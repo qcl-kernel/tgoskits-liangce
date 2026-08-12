@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "qmp_pmemsave_completed_exact_size",
+  "proofScope": "final-guest-dtb-qmp-pmemsave-byte-capture",
+  "doesNotProve": [
+    "captured bytes form valid flattened device trees",
+    "device-tree semantic validity",
+    "captured device ownership matches the VM configuration",
+    "QMP socket belongs to the same QEMU run as the source log",
+    "both guests booted",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "publication": "segment files published first; this manifest published last",
+  "sourcePathBase": "artifact parent directory",
+  "source": {
+    "capturePlan": {
+      "path": "capture-plan.json",
+      "sha256": "06f952fa3d67dc693f327662af353d43b320b57615501eac44d76d2b5dca9925"
+    },
+    "axvisorLog": {
+      "path": "axvisor-ready-prefix.log",
+      "sha256": "d5fb5cd8fb1f875b596ad97e20891815e6d2877472135f55b4718226d3521c10"
+    }
+  },
+  "qmp": {
+    "capabilitiesNegotiated": true,
+    "operation": "pmemsave",
+    "addressSpace": "host-physical"
+  },
+  "guests": [
+    {
+      "vmId": 1,
+      "gpa": "0x8fe00000",
+      "size": 7732,
+      "segments": [
+        {
+          "vmId": 1,
+          "index": 0,
+          "hpa": "0x8fe00000",
+          "length": 7732,
+          "path": "guest-vm-1.segment-000.bin",
+          "sha256": "9fa8bc5588a6f3be5ab7ab717d74f459759dd8e62aa733d31796918a6009d417",
+          "qmpOperation": "pmemsave"
+        }
+      ]
+    }
+  ]
+}

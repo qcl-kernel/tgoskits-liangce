@@ -1,0 +1,15 @@
+/target
+/.vscode
+.DS_Store
+*.asm
+*.img
+*.o
+*.elf
+*.bin
+qemu.log
+rusty-tags.vi
+/.project*
+/.axconfig.*
+/.cargo/axbuild-ostool.toml
+/.cargo/config.toml
+/Cargo.lock

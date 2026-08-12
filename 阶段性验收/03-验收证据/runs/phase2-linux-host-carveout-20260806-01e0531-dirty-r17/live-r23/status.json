@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "single_guest_live_capture_passed",
+  "proofScope": "one-guest-launch-ready-same-session-qmp-capture-resume-identity-exit",
+  "doesNotProve": [
+    "the unique READY marker was only observed in the launcher-owned combined log and does not prove an AxVisor final-DTB producer emitted it",
+    "device-tree semantic validity beyond the inner capture result",
+    "a second guest booted",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "startedAtUtc": "2026-08-09T22:30:32Z",
+  "finishedAtUtc": "2026-08-09T22:33:19Z",
+  "success": true,
+  "error": null,
+  "publication": "published last after confirmed group exit and runtime cleanup",
+  "state": {
+    "expectedVmId": 1,
+    "sessionNonce": "7a0d4d836a6eb047403dd2ce2da0c934",
+    "qemuName": "axvisor-guest-dtb-7a0d4d836a6eb047403dd2ce2da0c934",
+    "paths": {
+      "axvisorDirectory": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor",
+      "buildConfig": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-dma-guard-evidence.toml",
+      "qemuConfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-dma-guard-hold.toml",
+      "vmconfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+      "rootfs": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+      "hostDtb": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dtb",
+      "liveLog": "axvisor-live.log",
+      "nestedCaptureDirectory": "live-capture",
+      "qmpSocket": "/tmp/axgdtb-7a0d4d836a6eb047403dd2ce2da0c934/qmp.sock",
+      "qemuPidfile": "/tmp/axgdtb-7a0d4d836a6eb047403dd2ce2da0c934/qemu.pid"
+    },
+    "command": [
+      "cargo",
+      "xtask",
+      "qemu",
+      "--config",
+      "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-dma-guard-evidence.toml",
+      "--qemu-config",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-dma-guard-hold.toml",
+      "--vmconfigs",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+      "--qmp-socket",
+      "/tmp/axgdtb-7a0d4d836a6eb047403dd2ce2da0c934/qmp.sock",
+      "--qemu-pidfile",
+      "/tmp/axgdtb-7a0d4d836a6eb047403dd2ce2da0c934/qemu.pid",
+      "--qemu-name",
+      "axvisor-guest-dtb-7a0d4d836a6eb047403dd2ce2da0c934",
+      "--rootfs",
+      "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img"
+    ],
+    "inputArtifacts": {
+      "buildConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-dma-guard-evidence.toml",
+        "size": 520,
+        "sha256": "d9c3b0d8833676a0512a352913726c4cf0c54a515a1a50d73fc0b68e6f6a37da"
+      },
+      "qemuConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-dma-guard-hold.toml",
+        "size": 793,
+        "sha256": "f7e88a97f8a3dccad5a4c11fc432c384a1f087ab15981c714f1a2ac733d972dc"
+      },
+      "vmconfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+        "size": 712,
+        "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0"
+      },
+      "rootfs": {
+        "path": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "size": 33554432,
+        "sha256": "abf50a2d13986d160d9135b4a9fc48ef2405c4f048c3285796175d79f69afed8"
+      },
+      "hostDtb": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dtb",
+        "size": 8388,
+        "sha256": "ffea82e11c318d02243a14c5deea9434fe89ff313878fad336ce0cd2147084ab"
+      }
+    },
+    "launcherQemuArgs": [
+      "-nographic",
+      "-cpu",
+      "cortex-a72",
+      "-machine",
+      "virt,virtualization=on,gic-version=3",
+      "-smp",
+      "4",
+      "-device",
+      "virtio-blk-device,drive=disk0",
+      "-append",
+      "root=/dev/vda rw init=/bin/sh",
+      "-m",
+      "8g",
+      "-dtb",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dtb"
+    ],
+    "launcherPid": 412,
+    "launcherProcessGroup": 412,
+    "ready": {
+      "readyPrefixBytes": 20274,
+      "readyPrefixSha256": "98bde095fa7df89faf03fd7d005653c27a865b01e0ed7eb86746094cf7099914",
+      "capturePlanGuestIds": [
+        1
+      ]
+    },
+    "hostDtbReadyIdentity": {
+      "pid": 627,
+      "startTimeTicks": 107605,
+      "cmdlineSha256": "d2b92b0e5eaff9dbe40618544f38c6f80b03eff5bfa9644dd69916d66504a78c",
+      "dtbOption": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dtb"
+    },
+    "nestedCaptureChain": {
+      "path": "live-capture/capture-chain.json",
+      "sha256": "21c61f35d8987966a4a1936a38592d921412d1f66673aee4f31971c32a0eadf9",
+      "status": "identity_bound_live_qmp_capture_completed"
+    },
+    "postResumeIdentity": {
+      "pid": 627,
+      "startTimeTicks": 107605,
+      "cmdlineSha256": "d2b92b0e5eaff9dbe40618544f38c6f80b03eff5bfa9644dd69916d66504a78c",
+      "pidfdBound": true
+    },
+    "postResumeMarker": {
+      "marker": "~ #",
+      "byteOffset": 38662,
+      "markerBytes": 3,
+      "readyPrefixBytes": 20274,
+      "observedPrefixBytes": 38666,
+      "observedPrefixSha256": "be65d5c8c0ef9000139e59a2372f7494e6ed0d796ced887c5d8b477adec9d42a",
+      "occurrencesInPostResumeRegion": 1,
+      "evidenceMeaning": "exact-byte-substring-observation-only",
+      "sealedBeforeSigintPrefixBytes": 38666,
+      "sealedBeforeSigintPrefixSha256": "be65d5c8c0ef9000139e59a2372f7494e6ed0d796ced887c5d8b477adec9d42a"
+    },
+    "qemuExit": "SIGINT sent through pidfd after nested resumed identity revalidation",
+    "launcherExitCode": 0,
+    "groupCleanup": {
+      "pgid": 412,
+      "signalSent": "none-already-exited",
+      "groupExited": true,
+      "escalated": false
+    },
+    "runtimeCleanup": {
+      "removed": [],
+      "directoryRemoved": true
+    },
+    "liveLog": {
+      "path": "axvisor-live.log",
+      "sha256": "fd170d561459e09041e851c5f3c09914ab19b3e28abf38c80684f633fcf6fae5"
+    }
+  }
+}

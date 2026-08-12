@@ -1,0 +1,2 @@
+cd /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+  timeout --signal=INT --kill-after=30s --foreground 900 cargo xtask qemu --config configs/board/qemu-aarch64.toml --qemu-config /mnt/f/project/泉城实验室/tgoskits/configs/contest/qemu-aarch64-linux-baseline.toml --vmconfigs tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml 

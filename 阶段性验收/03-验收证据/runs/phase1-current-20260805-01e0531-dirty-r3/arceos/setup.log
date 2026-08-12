@@ -1,0 +1,21 @@
+[setup_qemu] Guest: arceos | Repo: /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+[setup_qemu] Step 1: ensure guest image is downloaded...
+  -> Found existing image directory: /root/.cache/tgoskits/axvisor-images/qemu_aarch64_arceos
+[setup_qemu] Step 2: patch VM config kernel_path...
+  -> Generated VM config: /mnt/f/project/泉城实验室/tgoskits/os/axvisor/tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
+  -> Updated kernel_path to /root/.cache/tgoskits/axvisor-images/qemu_aarch64_arceos/qemu-aarch64
+  -> Updated image_location to memory
+[setup_qemu] Step 3: prepare rootfs...
+  -> Copied /root/.cache/tgoskits/axvisor-images/qemu_aarch64_arceos/rootfs.img -> /mnt/f/project/泉城实验室/tgoskits/os/axvisor/tmp/rootfs.img
+
+[setup_qemu] Done. Guest: arceos
+You can now run the QEMU test with:
+
+  cd /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+  cargo xtask qemu \
+    --config configs/board/qemu-aarch64.toml \
+    --qemu-config .github/workflows/qemu-aarch64.toml \
+    --vmconfigs /mnt/f/project/泉城实验室/tgoskits/os/axvisor/tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
+
+Success indicator: 'Hello, world!'
+

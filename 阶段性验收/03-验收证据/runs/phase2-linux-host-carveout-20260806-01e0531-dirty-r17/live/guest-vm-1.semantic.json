@@ -1,0 +1,37 @@
+{
+  "doesNotProve": [
+    "QMP capture identity",
+    "Guest boot",
+    "passthrough DMA isolation",
+    "Linux and Zephyr IP connectivity",
+    "passthrough console isolation"
+  ],
+  "proofScope": "decoded-guest-dts-and-vm-config-static-semantics",
+  "schemaVersion": 1,
+  "sources": {
+    "dts": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\live\\guest-vm-1.final.dts",
+      "sha256": "8f38e86e78d18a76050f781e49ae7a3cca98f13db1ac594925a52434523311b9"
+    },
+    "vmConfig": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\configs\\vmconfig.map-reserved.toml",
+      "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0"
+    }
+  },
+  "status": "captured_guest_dtb_static_semantics_validated",
+  "vm": {
+    "consoleDevice": null,
+    "consoleMode": "passthrough-or-no-vm-owned-console",
+    "cpuNum": 1,
+    "id": 1,
+    "memoryRegions": [
+      {
+        "size": 268435456,
+        "start": 2147483648
+      }
+    ],
+    "mpidrs": [
+      0
+    ]
+  }
+}

@@ -1,0 +1,569 @@
+use alloc::sync::Arc;
+
+use ax_errno::{AxError, AxResult};
+use ax_fs_ng::vfs::FS_CONTEXT;
+use ax_kspin::SpinNoIrq;
+use ax_runtime::hal::cpu::uspace::UserContext;
+use ax_task::{AxTaskExt, current, spawn_task};
+use bitflags::bitflags;
+use linux_raw_sys::general::*;
+use scope_local::Scope;
+use starry_process::Pid;
+use starry_signal::Signo;
+use starry_vm::VmMutPtr;
+
+use crate::{
+    file::{FD_TABLE, FileLike, PidFd, close_file_like},
+    mm::copy_from_kernel,
+    task::{AsThread, ProcessData, ProcessImage, Thread, add_task_to_table, new_user_task},
+};
+
+bitflags! {
+    /// Options for use with [`sys_clone`] and [`sys_clone3`].
+    #[derive(Debug, Clone, Copy, Default)]
+    pub struct CloneFlags: u64 {
+        /// The calling process and the child process run in the same memory space.
+        const VM = CLONE_VM as u64;
+        /// The caller and the child process share the same filesystem information.
+        const FS = CLONE_FS as u64;
+        /// The calling process and the child process share the same file descriptor table.
+        const FILES = CLONE_FILES as u64;
+        /// The calling process and the child process share the same table of signal handlers.
+        const SIGHAND = CLONE_SIGHAND as u64;
+        /// Sets pidfd to the child process's PID file descriptor.
+        const PIDFD = CLONE_PIDFD as u64;
+        /// If the calling process is being traced, then trace the child also.
+        const PTRACE = CLONE_PTRACE as u64;
+        /// The execution of the calling process is suspended until the child releases
+        /// its virtual memory resources via a call to execve(2) or _exit(2) (as with vfork(2)).
+        const VFORK = CLONE_VFORK as u64;
+        /// The parent of the new child (as returned by getppid(2)) will be the same
+        /// as that of the calling process.
+        const PARENT = CLONE_PARENT as u64;
+        /// The child is placed in the same thread group as the calling process.
+        const THREAD = CLONE_THREAD as u64;
+        /// The cloned child is started in a new mount namespace.
+        const NEWNS = CLONE_NEWNS as u64;
+        /// The child and the calling process share a single list of System V
+        /// semaphore adjustment values.
+        const SYSVSEM = CLONE_SYSVSEM as u64;
+        /// The TLS (Thread Local Storage) descriptor is set to tls.
+        const SETTLS = CLONE_SETTLS as u64;
+        /// Store the child thread ID in the parent's memory.
+        const PARENT_SETTID = CLONE_PARENT_SETTID as u64;
+        /// Clear (zero) the child thread ID in child memory when the child exits,
+        /// and do a wakeup on the futex at that address.
+        const CHILD_CLEARTID = CLONE_CHILD_CLEARTID as u64;
+        /// A tracing process cannot force `CLONE_PTRACE` on this child process.
+        const UNTRACED = CLONE_UNTRACED as u64;
+        /// Store the child thread ID in the child's memory.
+        const CHILD_SETTID = CLONE_CHILD_SETTID as u64;
+        /// Create the process in a new cgroup namespace.
+        const NEWCGROUP = CLONE_NEWCGROUP as u64;
+        /// Create the process in a new UTS namespace.
+        const NEWUTS = CLONE_NEWUTS as u64;
+        /// Create the process in a new IPC namespace.
+        const NEWIPC = CLONE_NEWIPC as u64;
+        /// Create the process in a new user namespace.
+        const NEWUSER = CLONE_NEWUSER as u64;
+        /// Create the process in a new PID namespace.
+        const NEWPID = CLONE_NEWPID as u64;
+        /// Create the process in a new network namespace.
+        const NEWNET = CLONE_NEWNET as u64;
+        /// The new process shares an I/O context with the calling process.
+        const IO = CLONE_IO as u64;
+        /// Clear signal handlers on clone (since Linux 5.5).
+        const CLEAR_SIGHAND = 0x100000000u64;
+        /// Clone into specific cgroup (since Linux 5.7).
+        const INTO_CGROUP = 0x200000000u64;
+        /// (Deprecated) Causes the parent not to receive a signal when the child terminated.
+        const DETACHED = CLONE_DETACHED as u64;
+    }
+}
+
+// The `sched:sched_process_fork` tracepoint is defined here, next to its sole
+// emission site in `CloneArgs::do_clone` (which all of clone/clone3/fork/vfork
+// funnel through), so the event schema and the fast-path call stay together.
+// Registration into the global `.tracepoint` section is by link section, so
+// the definition's module location is immaterial to discovery.
+ktracepoint::define_event_trace!(
+    sched_process_fork,
+    TP_kops(crate::tracepoint::KernelTraceAux),
+    TP_system(sched),
+    TP_PROTO(parent_tid: u64, child_tid: u64),
+    TP_STRUCT__entry {
+        parent_tid: u64,
+        child_tid: u64,
+    },
+    TP_fast_assign {
+        parent_tid: parent_tid,
+        child_tid: child_tid,
+    },
+    TP_ident(__entry),
+    TP_printk({
+        alloc::format!(
+            "parent_tid={} child_tid={}",
+            __entry.parent_tid,
+            __entry.child_tid,
+        )
+    })
+);
+
+/// Unified arguments for clone/clone3/fork/vfork.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CloneArgs {
+    pub flags: CloneFlags,
+    pub exit_signal: u64,
+    pub stack: usize,
+    pub tls: usize,
+    pub parent_tid: usize,
+    pub child_tid: usize,
+    pub pidfd: usize,
+}
+
+impl CloneArgs {
+    fn validate(&self) -> AxResult<()> {
+        let Self {
+            flags, exit_signal, ..
+        } = self;
+
+        if *exit_signal > 0 && flags.contains(CloneFlags::THREAD) {
+            return Err(AxError::InvalidInput);
+        }
+        if flags.contains(CloneFlags::THREAD)
+            && !flags.contains(CloneFlags::VM | CloneFlags::SIGHAND)
+        {
+            return Err(AxError::InvalidInput);
+        }
+        if flags.contains(CloneFlags::SIGHAND) && !flags.contains(CloneFlags::VM) {
+            return Err(AxError::InvalidInput);
+        }
+        if flags.contains(CloneFlags::VFORK | CloneFlags::THREAD) {
+            return Err(AxError::InvalidInput);
+        }
+        if flags.contains(CloneFlags::PIDFD | CloneFlags::DETACHED) {
+            return Err(AxError::InvalidInput);
+        }
+        if flags.contains(CloneFlags::NEWNS | CloneFlags::FS) {
+            return Err(AxError::InvalidInput);
+        }
+
+        // CLONE_NEWCGROUP is not yet implemented.
+        if flags.contains(CloneFlags::NEWCGROUP) {
+            error!("sys_clone/sys_clone3: unsupported namespace flag CLONE_NEWCGROUP");
+            return Err(AxError::InvalidInput);
+        }
+
+        Ok(())
+    }
+
+    pub fn do_clone(self, uctx: &UserContext) -> AxResult<isize> {
+        self.validate()?;
+
+        let Self {
+            flags,
+            exit_signal,
+            stack,
+            tls,
+            parent_tid,
+            child_tid,
+            pidfd,
+        } = self;
+
+        debug!(
+            "do_clone <= flags: {:?}, exit_signal: {}, stack: {:#x}, tls: {:#x}",
+            flags, exit_signal, stack, tls
+        );
+
+        let exit_signal = if exit_signal > 0 {
+            Some(Signo::from_repr(exit_signal as u8).ok_or(AxError::InvalidInput)?)
+        } else {
+            None
+        };
+
+        // Linux blocks the parent for every CLONE_VFORK clone until the child
+        // execs or exits, regardless of whether the caller passed a child stack.
+        // BusyBox shell/timeout paths rely on that ordering when they combine
+        // CLONE_VM, CLONE_VFORK, and a private child stack.
+        let needs_vfork_block = flags.contains(CloneFlags::VFORK);
+
+        let mut new_uctx = *uctx;
+        new_uctx.prepare_clone_child_return_state();
+        if stack != 0 {
+            new_uctx.set_sp(stack);
+        }
+        if flags.contains(CloneFlags::SETTLS) {
+            new_uctx.set_tls(tls);
+        }
+        new_uctx.set_retval(0);
+        #[cfg(target_arch = "riscv64")]
+        let child_fp_fs = match uctx.sstatus.fs() {
+            riscv::register::sstatus::FS::Dirty => riscv::register::sstatus::FS::Clean,
+            fs => fs,
+        };
+        #[cfg(target_arch = "riscv64")]
+        new_uctx.sstatus.set_fs(child_fp_fs);
+
+        let set_child_tid = if flags.contains(CloneFlags::CHILD_SETTID) {
+            child_tid
+        } else {
+            0
+        };
+
+        let curr = current();
+        let curr_thread = curr.as_thread();
+        let old_proc_data = &curr_thread.proc_data;
+
+        let mut new_task = new_user_task(&curr.name(), new_uctx, set_child_tid);
+        #[cfg(target_arch = "riscv64")]
+        {
+            let mut fp_state = ax_cpu::FpState::default();
+            fp_state.save();
+            fp_state.fs = child_fp_fs;
+            new_task.ctx_mut().fp_state = fp_state;
+        }
+
+        let tid = new_task.id().as_u64() as Pid;
+        if flags.contains(CloneFlags::PARENT_SETTID) && parent_tid != 0 {
+            (parent_tid as *mut Pid).vm_write(tid).ok();
+        }
+
+        let new_proc_data = if flags.contains(CloneFlags::THREAD) {
+            new_task
+                .ctx_mut()
+                .set_page_table_root(old_proc_data.aspace().lock().page_table_root());
+            old_proc_data.clone()
+        } else {
+            let proc = if flags.contains(CloneFlags::PARENT) {
+                old_proc_data.proc.parent().ok_or(AxError::InvalidInput)?
+            } else {
+                old_proc_data.proc.clone()
+            }
+            .fork(tid);
+
+            let aspace = if flags.contains(CloneFlags::VM) {
+                old_proc_data.aspace()
+            } else {
+                let aspace_arc = old_proc_data.aspace();
+                let aspace = aspace_arc.lock().try_clone()?;
+                copy_from_kernel(&mut aspace.lock())?;
+                aspace
+            };
+            new_task
+                .ctx_mut()
+                .set_page_table_root(aspace.lock().page_table_root());
+
+            let signal_actions = if flags.contains(CloneFlags::SIGHAND) {
+                old_proc_data.signal.actions()
+            } else if flags.contains(CloneFlags::CLEAR_SIGHAND) {
+                Arc::new(SpinNoIrq::new(Default::default()))
+            } else {
+                Arc::new(SpinNoIrq::new(
+                    old_proc_data.signal.actions().lock().clone(),
+                ))
+            };
+
+            let proc_data = ProcessData::new(
+                proc,
+                ProcessImage::new(
+                    old_proc_data.exe_path.read().clone(),
+                    old_proc_data.cmdline.read().clone(),
+                    old_proc_data.envp.read().clone(),
+                    old_proc_data.auxv.read().clone(),
+                    old_proc_data.root_path.read().clone(),
+                    old_proc_data.cwd_path.read().clone(),
+                ),
+                aspace,
+                signal_actions,
+                exit_signal,
+                curr_thread.tid(),
+                flags.contains(CloneFlags::VM),
+            );
+            proc_data.set_umask(old_proc_data.umask());
+            proc_data.set_nice(old_proc_data.nice());
+            proc_data.set_heap_top(old_proc_data.get_heap_top());
+            proc_data.replace_personality(old_proc_data.personality());
+            // Inherit parent dumpable (PR_SET_DUMPABLE state). Linux: child
+            // fork/clone copies mm->dumpable from parent; without this, a
+            // child of `prctl(PR_SET_DUMPABLE, 0) -> fork()` would reset to
+            // SUID_DUMP_USER (1), breaking the safety semantics this PR is
+            // supposed to enforce. Verified via Linux host: parent sets 0,
+            // fork child PR_GET_DUMPABLE returns 0.
+            proc_data.set_dumpable(old_proc_data.dumpable());
+            proc_data.set_thp_disable(old_proc_data.thp_disable());
+
+            // Inherit the parent's namespace proxy, then unshare
+            // each namespace for which a CLONE_NEW* flag is set.
+            let mut new_nsproxy = old_proc_data.nsproxy.lock().clone_all();
+            if flags.contains(CloneFlags::NEWUTS) {
+                new_nsproxy.unshare_uts();
+            }
+            if flags.contains(CloneFlags::NEWIPC) {
+                new_nsproxy.unshare_ipc();
+            }
+            if flags.contains(CloneFlags::NEWNS) {
+                new_nsproxy.unshare_mnt();
+            }
+            if flags.contains(CloneFlags::NEWPID) {
+                new_nsproxy.unshare_pid();
+                new_nsproxy.pid_ns.lock().alloc_local_pid(tid as u64);
+                new_nsproxy.pid_ns.lock().set_init_global_tid(tid as u64);
+            }
+            if flags.contains(CloneFlags::NEWNET) {
+                new_nsproxy.unshare_net();
+            }
+            if flags.contains(CloneFlags::NEWUSER) {
+                new_nsproxy.unshare_user();
+            }
+
+            // Consume a pending child PID namespace prepared by
+            // unshare(CLONE_NEWPID) in the parent (Linux: the parent is
+            // not moved; the child becomes PID 1 in the new namespace).
+            if !flags.contains(CloneFlags::NEWPID) {
+                let mut parent_ns = old_proc_data.nsproxy.lock();
+                if let Some(child_pid_ns) = parent_ns.child_pid_ns.take() {
+                    new_nsproxy.pid_ns = child_pid_ns;
+                    {
+                        let mut pid_ns = new_nsproxy.pid_ns.lock();
+                        pid_ns.alloc_local_pid(tid as u64);
+                        pid_ns.set_init_global_tid(tid as u64);
+                    }
+                }
+            }
+
+            *proc_data.nsproxy.lock() = new_nsproxy;
+
+            proc_data
+        };
+
+        let mut scope = Scope::new();
+        let current_fd_table = crate::file::current_fd_table();
+        if flags.contains(CloneFlags::FILES) {
+            // Synchronize with close_all_fds: holding a read lock ensures
+            // close_all_fds either observes our strong-count increment or
+            // blocks until the new thread has installed the shared Arc.
+            let _guard = current_fd_table.read();
+            FD_TABLE.scope_mut(&mut scope).clone_from(&current_fd_table);
+        } else {
+            FD_TABLE
+                .scope_mut(&mut scope)
+                .write()
+                .clone_from(&current_fd_table.read());
+        }
+
+        let current_fs_context = ax_fs_ng::vfs::current_fs_context();
+        if flags.contains(CloneFlags::FS) {
+            FS_CONTEXT
+                .scope_mut(&mut scope)
+                .clone_from(&current_fs_context);
+        } else {
+            let mut fs_context = current_fs_context.lock().clone();
+            if flags.contains(CloneFlags::NEWNS) {
+                fs_context.unshare_mount_namespace()?;
+            }
+            *FS_CONTEXT.scope_mut(&mut scope).lock() = fs_context;
+        }
+
+        new_proc_data.proc.add_thread(tid);
+
+        let parent_cred = Some(curr_thread.cred());
+        let thr = Thread::new(
+            tid,
+            new_proc_data.clone(),
+            parent_cred,
+            curr_thread.signal.blocked(),
+            scope,
+        );
+        if curr_thread.no_new_privs() {
+            thr.set_no_new_privs();
+        }
+        thr.set_seccomp_state(curr_thread.seccomp_state());
+        if flags.contains(CloneFlags::CHILD_CLEARTID) {
+            thr.set_clear_child_tid(child_tid);
+        }
+        if flags.contains(CloneFlags::PIDFD) && pidfd != 0 {
+            let pidfd_obj = if flags.contains(CloneFlags::THREAD) {
+                PidFd::new_thread(&thr, tid)
+            } else {
+                PidFd::new_process(&new_proc_data)
+            };
+            let fd = pidfd_obj.add_to_fd_table(true)?;
+            if let Err(err) = (pidfd as *mut i32).vm_write(fd) {
+                let _ = close_file_like(fd);
+                return Err(err.into());
+            }
+        }
+        // perf: clone any `attr.inherit` event from the parent onto the child so
+        // `perf record` follows it. Done before the child is scheduled (it is not
+        // yet spawned) so the counter is present the first time the child runs.
+        #[cfg(target_arch = "aarch64")]
+        crate::perf::task::on_clone_inherit(curr_thread, &thr);
+        *new_task.task_ext_mut() = Some(AxTaskExt::from_impl(thr));
+
+        // vfork(2) and clone(CLONE_VFORK) must sleep the parent until the child
+        // execs or exits. Use PollSet so the parent's wait remains
+        // interruptible by task.interrupt().
+        if needs_vfork_block {
+            let poll = Arc::new(axpoll::PollSet::new());
+            new_proc_data.set_vfork_done(poll);
+        }
+
+        let parent_pid = curr.as_thread().proc_data.proc.pid();
+        // The user-visible tid, not the scheduler id: they diverge for the init
+        // process (pid/tid pinned to 1, scheduler id higher). Signal delivery
+        // and ptrace below look this up in the tid-keyed task table.
+        let parent_tid = curr.as_thread().tid() as Pid;
+        let ptrace_event = if flags.contains(CloneFlags::THREAD) {
+            super::ptrace::PTRACE_EVENT_CLONE
+        } else if flags.contains(CloneFlags::VFORK) {
+            super::ptrace::PTRACE_EVENT_VFORK
+        } else {
+            super::ptrace::PTRACE_EVENT_FORK
+        };
+        let trace_clone =
+            super::ptrace::ptrace_notify_clone(parent_pid, parent_tid, tid as Pid, ptrace_event);
+        if trace_clone && let Some(tracer_pid) = curr.as_thread().proc_data.ptrace_tracer_pid() {
+            if !flags.contains(CloneFlags::THREAD) {
+                new_proc_data.set_ptrace_tracer_pid(tracer_pid);
+                new_proc_data.set_ptrace_attached();
+            }
+            new_proc_data.set_ptrace_stop(tid, starry_signal::Signo::SIGSTOP, &new_uctx);
+        }
+
+        let task = spawn_task(new_task);
+        add_task_to_table(&task);
+
+        if trace_clone && needs_vfork_block {
+            let _ = crate::task::send_signal_to_thread(
+                None,
+                parent_tid,
+                Some(starry_signal::SignalInfo::new_kernel(
+                    starry_signal::Signo::SIGTRAP,
+                )),
+            );
+        }
+
+        // Fire before any potential vfork-wait so observers see the fork edge
+        // even when the parent blocks below.
+        trace_sched_process_fork(curr.id().as_u64(), tid as u64);
+
+        // perf side-band: tell any `attr.task` event watching the parent that it
+        // forked a child (PERF_RECORD_FORK), so `perf record` can account it.
+        // Emitted before any vfork-wait below, in the parent's context.
+        #[cfg(target_arch = "aarch64")]
+        crate::perf::task::on_clone_sideband(
+            curr.as_thread(),
+            new_proc_data.proc.pid(),
+            tid as u32,
+        );
+
+        // Block the parent until the child exec's or exits.
+        if needs_vfork_block {
+            new_proc_data.wait_vfork_done();
+            let _ = super::ptrace::ptrace_notify_vfork_done(parent_pid, parent_tid, tid as Pid);
+        }
+
+        Ok(tid as _)
+    }
+}
+
+ktracepoint::define_event_trace!(
+    sys_clone,
+    TP_kops(crate::tracepoint::KernelTraceAux),
+    TP_system(syscalls),
+    TP_PROTO(flags:u32, stack:usize, parent_tid:usize),
+    TP_STRUCT__entry {
+        stack: usize,
+        parent_tid: usize,
+        flags: u32,
+    },
+    TP_fast_assign {
+        flags: flags,
+        stack: stack,
+        parent_tid: parent_tid,
+    },
+    TP_ident(__entry),
+    TP_printk({
+        let flags = __entry.flags;
+        let stack = __entry.stack;
+        let parent_tid = __entry.parent_tid;
+        alloc::format!("clone with flags: {flags}, stack: {stack:#x}, parent_tid: {parent_tid:#x}")
+    })
+);
+
+pub fn sys_clone(
+    uctx: &UserContext,
+    flags: u32,
+    stack: usize,
+    parent_tid: usize,
+    #[cfg(any(target_arch = "x86_64", target_arch = "loongarch64"))] child_tid: usize,
+    tls: usize,
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "loongarch64")))] child_tid: usize,
+) -> AxResult<isize> {
+    const FLAG_MASK: u32 = 0xff;
+    let clone_flags = CloneFlags::from_bits_truncate((flags & !FLAG_MASK) as u64);
+    let exit_signal = (flags & FLAG_MASK) as u64;
+
+    trace_sys_clone(clone_flags.bits() as _, stack, parent_tid);
+
+    if clone_flags.contains(CloneFlags::PIDFD | CloneFlags::PARENT_SETTID) {
+        return Err(AxError::InvalidInput);
+    }
+
+    let args = CloneArgs {
+        flags: clone_flags,
+        exit_signal,
+        stack,
+        tls,
+        parent_tid,
+        child_tid,
+        // In sys_clone, parent_tid is reused for pidfd when CLONE_PIDFD is set
+        pidfd: if clone_flags.contains(CloneFlags::PIDFD) {
+            parent_tid
+        } else {
+            0
+        },
+    };
+
+    args.do_clone(uctx)
+}
+
+#[cfg(target_arch = "x86_64")]
+pub fn sys_fork(uctx: &UserContext) -> AxResult<isize> {
+    sys_clone(uctx, SIGCHLD, 0, 0, 0, 0)
+}
+
+#[cfg(target_arch = "x86_64")]
+pub fn sys_vfork(uctx: &UserContext) -> AxResult<isize> {
+    let flags = (CloneFlags::VFORK | CloneFlags::VM).bits() as u32 | SIGCHLD;
+    sys_clone(uctx, flags, 0, 0, 0, 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use linux_raw_sys::general::SIGCHLD;
+
+    use super::{CloneArgs, CloneFlags};
+
+    #[test]
+    fn clone_parent_allows_nonzero_exit_signal() {
+        let args = CloneArgs {
+            flags: CloneFlags::PARENT,
+            exit_signal: SIGCHLD as u64,
+            ..Default::default()
+        };
+
+        assert!(args.validate().is_ok());
+    }
+
+    #[test]
+    fn clone_thread_rejects_nonzero_exit_signal() {
+        let args = CloneArgs {
+            flags: CloneFlags::THREAD | CloneFlags::VM | CloneFlags::SIGHAND,
+            exit_signal: SIGCHLD as u64,
+            ..Default::default()
+        };
+
+        assert!(args.validate().is_err());
+    }
+}

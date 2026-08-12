@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase1-final-20260717T204935Z-330b9ce2d52b-dirty",
+  "guest": "linux",
+  "startedAtUtc": "2026-07-17T20:58:12Z",
+  "finishedAtUtc": "2026-07-17T21:05:00Z",
+  "durationSeconds": 408,
+  "status": "passed",
+  "setupExitCode": 0,
+  "qemuExitCode": 0,
+  "successMarker": "test pass!",
+  "successMarkerSeen": true
+}

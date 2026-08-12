@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "qmp_peer_process_and_pause_window_bound",
+  "proofScope": "qmp-socket-pid-start-boot-uid-exe-cmdline-name-nonce-continuity",
+  "doesNotProve": [
+    "the AxVisor log writer belongs to QEMU when stdout is relayed through tee",
+    "Guest boot success",
+    "passthrough DMA isolation",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "sessionNonce": "a969ddb934f29bc8041a02937ba2ade5",
+  "qemuName": "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+  "qmpQueryName": "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+  "pidfile": {
+    "path": "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+    "pid": 1151
+  },
+  "qmpSocket": {
+    "path": "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock",
+    "device": 2096,
+    "inode": 11766,
+    "uid": 0,
+    "gid": 0
+  },
+  "qmpPeerCredentials": {
+    "pid": 1151,
+    "uid": 0,
+    "gid": 0
+  },
+  "qmpStates": [
+    "running",
+    "paused",
+    "running"
+  ],
+  "processCheckpoints": {
+    "beforeConnect": {
+      "pid": 1151,
+      "startTimeTicks": 213673,
+      "bootId": "05dade8d-fe17-4dd1-85f2-924f0a1cdd9e",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-device",
+        "virtio-blk-device,drive=disk0",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "-append",
+        "root=/dev/vda rw init=/bin/sh",
+        "-m",
+        "8g",
+        "-dtb",
+        "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "-qmp",
+        "unix:/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+        "-name",
+        "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "a0c66053bf2524909f4e25fb39afec278ef644d1176767ed708bd67dd2e8694e"
+    },
+    "afterConnect": {
+      "pid": 1151,
+      "startTimeTicks": 213673,
+      "bootId": "05dade8d-fe17-4dd1-85f2-924f0a1cdd9e",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-device",
+        "virtio-blk-device,drive=disk0",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "-append",
+        "root=/dev/vda rw init=/bin/sh",
+        "-m",
+        "8g",
+        "-dtb",
+        "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "-qmp",
+        "unix:/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+        "-name",
+        "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "a0c66053bf2524909f4e25fb39afec278ef644d1176767ed708bd67dd2e8694e"
+    },
+    "paused": {
+      "pid": 1151,
+      "startTimeTicks": 213673,
+      "bootId": "05dade8d-fe17-4dd1-85f2-924f0a1cdd9e",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-device",
+        "virtio-blk-device,drive=disk0",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "-append",
+        "root=/dev/vda rw init=/bin/sh",
+        "-m",
+        "8g",
+        "-dtb",
+        "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "-qmp",
+        "unix:/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+        "-name",
+        "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "a0c66053bf2524909f4e25fb39afec278ef644d1176767ed708bd67dd2e8694e"
+    },
+    "postPmemsave": {
+      "pid": 1151,
+      "startTimeTicks": 213673,
+      "bootId": "05dade8d-fe17-4dd1-85f2-924f0a1cdd9e",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-device",
+        "virtio-blk-device,drive=disk0",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "-append",
+        "root=/dev/vda rw init=/bin/sh",
+        "-m",
+        "8g",
+        "-dtb",
+        "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "-qmp",
+        "unix:/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+        "-name",
+        "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "a0c66053bf2524909f4e25fb39afec278ef644d1176767ed708bd67dd2e8694e"
+    },
+    "resumed": {
+      "pid": 1151,
+      "startTimeTicks": 213673,
+      "bootId": "05dade8d-fe17-4dd1-85f2-924f0a1cdd9e",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-device",
+        "virtio-blk-device,drive=disk0",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "-append",
+        "root=/dev/vda rw init=/bin/sh",
+        "-m",
+        "8g",
+        "-dtb",
+        "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "-qmp",
+        "unix:/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axgdtb-a969ddb934f29bc8041a02937ba2ade5/qemu.pid",
+        "-name",
+        "axvisor-guest-dtb-a969ddb934f29bc8041a02937ba2ade5",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "a0c66053bf2524909f4e25fb39afec278ef644d1176767ed708bd67dd2e8694e"
+    }
+  },
+  "sources": {
+    "readyPrefix": {
+      "path": "axvisor-ready-prefix.log",
+      "size": 19511,
+      "sha256": "1b04783aca5980dd1323a30190a6fd023322275c9396946e587fe241963f0dc5"
+    },
+    "capturePlan": {
+      "path": "capture-plan.json",
+      "sha256": "43108ca603f469f99120cda5ead9fa86ab0b5bf5bd2f16e920565ddc723296a9"
+    },
+    "captureExecution": {
+      "path": "capture-execution.json",
+      "sha256": "9d5a47ec71d989b033f46bdf328ff82f18a06fc48733ef2e978fee407ba01f84"
+    }
+  }
+}

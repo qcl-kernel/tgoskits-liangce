@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "single_guest_live_capture_passed",
+  "proofScope": "one-guest-launch-ready-same-session-qmp-capture-resume-identity-exit",
+  "doesNotProve": [
+    "the unique READY marker was only observed in the launcher-owned combined log and does not prove an AxVisor final-DTB producer emitted it",
+    "device-tree semantic validity beyond the inner capture result",
+    "a second guest booted",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "startedAtUtc": "2026-08-05T18:41:11Z",
+  "finishedAtUtc": "2026-08-05T18:47:05Z",
+  "success": true,
+  "error": null,
+  "publication": "published last after confirmed group exit and runtime cleanup",
+  "state": {
+    "expectedVmId": 1,
+    "sessionNonce": "a60c7b8a44ba2d282892a5a7dad2c7dd",
+    "qemuName": "axvisor-guest-dtb-a60c7b8a44ba2d282892a5a7dad2c7dd",
+    "paths": {
+      "axvisorDirectory": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor",
+      "buildConfig": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-carveout-evidence.toml",
+      "qemuConfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-host-dtb.toml",
+      "vmconfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+      "rootfs": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+      "hostDtb": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+      "liveLog": "axvisor-live.log",
+      "nestedCaptureDirectory": "live-capture",
+      "qmpSocket": "/tmp/axgdtb-a60c7b8a44ba2d282892a5a7dad2c7dd/qmp.sock",
+      "qemuPidfile": "/tmp/axgdtb-a60c7b8a44ba2d282892a5a7dad2c7dd/qemu.pid"
+    },
+    "command": [
+      "cargo",
+      "xtask",
+      "qemu",
+      "--config",
+      "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-carveout-evidence.toml",
+      "--qemu-config",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-host-dtb.toml",
+      "--vmconfigs",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+      "--qmp-socket",
+      "/tmp/axgdtb-a60c7b8a44ba2d282892a5a7dad2c7dd/qmp.sock",
+      "--qemu-pidfile",
+      "/tmp/axgdtb-a60c7b8a44ba2d282892a5a7dad2c7dd/qemu.pid",
+      "--qemu-name",
+      "axvisor-guest-dtb-a60c7b8a44ba2d282892a5a7dad2c7dd",
+      "--rootfs",
+      "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img"
+    ],
+    "inputArtifacts": {
+      "buildConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-linux-carveout-evidence.toml",
+        "size": 424,
+        "sha256": "1a04fe9cb2411801f7774a7f91eccd3d6b13deed08d6b8a9e0a6b0964e27b2d4"
+      },
+      "qemuConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/qemu-aarch64-linux-host-dtb.toml",
+        "size": 866,
+        "sha256": "6ba22046869d29f6e0232040abcd9fea6c633440d7be2730b384b123b22d14d2"
+      },
+      "vmconfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+        "size": 712,
+        "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0"
+      },
+      "rootfs": {
+        "path": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+        "size": 33554432,
+        "sha256": "63620e97742f7ad94dbe00de7621bf24df0308f994fbf68714fead0811507c0a"
+      },
+      "hostDtb": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb",
+        "size": 8277,
+        "sha256": "e5820a5a34d334af4c11713282cf13f5fa878386c0d5c7600207c3b758a2e63f"
+      }
+    },
+    "launcherQemuArgs": [
+      "-nographic",
+      "-cpu",
+      "cortex-a72",
+      "-machine",
+      "virt,virtualization=on,gic-version=3",
+      "-smp",
+      "4",
+      "-device",
+      "virtio-blk-device,drive=disk0",
+      "-append",
+      "root=/dev/vda rw init=/bin/sh",
+      "-m",
+      "8g",
+      "-dtb",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb"
+    ],
+    "launcherPid": 440,
+    "launcherProcessGroup": 440,
+    "ready": {
+      "readyPrefixBytes": 20588,
+      "readyPrefixSha256": "d555ff354b980c9db1dc762795e414d12f155f789f0a264d147330373a2620a4",
+      "capturePlanGuestIds": [
+        1
+      ]
+    },
+    "hostDtbReadyIdentity": {
+      "pid": 1103,
+      "startTimeTicks": 34989,
+      "cmdlineSha256": "eb78b6b93d008ac658dc9ec46f6072b8f05b6615e8d7d3d4fea24eba3cf49813",
+      "dtbOption": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared/host-carveout.dtb"
+    },
+    "nestedCaptureChain": {
+      "path": "live-capture/capture-chain.json",
+      "sha256": "b29f36773a10ffc028219f1bf36e927282abddd968f846e68b79738d0a9b0020",
+      "status": "identity_bound_live_qmp_capture_completed"
+    },
+    "postResumeIdentity": {
+      "pid": 1103,
+      "startTimeTicks": 34989,
+      "cmdlineSha256": "eb78b6b93d008ac658dc9ec46f6072b8f05b6615e8d7d3d4fea24eba3cf49813",
+      "pidfdBound": true
+    },
+    "qemuExit": "SIGINT sent through pidfd after nested resumed identity revalidation",
+    "launcherExitCode": 0,
+    "groupCleanup": {
+      "pgid": 440,
+      "signalSent": "none-already-exited",
+      "groupExited": true,
+      "escalated": false
+    },
+    "runtimeCleanup": {
+      "removed": [],
+      "directoryRemoved": true
+    },
+    "liveLog": {
+      "path": "axvisor-live.log",
+      "sha256": "73bbf3b1fe4c50ac6ad3bf71652ad7e30be53ace50e1cccbb0928a1ed7951f47"
+    }
+  }
+}

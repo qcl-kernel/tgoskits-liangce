@@ -1,0 +1,99 @@
+{
+  "artifactStatus": "runtime-log-observation-validated",
+  "captureStatusBinding": {
+    "artifactStatus": "capture-generated-unreviewed",
+    "expectedVmId": 1,
+    "hostDtb": {
+      "nonEmpty": true,
+      "sha256Match": true,
+      "sizeMatch": true
+    },
+    "liveLog": {
+      "pathMatch": true,
+      "sha256Match": true
+    },
+    "proofScope": "one-guest-launch-ready-same-session-qmp-capture-resume-identity-exit",
+    "schemaVersion": 1,
+    "status": "single_guest_live_capture_passed",
+    "validated": true,
+    "vmconfig": {
+      "sha256Match": true,
+      "sizeMatch": true
+    }
+  },
+  "dmaGuardMarkers": [
+    {
+      "allocatorExcludedLine": 195,
+      "earlyReservedLine": 118,
+      "hpa": "0x180000000",
+      "size": "0x200000"
+    }
+  ],
+  "doesNotProve": [
+    "Guest boot",
+    "MapReserved stage-2 mapping",
+    "passthrough DMA effect",
+    "passthrough DMA isolation",
+    "dual-Guest execution",
+    "Guest IP connectivity"
+  ],
+  "expectedCarveouts": [
+    {
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "vmId": 1
+    }
+  ],
+  "expectedDmaGuards": [
+    {
+      "hpa": "0x180000000",
+      "size": "0x200000"
+    }
+  ],
+  "markers": [
+    {
+      "allocatorExcludedLine": 193,
+      "earlyReservedLine": 119,
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "vmId": 1
+    }
+  ],
+  "proofScope": "byte-bound-host-log-carveout-and-dma-guard-marker-observation",
+  "schemaVersion": 1,
+  "sources": {
+    "captureStatus": {
+      "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/live-r23/status.json",
+      "sha256": "2b2829415eca4a387ab36d226b3d3e475f9af8dadba473a65e752afca08ca588",
+      "size": 6949
+    },
+    "hostDtb": {
+      "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dtb",
+      "sha256": "ffea82e11c318d02243a14c5deea9434fe89ff313878fad336ce0cd2147084ab",
+      "size": 8388
+    },
+    "hostDts": {
+      "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.dts",
+      "sha256": "4503e84b88ef56188035a70b00f08125df0d637abd7290cb2f24869248b1aab5",
+      "size": 10001
+    },
+    "preflight": {
+      "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/prepared-dma-guard-r22/host-carveout.preflight.json",
+      "sha256": "c5f7a5a36f756e6289009a027840c9881918fe8299e4184402859a8297ad072d",
+      "size": 1366
+    },
+    "rawLog": {
+      "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/live-r23/axvisor-live.log",
+      "sha256": "fd170d561459e09041e851c5f3c09914ab19b3e28abf38c80684f633fcf6fae5",
+      "size": 38971
+    },
+    "vmConfigs": [
+      {
+        "path": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-linux-host-carveout-20260806-01e0531-dirty-r17/configs/vmconfig.map-reserved.toml",
+        "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0",
+        "size": 712
+      }
+    ]
+  },
+  "status": "host_carveout_and_dma_guard_markers_match_static_preflight"
+}

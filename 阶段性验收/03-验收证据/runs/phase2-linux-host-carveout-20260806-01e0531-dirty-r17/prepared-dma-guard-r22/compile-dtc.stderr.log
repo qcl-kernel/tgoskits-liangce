@@ -1,0 +1,5 @@
+<stdin>:295.3-21: Warning (clocks_property): /pl061@9030000:clocks: cell 0 is not a phandle reference
+<stdin>:321.3-21: Warning (clocks_property): /pl031@9010000:clocks: cell 0 is not a phandle reference
+<stdin>:329.3-28: Warning (clocks_property): /pl011@9000000:clocks: cell 0 is not a phandle reference
+<stdin>:329.3-28: Warning (clocks_property): /pl011@9000000:clocks: cell 1 is not a phandle reference
+<stdin>:286.4-31: Warning (gpios_property): /gpio-keys/poweroff:gpios: cell 0 is not a phandle reference

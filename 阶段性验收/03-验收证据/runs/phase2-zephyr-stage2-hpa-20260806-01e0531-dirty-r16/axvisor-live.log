@@ -1,0 +1,807 @@
+   Compiling axvisor v0.5.21 (/mnt/f/project/泉城实验室/tgoskits/os/axvisor)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 05s
+     Running `/mnt/f/project/泉城实验室/tgoskits/target/debug/xtask qemu --config '/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-zephyr-stage2-evidence.toml' --qemu-config '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-pl011-current-20260805-01e0531-dirty-r9/configs/qemu-aarch64-zephyr-framed-console.toml' --vmconfigs '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-pl011-current-20260805-01e0531-dirty-r9/vmconfig.generated.toml' --qmp-socket /tmp/axgdtb-a410614810017ed9c8c478118c75ca87/qmp.sock --qemu-pidfile /tmp/axgdtb-a410614810017ed9c8c478118c75ca87/qemu.pid --qemu-name axvisor-guest-dtb-a410614810017ed9c8c478118c75ca87 --rootfs '/mnt/f/project/泉城实验室/tgoskits/tmp/contest/zephyr-smoke/rootfs-placeholder.img'`
+[2026-08-05T18:05:08Z INFO  axbuild::context] Workspace root: /mnt/f/project/泉城实验室/tgoskits
+[2026-08-05T18:05:48Z INFO  axbuild::context] Workspace member dir for axvisor: /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+Using build config: /mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-zephyr-stage2-evidence.toml
+[2026-08-05T18:06:22Z INFO  ostool::run::qemu] Using QEMU config file: /mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-pl011-current-20260805-01e0531-dirty-r9/configs/qemu-aarch64-zephyr-framed-console.toml
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-zephyr-stage2-evidence.toml ...
+sh -c /mnt/f/project/泉城实验室/tgoskits/tmp/axbuild/std/prebuild/prebuild-aarch64-unknown-linux-musl-73e159b1006c783f.sh
+AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar
+AXVISOR_VM_CONFIGS=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-pl011-current-20260805-01e0531-dirty-r9/vmconfig.generated.toml
+AX_ARCH=aarch64
+AX_LOG=info
+AX_TARGET=aarch64-unknown-none-softfloat
+CARGO_UNSTABLE_JSON_TARGET_SPEC=true
+CC_aarch64_unknown_linux_musl=aarch64-linux-musl-cc
+CFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+CXXFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+cargo build --config /mnt/f/project/泉城实验室/tgoskits/tmp/axbuild/std/config-aarch64-unknown-linux-musl-dynamic.toml -p axvisor --target scripts/targets/std/pie/aarch64-unknown-linux-musl.json -Z unstable-options --target-dir /mnt/f/project/泉城实验室/tgoskits/target --features guest-fdt-evidence,stage2-hpa-evidence,log/release_max_level_info -Z json-target-spec --bin axvisor --release --message-format json-render-diagnostics
+warning: function `set_fdt_addr_phys_if_valid` is never used
+  --> platforms/someboot/src/fdt/mod.rs:33:15
+   |
+33 | pub(crate) fn set_fdt_addr_phys_if_valid(fdt_addr: usize) -> bool {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling axvisor v0.5.21 (/mnt/f/project/泉城实验室/tgoskits/os/axvisor)
+warning: `someboot` (lib) generated 1 warning
+   Compiling axvm v0.5.23 (/mnt/f/project/泉城实验室/tgoskits/virtualization/axvm)
+warning: function `with_vm` is never used
+  --> virtualization/axvm/src/manager.rs:58:15
+   |
+58 | pub(crate) fn with_vm<F, R>(vm_id: VMId, f: F) -> Option<R>
+   |               ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `active_vcpu_mask` is never used
+  --> virtualization/axvm/src/manager.rs:67:15
+   |
+67 | pub(crate) fn active_vcpu_mask(vm_id: VMId) -> Option<usize> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `inject_interrupt` is never used
+  --> virtualization/axvm/src/manager.rs:79:15
+   |
+79 | pub(crate) fn inject_interrupt(vm_id: VMId, vcpu_id: usize, vector: usize) -> AxVmResult {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: field `token` is never read
+  --> virtualization/axvm/src/timer.rs:21:5
+   |
+20 | struct VmTimerEvent {
+   |        ------------ field in this struct
+21 |     token: usize,
+   |     ^^^^^
+
+warning: function `cancel_timer` is never used
+  --> virtualization/axvm/src/timer.rs:63:15
+   |
+63 | pub(crate) fn cancel_timer(token: usize) {
+   |               ^^^^^^^^^^^^
+
+warning: associated items `handle_nested_page_fault` and `debug_nested_page_fault` are never used
+   --> virtualization/axvm/src/vm/mod.rs:911:19
+    |
+420 | impl AxVM {
+    | --------- associated items in this implementation
+...
+911 |     pub(crate) fn handle_nested_page_fault(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+926 |     fn debug_nested_page_fault(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/runtime/vcpus.rs:223:5
+    |
+223 |     dead_code,
+    |     ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware boots secondary vCPUs
+    = note: `#[warn(unfulfilled_lint_expectations)]` on by default
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/runtime/vcpus.rs:256:5
+    |
+256 |     dead_code,
+    |     ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware boots secondary vCPUs
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/vcpu.rs:288:9
+    |
+288 |         dead_code,
+    |         ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware updates secondary vCPU entries
+
+warning: `axvm` (lib) generated 9 warnings
+warning: associated functions `create_vm_from_toml` and `start_vm` are never used
+  --> os/axvisor/src/manager.rs:52:12
+   |
+24 | impl AxvmManager {
+   | ---------------- associated functions in this implementation
+...
+52 |     pub fn create_vm_from_toml(raw_cfg: &str) -> Result<VMId> {
+   |            ^^^^^^^^^^^^^^^^^^^
+...
+57 |     pub fn start_vm(vm_id: VMId) -> Result<()> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `can_start_vm` is never used
+  --> os/axvisor/src/shell/command/vm.rs:32:4
+   |
+32 | fn can_start_vm(status: VmStatus) -> Result<(), &'static str> {
+   |    ^^^^^^^^^^^^
+
+warning: function `start_single_vm` is never used
+   --> os/axvisor/src/shell/command/vm.rs:231:4
+    |
+231 | fn start_single_vm(vm: axvm::AxVMRef) -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `start_vm_by_id` is never used
+   --> os/axvisor/src/shell/command/vm.rs:240:4
+    |
+240 | fn start_vm_by_id(vm_id: usize) {
+    |    ^^^^^^^^^^^^^^
+
+warning: `axvisor` (bin "axvisor") generated 4 warnings
+    Finished `release` profile [optimized] target(s) in 1m 08s
+warning: the following packages contain code that will be rejected by a future version of Rust: core v0.0.0 (/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core), memchr v2.8.2
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+Converting ELF to BIN format...
+  elf: /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor
+  bin: /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-objcopy --strip-all -O binary /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+qemu-system-aarch64 -nographic -cpu cortex-a72 -machine virt,virtualization=on,gic-version=3 -smp 4 -m 8g -qmp unix:/tmp/axgdtb-a410614810017ed9c8c478118c75ca87/qmp.sock,server=on,wait=off -pidfile /tmp/axgdtb-a410614810017ed9c8c478118c75ca87/qemu.pid -name axvisor-guest-dtb-a410614810017ed9c8c478118c75ca87 -kernel /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+VM Load @0x40200000
+VM Load Offset: 0xffff0000c0200000
+Memory Map:
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000040600000 (4 MiB)
+  Free   0x00000040600000 - 0x00000240000000 (7.99 GiB)
+Initialize RAM allocator: 0x40600000..0x240000000
+Reserving CPU-local areas
+CPU-local area stride: 0x44000 bytes
+Total CPU-local allocation: 0x110000 bytes (4 CPUs)
+Flushed RAM used range to memory map: 0x40600000..0x40700000, current: 0x40700000
+Flushed RAM used range to memory map: 0x40700000..0x40810000, current: 0x40810000
+CPU-local areas allocated at 0x40700000 - 0x40810000
+EL: 2
+Mapping early memory regions...
+Ram                 : [0x0000000040000000, 0x0000000240000000) -> [0x0000000040000000, 0x0000000240000000) (8 GiB)
+KImage              : [0x0000ffff80000000, 0x0000ffff80400000) -> [0x0000000040200000, 0x0000000040600000) (4 MiB)
+PerCpu              : [0x0000ff0040700000, 0x0000ff0040810000) -> [0x0000000040700000, 0x0000000040810000) (1.06 MiB)
+Debug serial        : [0x0000000009000000, 0x0000000009001000) -> [0x0000000009000000, 0x0000000009001000) (4 KiB)
+Boot page table at physical address: 0x40810000
+Setting up table registers...
+MMU Entry point at physical address: 0x402ef614
+Trap vector at 0xffff800f3800
+Memory Map:
+  MMIO   0x00000009000000 - 0x00000009001000 (4 KiB)
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000040600000 (4 MiB)
+  Rsv    0x00000040600000 - 0x00000040700000 (1 MiB)
+  PerCPU 0x00000040700000 - 0x00000040810000 (1.06 MiB)
+  Rsv    0x00000040810000 - 0x0000004081a000 (40 KiB)
+  Free   0x0000004081a000 - 0x00000240000000 (7.99 GiB)
+Jumping to main entry point at 0xffff800db140 with SP 0x0000ff0040744000
+
+       d8888                            .d88888b.   .d8888b.
+      d88888                           d88P" "Y88b d88P  Y88b
+     d88P888                           888     888 Y88b.
+    d88P 888 888d888  .d8888b  .d88b.  888     888  "Y888b.
+   d88P  888 888P"   d88P"    d8P  Y8b 888     888     "Y88b.
+  d88P   888 888     888      88888888 888     888       "888
+ d8888888888 888     Y88b.    Y8b.     Y88b. .d88P Y88b  d88P
+d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
+
+arch = aarch64
+platform = linux,dummy-virt
+target = aarch64-unknown-none-softfloat
+build_mode = 
+log_level = info
+backtrace = false
+smp = 4
+
+[37m[  0.088477 ax_runtime:217] [32mLogging is enabled.[m
+[m[37m[  0.089089 ax_runtime:218] [32mPrimary CPU 0 started, arg = 0x40600000.[m
+[m[37m[  0.089240 ax_runtime:220] [32mFound physcial memory regions:[m
+[m[37m[  0.090623 ax_runtime:222] [32m  [PA:0x9000000, PA:0x9001000) mmio (READ | WRITE | DEVICE | RESERVED)[m
+[m[37m[  0.090952 ax_runtime:222] [32m  [PA:0x40000000, PA:0x40200000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.091135 ax_runtime:222] [32m  [PA:0x40200000, PA:0x40600000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091299 ax_runtime:222] [32m  [PA:0x40600000, PA:0x40700000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091454 ax_runtime:222] [32m  [PA:0x40700000, PA:0x40810000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091604 ax_runtime:222] [32m  [PA:0x40810000, PA:0x4081a000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091742 ax_runtime:222] [32m  [PA:0x4081a000, PA:0x240000000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.091927 ax_runtime:367] [32mInitialize global memory allocator...[m
+[m[37m[  0.092071 ax_runtime:368] [32m  use buddy-slab-allocator allocator.[m
+[m[37m[  0.092383 ax_alloc::buddy_slab:158] [32mInitialize global memory allocator, start_vaddr: 0x4081a000, size: 0x1ff7e6000[m
+[m[37m[  0.109694 ax_alloc::buddy_slab:410] [32mglobal allocator initialized[m
+[m[37m[  0.109972 ax_alloc::buddy_slab:168] [32mAdd memory region, start_vaddr: 0x40000000, size: 0x200000[m
+[m[37m[  0.110202 buddy_slab_allocator::global:143] [32mGlobalAllocator: skip region 0x40000000+0x200000, no allocator-visible memory after 2097152 alignment[m
+[m[37m[  0.110629 ax_runtime:257] [32mkernel aspace: [VA:0x0, VA:0xffffffffffffffff)[m
+[m[37m[  0.110848 ax_mm:92] [32mInitialize virtual memory management...[m
+[m[37m[  0.629034 ax_runtime:269] [32mInitialize platform devices...[m
+[m[37m[  0.637996 someboot::arch::power:23] [32mPower management method : SMC[m
+[m[37m[  0.638299 somehal::driver:5] [32mInitializing rdrive with FDT at 0x40600000[m
+[m[37m[  0.666893 ax_task::api:146] [32mInitialize scheduling...[m
+[m[37m[  0.668528 ax_task::api:154] [32m  use FIFO scheduler.[m
+[m[37m[  0.668679 ax_runtime:295] [32mInitialize interrupt handlers...[m
+[m[37m[  0.673484 ax_runtime::devices:2] [32mProbe platform devices...[m
+[m[37m[  0.681256 ax_runtime::mp:79] [32mSecondary CPU 1 started.[m
+[m[37m[  0.683590 ax_runtime::mp:107] [32mSecondary CPU 1 init OK.[m
+[m[37m[  0.683600 ax_runtime::mp:79] [32mSecondary CPU 2 started.[m
+[m[37m[  0.686795 ax_runtime::mp:107] [32mSecondary CPU 2 init OK.[m
+[m[37m[  0.687261 ax_runtime::mp:79] [32mSecondary CPU 3 started.[m
+[m[37m[  0.687330 ax_runtime:343] [32mPrimary CPU 0 init OK.[m
+[m[37m[  0.690847 ax_runtime::mp:107] [32mSecondary CPU 3 init OK.[m
+[m
+
+       d8888            888     888  d8b
+      d88888            888     888  Y8P
+     d88P888            888     888
+    d88P 888  888  888  Y88b   d88P  888  .d8888b    .d88b.   888d888
+   d88P  888  `Y8bd8P'   Y88b d88P   888  88K       d88""88b  888P"
+  d88P   888    X88K      Y88o88P    888  "Y8888b.  888  888  888
+ d8888888888  .d8""8b.     Y888P     888       X88  Y88..88P  888
+d88P     888  888  888      Y8P      888   88888P'   "Y88P"   888
+
+
+by AxVisor Team
+
+[37m[  0.695043 0:2 axvisor:52] [32mStarting virtualization...[m
+[m[37m[  0.695306 0:2 axvm::host::arceos:205] [32mEnabling hardware virtualization support on all cores...[m
+[m[37m[  0.695525 0:2 axvm::host::arceos:211] [32mCore 0 is initializing hardware virtualization support...[m
+[m[37m[  0.695736 0:2 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.696611 0:2 axvm::host::arceos:213] [32mHardware virtualization support enabled on core 0[m
+[m[37m[  0.700845 1:10 axvm::host::arceos:223] [32mCore 1 is initializing hardware virtualization support...[m
+[m[37m[  0.701761 1:10 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.701962 1:10 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 1[m
+[m[37m[  0.702268 2:11 axvm::host::arceos:223] [32mCore 2 is initializing hardware virtualization support...[m
+[m[37m[  0.702421 2:11 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.702546 2:11 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 2[m
+[m[37m[  0.703935 0:2 axvm::host::arceos:239] [32mWaiting for all cores to enable hardware virtualization...[m
+[m[37m[  0.703933 3:12 axvm::host::arceos:223] [32mCore 3 is initializing hardware virtualization support...[m
+[m[37m[  0.704256 3:12 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.704388 3:12 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 3[m
+[m[37m[  0.704748 0:2 axvm::host::arceos:255] [32mAll cores have enabled hardware virtualization support.[m
+[m[37m[  0.705022 0:2 axvisor::config:94] [32mUsing static VM configs.[m
+[m[37m[  0.721265 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@0, node_id: 0x0, guest_cpu_id: 0x0[m
+[m[37m[  0.721567 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@1, node_id: 0x1, guest_cpu_id: 0x1[m
+[m[37m[  0.721814 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@2, node_id: 0x2, guest_cpu_id: 0x2[m
+[m[37m[  0.722016 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@3, node_id: 0x3, guest_cpu_id: 0x3[m
+[m[37m[  0.722291 0:2 axvm::arch::aarch64::fdt::core::parser:393] [32mFound 4 host CPU nodes[m
+[m[37m[  0.722640 0:2 axvm::arch::aarch64::fdt::core:80] [32mVM[1] DTB not found, generating from the VM configuration[m
+[m[37m[  0.738918 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/pl011@9000000", "/intc@8000000/its@8080000"][m
+[m[37m[  0.739714 0:2 axvm::arch::aarch64::fdt::core::device:107] [32mExcluding device: /intc@8000000/its@8080000[m
+[m[37m[  0.740034 0:2 axvm::arch::aarch64::fdt::core::device:107] [32mExcluding device: /pl011@9000000[m
+[m[37m[  0.772500 0:2 axvisor::config:137] [32mCreating VM[1] "zephyr-qemu-pl011-framed"[m
+[m[37m[  0.776303 0:2 axvm::vm:446] [32mVM created: id=1[m
+[m[37m[  1.019675 0:2 axvisor::config:149] [32mVM[1] created success, loading images...[m
+[m
+AXVISOR_GUEST_DTB_READY vm=1 gpa=0x47e00000 size=7640 hpa_segments=0x23a000000:7640
+[37m[  1.044768 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=0[m
+[m[37m[  1.045000 0:2 axdevice::device:268] [32mGPPT Distributor initialized with base GPA 0x8000000 and length 0x10000[m
+[m[37m[  1.045919 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=1[m
+[m[37m[  1.046155 0:2 axdevice::device:243] [32mGPPT Redistributor initialized for vCPU 0 with base GPA 0x80a0000 and length 0x20000[m
+[m[37m[  1.046772 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=2[m
+[m[37m[  1.081770 0:2 axvm::vm::prepare:102] [32mVM setup: id=1[m
+[m[37m[  1.082378 0:2 axvm::runtime:42] [32mInitializing VMM...[m
+[m[37m[  1.083841 0:2 axvm::runtime:47] [32mVMM starting, booting VMs...[m
+[m[37m[  1.084264 0:2 axvm::vm:666] [32mStarting VM[1][m
+[m[37m[  1.084619 0:2 axvm::runtime::vcpus:264] [32mSpawning task for VM[1] VCpu[0][m
+[m[37m[  1.085228 0:2 axvm::runtime::vcpus:281] [32mVCpu task Task(14, "VM[1]-VCpu[0]") created cpumask: [0, ][m
+[m[37m[  1.086167 0:2 axvm::runtime:53] [32mVM[1] boot success[m
+[m[37m[  1.087427 0:14 axvm::runtime::vcpus:335] [32mVM[1] VCpu[0] waiting for running[m
+[m[37m[  1.087718 0:14 axvm::runtime::vcpus:338] [32mVM[1] VCpu[0] running...[m
+[m
+AXVISOR_STAGE2_HPA_POSTRUN vm=1 vcpu=0 kind=alloc gpa=0x40000000 hpa=0x232200000 page_size=4096 identity=0
+[37m[  1.091253 3:13 axvisor::guest_console:79] [32mGuest console drain task running on dedicated host CPU 3[m
+[m
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=0 len=2 total=2 dropped=0 dma=0 hex=2a2a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=1 len=3 total=5 dropped=0 dma=0 hex=2a2042
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=2 len=1 total=6 dropped=0 dma=0 hex=6f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=3 len=2 total=8 dropped=0 dma=0 hex=6f74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=4 len=1 total=9 dropped=0 dma=0 hex=69
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=5 len=1 total=10 dropped=0 dma=0 hex=6e
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=6 len=1 total=11 dropped=0 dma=0 hex=67
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=7 len=14 total=25 dropped=0 dma=0 hex=205a6570687972204f5320627569
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=8 len=1 total=26 dropped=0 dma=0 hex=6c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=9 len=1 total=27 dropped=0 dma=0 hex=64
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=10 len=13 total=40 dropped=0 dma=0 hex=2076342e342e30202a2a2a0d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=11 len=1 total=41 dropped=0 dma=0 hex=54
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=12 len=1 total=42 dropped=0 dma=0 hex=47
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=13 len=2 total=44 dropped=0 dma=0 hex=4f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=14 len=2 total=46 dropped=0 dma=0 hex=5f5a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=15 len=1 total=47 dropped=0 dma=0 hex=45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=16 len=1 total=48 dropped=0 dma=0 hex=50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=17 len=1 total=49 dropped=0 dma=0 hex=48
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=18 len=2 total=51 dropped=0 dma=0 hex=5952
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=19 len=2 total=53 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=20 len=1 total=54 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=21 len=1 total=55 dropped=0 dma=0 hex=4f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=22 len=2 total=57 dropped=0 dma=0 hex=4b45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=23 len=1 total=58 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=24 len=7 total=65 dropped=0 dma=0 hex=53544152542070
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=25 len=2 total=67 dropped=0 dma=0 hex=6572
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=26 len=2 total=69 dropped=0 dma=0 hex=696f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=27 len=1 total=70 dropped=0 dma=0 hex=64
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=28 len=2 total=72 dropped=0 dma=0 hex=5f6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=29 len=1 total=73 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=30 len=1 total=74 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=31 len=14 total=88 dropped=0 dma=0 hex=3130302073616d706c65733d3130
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=32 len=1 total=89 dropped=0 dma=0 hex=0d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=33 len=1 total=90 dropped=0 dma=0 hex=0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=34 len=7 total=97 dropped=0 dma=0 hex=54474f535f5a45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=35 len=1 total=98 dropped=0 dma=0 hex=50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=36 len=1 total=99 dropped=0 dma=0 hex=48
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=37 len=14 total=113 dropped=0 dma=0 hex=59525f534d4f4b455f53414d504c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=38 len=18 total=131 dropped=0 dma=0 hex=45207365713d3120757074696d655f6d733d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=39 len=2 total=133 dropped=0 dma=0 hex=3133
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=40 len=14 total=147 dropped=0 dma=0 hex=302064656c74615f6d733d313230
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=41 len=2 total=149 dropped=0 dma=0 hex=0d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=42 len=11 total=160 dropped=0 dma=0 hex=54474f535f5a4550485952
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=43 len=2 total=162 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=44 len=1 total=163 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=45 len=1 total=164 dropped=0 dma=0 hex=4f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=46 len=16 total=180 dropped=0 dma=0 hex=4b455f53414d504c45207365713d3220
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=47 len=1 total=181 dropped=0 dma=0 hex=75
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=48 len=1 total=182 dropped=0 dma=0 hex=70
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=49 len=14 total=196 dropped=0 dma=0 hex=74696d655f6d733d323530206465
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=50 len=1 total=197 dropped=0 dma=0 hex=6c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=51 len=1 total=198 dropped=0 dma=0 hex=74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=52 len=2 total=200 dropped=0 dma=0 hex=615f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=53 len=1 total=201 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=54 len=1 total=202 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=55 len=1 total=203 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=56 len=1 total=204 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=57 len=2 total=206 dropped=0 dma=0 hex=3230
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=58 len=2 total=208 dropped=0 dma=0 hex=0d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=59 len=3 total=211 dropped=0 dma=0 hex=54474f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=60 len=15 total=226 dropped=0 dma=0 hex=535f5a45504859525f534d4f4b455f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=61 len=2 total=228 dropped=0 dma=0 hex=5341
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=62 len=14 total=242 dropped=0 dma=0 hex=4d504c45207365713d3320757074
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=63 len=1 total=243 dropped=0 dma=0 hex=69
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=64 len=1 total=244 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=65 len=1 total=245 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=66 len=2 total=247 dropped=0 dma=0 hex=5f6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=67 len=2 total=249 dropped=0 dma=0 hex=733d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=68 len=1 total=250 dropped=0 dma=0 hex=33
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=69 len=1 total=251 dropped=0 dma=0 hex=37
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=70 len=2 total=253 dropped=0 dma=0 hex=3020
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=71 len=1 total=254 dropped=0 dma=0 hex=64
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=72 len=2 total=256 dropped=0 dma=0 hex=656c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=73 len=2 total=258 dropped=0 dma=0 hex=7461
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=74 len=1 total=259 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=75 len=2 total=261 dropped=0 dma=0 hex=6d73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=76 len=1 total=262 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=77 len=2 total=264 dropped=0 dma=0 hex=3132
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=78 len=3 total=267 dropped=0 dma=0 hex=300d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=79 len=5 total=272 dropped=0 dma=0 hex=54474f535f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=80 len=1 total=273 dropped=0 dma=0 hex=5a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=81 len=22 total=295 dropped=0 dma=0 hex=45504859525f534d4f4b455f53414d504c4520736571
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=82 len=1 total=296 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=83 len=15 total=311 dropped=0 dma=0 hex=3420757074696d655f6d733d343930
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=84 len=1 total=312 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=85 len=3 total=315 dropped=0 dma=0 hex=64656c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=86 len=1 total=316 dropped=0 dma=0 hex=74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=87 len=1 total=317 dropped=0 dma=0 hex=61
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=88 len=1 total=318 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=89 len=1 total=319 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=90 len=1 total=320 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=91 len=2 total=322 dropped=0 dma=0 hex=3d31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=92 len=1 total=323 dropped=0 dma=0 hex=32
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=93 len=2 total=325 dropped=0 dma=0 hex=300d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=94 len=1 total=326 dropped=0 dma=0 hex=0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=95 len=11 total=337 dropped=0 dma=0 hex=54474f535f5a4550485952
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=96 len=2 total=339 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=97 len=1 total=340 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=98 len=1 total=341 dropped=0 dma=0 hex=4f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=99 len=2 total=343 dropped=0 dma=0 hex=4b45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=100 len=1 total=344 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=101 len=1 total=345 dropped=0 dma=0 hex=53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=102 len=1 total=346 dropped=0 dma=0 hex=41
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=103 len=1 total=347 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=104 len=2 total=349 dropped=0 dma=0 hex=504c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=105 len=1 total=350 dropped=0 dma=0 hex=45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=106 len=1 total=351 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=107 len=3 total=354 dropped=0 dma=0 hex=736571
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=108 len=1 total=355 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=109 len=1 total=356 dropped=0 dma=0 hex=35
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=110 len=1 total=357 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=111 len=1 total=358 dropped=0 dma=0 hex=75
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=112 len=3 total=361 dropped=0 dma=0 hex=707469
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=113 len=1 total=362 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=114 len=1 total=363 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=115 len=1 total=364 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=116 len=2 total=366 dropped=0 dma=0 hex=6d73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=117 len=2 total=368 dropped=0 dma=0 hex=3d36
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=118 len=1 total=369 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=119 len=2 total=371 dropped=0 dma=0 hex=3020
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=120 len=1 total=372 dropped=0 dma=0 hex=64
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=121 len=2 total=374 dropped=0 dma=0 hex=656c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=122 len=1 total=375 dropped=0 dma=0 hex=74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=123 len=1 total=376 dropped=0 dma=0 hex=61
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=124 len=2 total=378 dropped=0 dma=0 hex=5f6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=125 len=1 total=379 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=126 len=1 total=380 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=127 len=2 total=382 dropped=0 dma=0 hex=3132
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=128 len=1 total=383 dropped=0 dma=0 hex=30
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=129 len=1 total=384 dropped=0 dma=0 hex=0d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=130 len=1 total=385 dropped=0 dma=0 hex=0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=131 len=7 total=392 dropped=0 dma=0 hex=54474f535f5a45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=132 len=1 total=393 dropped=0 dma=0 hex=50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=133 len=2 total=395 dropped=0 dma=0 hex=4859
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=134 len=1 total=396 dropped=0 dma=0 hex=52
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=135 len=2 total=398 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=136 len=1 total=399 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=137 len=1 total=400 dropped=0 dma=0 hex=4f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=138 len=1 total=401 dropped=0 dma=0 hex=4b
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=139 len=2 total=403 dropped=0 dma=0 hex=455f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=140 len=2 total=405 dropped=0 dma=0 hex=5341
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=141 len=1 total=406 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=142 len=1 total=407 dropped=0 dma=0 hex=50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=143 len=2 total=409 dropped=0 dma=0 hex=4c45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=144 len=1 total=410 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=145 len=1 total=411 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=146 len=2 total=413 dropped=0 dma=0 hex=6571
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=147 len=2 total=415 dropped=0 dma=0 hex=3d36
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=148 len=2 total=417 dropped=0 dma=0 hex=2075
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=149 len=2 total=419 dropped=0 dma=0 hex=7074
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=150 len=1 total=420 dropped=0 dma=0 hex=69
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=151 len=1 total=421 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=152 len=2 total=423 dropped=0 dma=0 hex=655f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=153 len=2 total=425 dropped=0 dma=0 hex=6d73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=154 len=2 total=427 dropped=0 dma=0 hex=3d37
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=155 len=1 total=428 dropped=0 dma=0 hex=33
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=156 len=12 total=440 dropped=0 dma=0 hex=302064656c74615f6d733d31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=157 len=2 total=442 dropped=0 dma=0 hex=3230
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=158 len=1 total=443 dropped=0 dma=0 hex=0d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=159 len=1 total=444 dropped=0 dma=0 hex=0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=160 len=9 total=453 dropped=0 dma=0 hex=54474f535f5a455048
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=161 len=1 total=454 dropped=0 dma=0 hex=59
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=162 len=2 total=456 dropped=0 dma=0 hex=525f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=163 len=1 total=457 dropped=0 dma=0 hex=53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=164 len=1 total=458 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=165 len=2 total=460 dropped=0 dma=0 hex=4f4b
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=166 len=1 total=461 dropped=0 dma=0 hex=45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=167 len=2 total=463 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=168 len=1 total=464 dropped=0 dma=0 hex=41
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=169 len=2 total=466 dropped=0 dma=0 hex=4d50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=170 len=1 total=467 dropped=0 dma=0 hex=4c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=171 len=17 total=484 dropped=0 dma=0 hex=45207365713d3720757074696d655f6d73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=172 len=1 total=485 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=173 len=3 total=488 dropped=0 dma=0 hex=383530
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=174 len=2 total=490 dropped=0 dma=0 hex=2064
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=175 len=1 total=491 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=176 len=1 total=492 dropped=0 dma=0 hex=6c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=177 len=1 total=493 dropped=0 dma=0 hex=74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=178 len=10 total=503 dropped=0 dma=0 hex=615f6d733d3132300d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=179 len=8 total=511 dropped=0 dma=0 hex=54474f535f5a4550
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=180 len=2 total=513 dropped=0 dma=0 hex=4859
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=181 len=14 total=527 dropped=0 dma=0 hex=525f534d4f4b455f53414d504c45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=182 len=1 total=528 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=183 len=1 total=529 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=184 len=1 total=530 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=185 len=1 total=531 dropped=0 dma=0 hex=71
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=186 len=1 total=532 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=187 len=1 total=533 dropped=0 dma=0 hex=38
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=188 len=2 total=535 dropped=0 dma=0 hex=2075
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=189 len=2 total=537 dropped=0 dma=0 hex=7074
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=190 len=1 total=538 dropped=0 dma=0 hex=69
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=191 len=1 total=539 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=192 len=2 total=541 dropped=0 dma=0 hex=655f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=193 len=1 total=542 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=194 len=2 total=544 dropped=0 dma=0 hex=733d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=195 len=1 total=545 dropped=0 dma=0 hex=39
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=196 len=1 total=546 dropped=0 dma=0 hex=37
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=197 len=2 total=548 dropped=0 dma=0 hex=3020
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=198 len=1 total=549 dropped=0 dma=0 hex=64
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=199 len=3 total=552 dropped=0 dma=0 hex=656c74
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=200 len=1 total=553 dropped=0 dma=0 hex=61
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=201 len=1 total=554 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=202 len=2 total=556 dropped=0 dma=0 hex=6d73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=203 len=1 total=557 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=204 len=1 total=558 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=205 len=2 total=560 dropped=0 dma=0 hex=3230
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=206 len=2 total=562 dropped=0 dma=0 hex=0d0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=207 len=6 total=568 dropped=0 dma=0 hex=54474f535f5a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=208 len=11 total=579 dropped=0 dma=0 hex=45504859525f534d4f4b45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=209 len=2 total=581 dropped=0 dma=0 hex=5f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=210 len=10 total=591 dropped=0 dma=0 hex=414d504c45207365713d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=211 len=2 total=593 dropped=0 dma=0 hex=3920
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=212 len=11 total=604 dropped=0 dma=0 hex=757074696d655f6d733d31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=213 len=1 total=605 dropped=0 dma=0 hex=30
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=214 len=15 total=620 dropped=0 dma=0 hex=39302064656c74615f6d733d313230
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=215 len=1 total=621 dropped=0 dma=0 hex=0d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=216 len=1 total=622 dropped=0 dma=0 hex=0a
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=217 len=5 total=627 dropped=0 dma=0 hex=54474f535f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=218 len=14 total=641 dropped=0 dma=0 hex=5a45504859525f534d4f4b455f53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=219 len=2 total=643 dropped=0 dma=0 hex=414d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=220 len=1 total=644 dropped=0 dma=0 hex=50
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=221 len=1 total=645 dropped=0 dma=0 hex=4c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=222 len=1 total=646 dropped=0 dma=0 hex=45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=223 len=2 total=648 dropped=0 dma=0 hex=2073
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=224 len=1 total=649 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=225 len=2 total=651 dropped=0 dma=0 hex=713d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=226 len=1 total=652 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=227 len=2 total=654 dropped=0 dma=0 hex=3020
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=228 len=1 total=655 dropped=0 dma=0 hex=75
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=229 len=2 total=657 dropped=0 dma=0 hex=7074
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=230 len=2 total=659 dropped=0 dma=0 hex=696d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=231 len=1 total=660 dropped=0 dma=0 hex=65
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=232 len=1 total=661 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=233 len=1 total=662 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=234 len=2 total=664 dropped=0 dma=0 hex=733d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=235 len=2 total=666 dropped=0 dma=0 hex=3132
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=236 len=1 total=667 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=237 len=1 total=668 dropped=0 dma=0 hex=30
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=238 len=1 total=669 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=239 len=11 total=680 dropped=0 dma=0 hex=64656c74615f6d733d3132
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=240 len=11 total=691 dropped=0 dma=0 hex=300d0a54474f535f5a4550
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=241 len=2 total=693 dropped=0 dma=0 hex=4859
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=242 len=2 total=695 dropped=0 dma=0 hex=525f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=243 len=1 total=696 dropped=0 dma=0 hex=53
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=244 len=1 total=697 dropped=0 dma=0 hex=4d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=245 len=2 total=699 dropped=0 dma=0 hex=4f4b
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=246 len=1 total=700 dropped=0 dma=0 hex=45
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=247 len=1 total=701 dropped=0 dma=0 hex=5f
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=248 len=2 total=703 dropped=0 dma=0 hex=5041
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=249 len=2 total=705 dropped=0 dma=0 hex=5353
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=250 len=1 total=706 dropped=0 dma=0 hex=20
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=251 len=1 total=707 dropped=0 dma=0 hex=73
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=252 len=1 total=708 dropped=0 dma=0 hex=61
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=253 len=1 total=709 dropped=0 dma=0 hex=6d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=254 len=2 total=711 dropped=0 dma=0 hex=706c
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=255 len=2 total=713 dropped=0 dma=0 hex=6573
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=256 len=1 total=714 dropped=0 dma=0 hex=3d
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=257 len=1 total=715 dropped=0 dma=0 hex=31
+
+AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=1 name=zephyr gen=0 seq=258 len=3 total=718 dropped=0 dma=0 hex=300d0a
+qemu-system-aarch64: terminating on signal 2 from pid 294 (python3)
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-zephyr-stage2-evidence.toml ... done (168.76s)

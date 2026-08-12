@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase2-linux-smp2-upstream-20260726-r2",
+  "guest": "linux-smp2",
+  "startedAtUtc": "2026-07-26T16:55:11Z",
+  "finishedAtUtc": "2026-07-26T17:00:02Z",
+  "durationSeconds": 291,
+  "status": "passed",
+  "setupExitCode": 0,
+  "qemuExitCode": 0,
+  "successMarker": "linux-smp2-pass",
+  "successMarkerSeen": true
+}

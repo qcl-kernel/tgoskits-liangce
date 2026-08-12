@@ -1,0 +1,6 @@
+schema_version=1
+base_commit=01e053105e243d1fdd1c03f6f850b266efbe8de0
+tracked_changes=tracked-worktree.patch
+untracked_paths=untracked-source-files.zlist (NUL-delimited)
+untracked_payload=untracked-source.tar
+reconstruct_in_clean_checkout=git apply tracked-worktree.patch, then extract untracked-source.tar

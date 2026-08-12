@@ -1,0 +1,527 @@
+use alloc::{
+    boxed::Box,
+    string::ToString,
+    sync::{Arc, Weak},
+    vec::Vec,
+};
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+use ax_errno::{AxError, AxResult};
+use ax_fs_ng::vfs::{CachedFile, FileFlags};
+use ax_memory_addr::{PAGE_SIZE_4K, PhysAddr, VirtAddr, VirtAddrRange};
+use ax_runtime::hal::paging::{MappingFlags, PageSize, PageTableCursor, PagingError};
+use ax_sync::Mutex;
+use axfs_ng_vfs::Location;
+use weak_map::StrongRef;
+
+use super::{
+    AddrSpace, Backend, BackendFileInfo, BackendOps, CloneMapAccounting, MemoryAccounting,
+    PopulateCallback, RssKind, pages_in,
+};
+use crate::mm::flush_tlb_range_sync;
+
+#[doc(hidden)]
+pub struct FileBackendInner {
+    shared: bool,
+    file_data: Mutex<FileBackendInnerData>,
+    cache: CachedFile,
+    flags: FileFlags,
+    handle: AtomicUsize,
+    futex_handle: Arc<()>,
+}
+
+#[derive(Clone)]
+struct FileBackendInnerData {
+    start: VirtAddr,
+    offset_page: u32,
+}
+
+impl Drop for FileBackendInner {
+    fn drop(&mut self) {
+        let handle = self.handle.load(Ordering::Acquire);
+        if handle != 0 {
+            unsafe {
+                self.cache.remove_evict_listener(handle);
+            }
+        }
+    }
+}
+impl FileBackendInner {
+    pub fn register_listener(self: &Arc<Self>, aspace: &Arc<Mutex<AddrSpace>>) {
+        if self.handle.load(Ordering::Acquire) != 0 {
+            panic!("Listener already registered");
+        }
+        let aspace = Arc::downgrade(aspace);
+        let writeback_aspace = aspace.clone();
+        let this = Arc::downgrade(self);
+        let writeback = this.clone();
+        let handle = self.cache.add_page_listener(
+            move |pn, _page| -> bool {
+                let Some(this) = this.upgrade() else {
+                    // Backend dropped — no mappings remain, safe to free.
+                    return true;
+                };
+                let Some(aspace) = writeback_aspace.upgrade() else {
+                    // The address space has been dropped, nothing to do.
+                    return true;
+                };
+                let Some(mut aspace) = aspace.try_lock() else {
+                    // Cannot acquire AddrSpace lock (contention with populate
+                    // or another thread).  Return false so the reclaim path
+                    // puts the page back into the cache instead of freeing it
+                    // — dropping the page here would leave a dangling PTE.
+                    return false;
+                };
+                this.on_evict(pn, &mut aspace);
+                true
+            },
+            move |pn| -> bool {
+                let Some(this) = writeback.upgrade() else {
+                    return true;
+                };
+                let Some(aspace) = aspace.upgrade() else {
+                    return true;
+                };
+                let mut aspace = aspace.lock();
+                this.protect_dirty_page(pn, &mut aspace)
+            },
+        );
+        self.handle.store(handle, Ordering::Release);
+    }
+
+    fn on_evict(self: &Arc<Self>, pn: u32, aspace: &mut AddrSpace) {
+        let file_data = self.file_data.lock();
+        let Some(pn) = pn.checked_sub(file_data.offset_page) else {
+            return;
+        };
+        let vaddr = file_data.start + pn as usize * PageSize::Size4K as usize;
+        if !aspace.find_area(vaddr).is_some_and(
+            |it| matches!(it.backend(), Backend::File(file) if Arc::ptr_eq(&file.0, self)),
+        ) {
+            // Ignore if the page is not controlled by this file mapping.
+            return;
+        }
+
+        let kind = if self.shared {
+            RssKind::Shmem
+        } else {
+            RssKind::File
+        };
+        let unmapped = {
+            let pt = aspace.page_table_mut();
+            match pt.cursor().unmap(vaddr) {
+                Ok(_) => true,
+                Err(PagingError::NotMapped) => false,
+                Err(err) => {
+                    warn!("Failed to unmap page {:?}: {:?}", vaddr, err);
+                    false
+                }
+            }
+        };
+        if unmapped {
+            aspace.rss().dec(kind, 1);
+        }
+    }
+
+    fn protect_dirty_page(self: &Arc<Self>, pn: u32, aspace: &mut AddrSpace) -> bool {
+        let file_data = self.file_data.lock();
+        let Some(pn) = pn.checked_sub(file_data.offset_page) else {
+            return true;
+        };
+        let vaddr = file_data.start + pn as usize * PageSize::Size4K as usize;
+        if !aspace.find_area(vaddr).is_some_and(
+            |it| matches!(it.backend(), Backend::File(file) if Arc::ptr_eq(&file.0, self)),
+        ) {
+            return true;
+        }
+
+        let pt = aspace.page_table_mut();
+        let mut cursor = pt.cursor();
+        match cursor.query(vaddr) {
+            Ok((paddr, flags, PageSize::Size4K)) => {
+                // A writable shared mapping can dirty this page concurrently with the
+                // writeback snapshot, so drop WRITE to fault the next store. A read-only
+                // shared mapping cannot dirty the page through the mapping at all (e.g.
+                // bbolt maps its db read-only and writes through pwrite), so there is
+                // nothing to protect - leave it mapped and report success rather than
+                // failing the fdatasync with EBUSY.
+                if flags.contains(MappingFlags::WRITE) {
+                    let new_flags = flags - MappingFlags::WRITE;
+                    if let Err(err) = cursor.remap(vaddr, paddr, new_flags) {
+                        warn!(
+                            "Failed to write-protect dirty mmap page {:?}: {:?}",
+                            vaddr, err
+                        );
+                        return false;
+                    }
+                    flush_tlb_range_sync(vaddr, PAGE_SIZE_4K);
+                }
+                true
+            }
+            Ok((_, _, page_size)) => {
+                warn!(
+                    "Unexpected file-backed mmap page size during writeback protect: {:?}",
+                    page_size
+                );
+                false
+            }
+            Err(PagingError::NotMapped) => true,
+            Err(err) => {
+                warn!("Failed to query dirty mmap page {:?}: {:?}", vaddr, err);
+                false
+            }
+        }
+    }
+}
+
+/// File-backed mapping backend.
+#[derive(Clone)]
+pub struct FileBackend(Arc<FileBackendInner>, Weak<Mutex<AddrSpace>>);
+impl FileBackend {
+    fn check_flags(&self, flags: MappingFlags) -> AxResult {
+        let mut required_flags = FileFlags::empty();
+        if flags.contains(MappingFlags::READ) {
+            required_flags |= FileFlags::READ;
+        }
+        if flags.contains(MappingFlags::WRITE) {
+            required_flags |= FileFlags::WRITE;
+        }
+
+        if !self.0.flags.contains(required_flags) {
+            return Err(AxError::PermissionDenied);
+        }
+        Ok(())
+    }
+
+    /// Clone with a different start address and a fresh evict listener.
+    pub fn with_start(&self, new_start: VirtAddr, aspace: &Arc<Mutex<AddrSpace>>) -> Self {
+        let mut file_data = self.0.file_data.lock().clone();
+        file_data.start = new_start;
+        let inner = Arc::new(FileBackendInner {
+            shared: self.0.shared,
+            file_data: Mutex::new(file_data),
+            cache: self.0.cache.clone(),
+            flags: self.0.flags,
+            handle: AtomicUsize::new(0),
+            futex_handle: self.0.futex_handle.clone(),
+        });
+        inner.register_listener(aspace);
+        Self(inner, aspace.downgrade())
+    }
+
+    pub fn futex_handle(&self) -> Weak<()> {
+        Arc::downgrade(&self.0.futex_handle)
+    }
+
+    /// `true` when this file mapping is shared with the page cache (MAP_SHARED).
+    pub(crate) fn is_shared_file_map(&self) -> bool {
+        self.0.shared
+    }
+
+    /// Location of the backing file (used by memfd seal accounting).
+    pub(crate) fn cache_location(&self) -> &Location {
+        self.0.cache.location()
+    }
+
+    pub fn is_shared(&self) -> bool {
+        self.0.shared
+    }
+
+    fn rss_kind(&self) -> RssKind {
+        if self.0.shared {
+            RssKind::Shmem
+        } else {
+            RssKind::File
+        }
+    }
+
+    pub fn cache(&self) -> &CachedFile {
+        &self.0.cache
+    }
+
+    pub fn writeback_range(&self, range_start: VirtAddr, range_end: VirtAddr) -> AxResult {
+        let file_data = self.0.file_data.lock();
+
+        let offset_page = file_data.offset_page;
+        let mapping_start = file_data.start;
+        let local_start = range_start
+            .as_usize()
+            .saturating_sub(mapping_start.as_usize());
+        let local_end = range_end
+            .as_usize()
+            .saturating_sub(mapping_start.as_usize());
+
+        let start_pn = offset_page + (local_start / PAGE_SIZE_4K) as u32;
+        let end_pn = offset_page + local_end.div_ceil(PAGE_SIZE_4K) as u32;
+
+        let dirty_pns = self.0.cache.dirty_pages_in_range(start_pn, end_pn);
+
+        if dirty_pns.is_empty() {
+            return Ok(());
+        }
+
+        self.0
+            .cache
+            .writeback_pages(&dirty_pns)
+            .map_err(|_| AxError::Io)?;
+
+        Ok(())
+    }
+
+    pub fn file_info(&self) -> AxResult<BackendFileInfo> {
+        let loc = self.0.cache.location();
+        let name = loc.absolute_path().map(|pb| pb.to_string())?;
+        let offset = (self.0.file_data.lock().offset_page as u64) * PAGE_SIZE_4K as u64;
+        let inode = loc.inode();
+        let dev = loc.metadata()?.device;
+        Ok(BackendFileInfo {
+            path: name,
+            offset: Some(offset),
+            inode: Some(inode),
+            dev: Some(dev),
+            shared: self.0.shared,
+        })
+    }
+}
+
+impl BackendOps for FileBackend {
+    fn page_size(&self) -> PageSize {
+        PageSize::Size4K
+    }
+
+    fn map(
+        &self,
+        _range: VirtAddrRange,
+        flags: MappingFlags,
+        _acct: Option<&MemoryAccounting>,
+        _pt: &mut PageTableCursor,
+    ) -> AxResult {
+        self.check_flags(flags)
+    }
+
+    fn unmap(
+        &self,
+        range: VirtAddrRange,
+        acct: Option<&MemoryAccounting>,
+        pt: &mut PageTableCursor,
+    ) -> AxResult {
+        let kind = self.rss_kind();
+        for addr in pages_in(range, PageSize::Size4K)? {
+            match pt.unmap(addr) {
+                Ok(_) => {
+                    if let Some(acct) = acct {
+                        acct.dec(kind, 1);
+                    }
+                }
+                Err(PagingError::NotMapped) => {}
+                Err(err) => {
+                    warn!("Failed to unmap page {:?}: {:?}", addr, err);
+                    return Err(err.into());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn on_protect(
+        &self,
+        _range: VirtAddrRange,
+        new_flags: MappingFlags,
+        _pt: &mut PageTableCursor,
+    ) -> AxResult {
+        self.check_flags(new_flags)
+    }
+
+    fn populate(
+        &self,
+        range: VirtAddrRange,
+        flags: MappingFlags,
+        access_flags: MappingFlags,
+        acct: Option<&MemoryAccounting>,
+        pt: &mut PageTableCursor,
+    ) -> AxResult<(usize, Option<PopulateCallback>)> {
+        let mut pages = 0;
+        let mut to_be_evicted = Vec::new();
+        let kind = self.rss_kind();
+        let file_data = self.0.file_data.lock();
+        let start_page =
+            ((range.start - file_data.start) / PAGE_SIZE_4K) as u32 + file_data.offset_page;
+        // Pages at or beyond EOF must not be eagerly backed (Linux SIGBUS past EOF;
+        // without this bound MAP_POPULATE over a sparse mapping exhausts RAM).
+        let eof_page = self
+            .0
+            .cache
+            .file_len()
+            .unwrap_or(u64::MAX)
+            .div_ceil(PAGE_SIZE_4K as u64);
+        for (i, addr) in pages_in(range, PageSize::Size4K)?.enumerate() {
+            let pn = start_page + i as u32;
+            if (pn as u64) >= eof_page {
+                continue;
+            }
+            match pt.query(addr) {
+                Ok((paddr, page_flags, _)) => {
+                    if access_flags.contains(MappingFlags::WRITE)
+                        && !page_flags.contains(MappingFlags::WRITE)
+                    {
+                        self.0.cache.mark_mmap_dirty_page(pn)?;
+                        pt.remap(addr, paddr, flags)?;
+                        pages += 1;
+                    } else if page_flags.contains(access_flags) {
+                        pages += 1;
+                    }
+                }
+                // If the page is not mapped, try map it.
+                Err(PagingError::NotMapped) => {
+                    let map_flags = if self.0.cache.in_memory() {
+                        // For in memory files, we don't need to (and also
+                        // musn't) mark them dirty, so we can use the original
+                        // flags.
+                        flags
+                    } else {
+                        flags - MappingFlags::WRITE
+                    };
+                    self.0.cache.with_page_or_insert(pn, |page, evicted| {
+                        if let Some(evicted) = evicted {
+                            // Keep the evicted page (and thus its physical frame)
+                            // alive until `on_evict` below has torn down its mapping
+                            // and flushed the TLB. The eviction listener cannot unmap
+                            // here because the address space is already locked by this
+                            // populate, so the unmap is deferred; freeing the frame now
+                            // (by dropping the page) would leave the evicted VA mapped
+                            // to a frame that can be reallocated, so a sibling thread
+                            // preempted into userspace could read another page's data
+                            // through the stale mapping.
+                            to_be_evicted.push(evicted);
+                        }
+                        pt.map(
+                            addr,
+                            PhysAddr::from(page.paddr()?),
+                            PageSize::Size4K,
+                            map_flags,
+                        )?;
+                        if let Some(acct) = acct {
+                            acct.inc(kind, 1);
+                        }
+                        pages += 1;
+                        Ok(())
+                    })?;
+                }
+                Err(_) => return Err(AxError::BadAddress),
+            }
+        }
+        Ok((
+            pages,
+            if to_be_evicted.is_empty() {
+                None
+            } else {
+                let inner = self.0.clone();
+                Some(Box::new(move |aspace: &mut AddrSpace| {
+                    for (pn, page) in to_be_evicted {
+                        // Unmap (and TLB-flush via the cursor) the evicted VA first,
+                        // then drop the page to free its frame — never the reverse.
+                        //
+                        // The page cache is shared across all areas backed by the same
+                        // file. After mprotect splits a file mapping, `split` creates a
+                        // sibling FileBackendInner (same CachedFile, different
+                        // start/offset_page). A populate on one sub-area can evict a page
+                        // owned by another sub-area; `inner.on_evict` only covers
+                        // `inner`'s own page range (its `checked_sub` returns None
+                        // otherwise), so route the evicted page to every area sharing this
+                        // cache. `on_evict` self-validates (range + area ptr_eq), so only
+                        // the true owner unmaps. Without this, the sibling's PTE keeps
+                        // pointing at the just-freed frame — a use-after-free that
+                        // surfaces as a wild pointer (the JVM jimage on loongarch).
+                        let owners: Vec<_> = aspace
+                            .areas()
+                            .filter_map(|area| match area.backend() {
+                                Backend::File(fb) if fb.0.cache.ptr_eq(&inner.cache) => {
+                                    Some(fb.0.clone())
+                                }
+                                _ => None,
+                            })
+                            .collect();
+                        for owner in owners {
+                            owner.on_evict(pn, aspace);
+                        }
+                        drop(page);
+                    }
+                }))
+            },
+        ))
+    }
+
+    fn clone_map(
+        &self,
+        _range: VirtAddrRange,
+        _flags: MappingFlags,
+        _old_pt: &mut PageTableCursor,
+        _new_pt: &mut PageTableCursor,
+        new_aspace: &Arc<Mutex<AddrSpace>>,
+        _acct: CloneMapAccounting<'_>,
+    ) -> AxResult<Backend> {
+        let start = self.0.file_data.lock().start;
+        Ok(Backend::File(self.with_start(start, new_aspace)))
+    }
+
+    fn split(&mut self, align_diff: usize) -> Option<Backend> {
+        assert!(align_diff.is_multiple_of(PAGE_SIZE_4K));
+        if align_diff == 0 {
+            return None;
+        }
+        let file_data = self.0.file_data.lock();
+        let inner = Arc::new(FileBackendInner {
+            shared: self.0.shared,
+            file_data: Mutex::new(FileBackendInnerData {
+                start: file_data.start + align_diff,
+                offset_page: file_data.offset_page + (align_diff / PAGE_SIZE_4K) as u32,
+            }),
+            cache: self.0.cache.clone(),
+            flags: self.0.flags,
+            handle: AtomicUsize::new(0),
+            futex_handle: self.0.futex_handle.clone(),
+        });
+
+        {
+            let aspace = self.1.upgrade()?;
+            inner.register_listener(&aspace);
+        }
+
+        Some(Backend::File(FileBackend(inner, self.1.clone())))
+    }
+
+    fn shrink_left(&mut self, shrink_size: usize) {
+        assert!(shrink_size.is_multiple_of(PAGE_SIZE_4K));
+
+        let mut file_data = self.0.file_data.lock();
+        file_data.start += shrink_size;
+        file_data.offset_page += (shrink_size / PAGE_SIZE_4K) as u32;
+    }
+
+    fn shrink_right(&mut self, _shrink_size: usize) {
+        // shrinking right does not require any action since the file backend does not have any state
+    }
+}
+
+impl Backend {
+    pub fn new_file(
+        start: VirtAddr,
+        cache: CachedFile,
+        flags: FileFlags,
+        offset: usize,
+        aspace: &Arc<Mutex<AddrSpace>>,
+        shared: bool,
+    ) -> Self {
+        let offset_page = (offset / PAGE_SIZE_4K) as u32;
+        let inner = Arc::new(FileBackendInner {
+            shared,
+            file_data: Mutex::new(FileBackendInnerData { start, offset_page }),
+            cache,
+            flags,
+            handle: AtomicUsize::new(0),
+            futex_handle: Arc::new(()),
+        });
+        inner.register_listener(aspace);
+        Self::File(FileBackend(inner, aspace.downgrade()))
+    }
+}

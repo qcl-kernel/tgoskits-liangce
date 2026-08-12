@@ -1,0 +1,15 @@
+schema_version=1
+captured_at_utc=2026-07-26T17:03:53Z
+run_id=phase2-zephyr-axvisor-upstream-20260726
+git_commit=01e053105e243d1fdd1c03f6f850b266efbe8de0
+git_branch=contest/axvisor-ai-control
+zephyr_revision=684c9e8f32e4373a21098559f748f06915f950c9
+zephyr_manifest_sha256=9c3661dd82e5ab7f487e3c0a4eee8726978736eadb470a3a09a76c77a8f10f92
+zephyr_sdk_version=1.0.1
+zephyr_toolchain=aarch64-zephyr-elf
+west_version=1.5.0
+zephyr_board=qemu_cortex_a53
+uname=Linux LAPTOP-K8BRMIIL 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+cargo=cargo 1.99.0-nightly (59800466c 2026-07-07)
+qemu=QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.17)
+libclang=/lib/x86_64-linux-gnu/libclang-19.so.19

@@ -1,0 +1,12 @@
+[package]
+name = "ax-linked-list-r4l"
+version = "0.5.6"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = ["Wedson Almeida Filho <wedsonaf@google.com>", "WeiKang Guo <guoweikang.kernel@gmail.com>"]
+description = "Linked lists that supports arbitrary removal in constant time"
+keywords = ["list"]
+categories = ["no-std", "rust-patterns"]
+license = "Apache-2.0"
+
+[dependencies]

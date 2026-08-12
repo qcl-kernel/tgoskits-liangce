@@ -1,0 +1,16 @@
+## contest/axvisor-ai-control
+ M .gitattributes
+ M .github/workflows/ci.yml
+ M .gitignore
+ M os/axvisor/doc/qemu-quickstart.md
+ M os/axvisor/doc/qemu-quickstart_cn.md
+ M os/axvisor/scripts/quick-start.sh
+ M os/axvisor/scripts/setup_qemu.sh
+ M os/axvisor/xtask/src/main.rs
+ M scripts/test/check_ci_paths.py
+?? configs/
+?? results/
+?? scripts/contest/
+?? scripts/test/check_axvisor_image_cli.py
+?? scripts/test/check_axvisor_setup_command.py
+?? scripts/test/check_contest_baseline.py

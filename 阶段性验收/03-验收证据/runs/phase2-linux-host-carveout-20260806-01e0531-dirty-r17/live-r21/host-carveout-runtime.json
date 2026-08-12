@@ -1,0 +1,84 @@
+{
+  "artifactStatus": "runtime-log-observation-validated",
+  "captureStatusBinding": {
+    "artifactStatus": "capture-generated-unreviewed",
+    "expectedVmId": 1,
+    "hostDtb": {
+      "nonEmpty": true,
+      "sha256Match": true,
+      "sizeMatch": true
+    },
+    "liveLog": {
+      "pathMatch": true,
+      "sha256Match": true
+    },
+    "proofScope": "one-guest-launch-ready-same-session-qmp-capture-resume-identity-exit",
+    "schemaVersion": 1,
+    "status": "single_guest_live_capture_passed",
+    "validated": true,
+    "vmconfig": {
+      "sha256Match": true,
+      "sizeMatch": true
+    }
+  },
+  "doesNotProve": [
+    "Guest boot",
+    "MapReserved stage-2 mapping",
+    "passthrough DMA isolation",
+    "dual-Guest execution",
+    "Guest IP connectivity"
+  ],
+  "expectedCarveouts": [
+    {
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "vmId": 1
+    }
+  ],
+  "markers": [
+    {
+      "allocatorExcludedLine": 187,
+      "earlyReservedLine": 119,
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "vmId": 1
+    }
+  ],
+  "proofScope": "byte-bound-host-log-carveout-marker-observation",
+  "schemaVersion": 1,
+  "sources": {
+    "captureStatus": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\live-r21\\status.json",
+      "sha256": "ca6688a4ec55547b9fb509d9d55256c9c1ca2c9c24108b721bb7926222ea2071",
+      "size": 6889
+    },
+    "hostDtb": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\prepared\\host-carveout.dtb",
+      "sha256": "e5820a5a34d334af4c11713282cf13f5fa878386c0d5c7600207c3b758a2e63f",
+      "size": 8277
+    },
+    "hostDts": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\prepared\\host-carveout.dts",
+      "sha256": "5e90d354ab72123cbbc5c10a500187d8a1cb87a1cf8f6b740fa3d07c5ff6286f",
+      "size": 9878
+    },
+    "preflight": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\prepared\\host-carveout.preflight.json",
+      "sha256": "df0e845a69195d0f40be5092a2720ead4a4994b453da0ac810a3f8a4d1483e85",
+      "size": 1132
+    },
+    "rawLog": {
+      "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\live-r21\\axvisor-live.log",
+      "sha256": "77291a3917a6755e5bf74cf6716c6efc431614ffcee05c163a0869923fab16f3",
+      "size": 38257
+    },
+    "vmConfigs": [
+      {
+        "path": "results\\baseline\\runs\\phase2-linux-host-carveout-20260806-01e0531-dirty-r17\\configs\\vmconfig.map-reserved.toml",
+        "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0",
+        "size": 712
+      }
+    ]
+  },
+  "status": "host_carveout_markers_match_static_preflight"
+}

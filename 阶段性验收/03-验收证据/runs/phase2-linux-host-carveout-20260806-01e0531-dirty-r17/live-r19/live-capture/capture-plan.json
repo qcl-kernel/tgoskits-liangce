@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "marker-derived-unreviewed",
+  "status": "capture_planned",
+  "proofScope": "final-guest-dtb-physical-capture-plan",
+  "doesNotProve": [
+    "physical bytes were captured",
+    "captured bytes form valid flattened device trees",
+    "both guests booted",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "sourcePathBase": "capture-plan.json parent directory",
+  "source": {
+    "axvisorLog": {
+      "path": "axvisor-ready-prefix.log",
+      "sha256": "20b886347a8331d6c97e90107f48d0076a40ebf0d4bed069909aa91833aefa99"
+    }
+  },
+  "guests": [
+    {
+      "vmId": 1,
+      "gpa": "0x8fe00000",
+      "size": 7732,
+      "sourceLine": 279,
+      "assembledFileName": "guest-vm-1.final.dtb",
+      "segments": [
+        {
+          "index": 0,
+          "hpa": "0x8fe00000",
+          "length": 7732,
+          "fileName": "guest-vm-1.segment-000.bin",
+          "qmpOperation": "pmemsave"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+# Static outer-QEMU topology; no runner may treat this as a successful boot.
+# status: blocked_dma_console
+status = "blocked_dma_console"
+
+args = [
+  "-nographic",
+  "-cpu",
+  "cortex-a72",
+  "-machine",
+  "virt,virtualization=on,gic-version=3",
+  "-smp",
+  "4",
+  "-m",
+  "8g",
+  "-drive",
+  "id=linux-root,if=none,format=raw,file=${workspaceFolder}/tmp/rootfs.img",
+  "-device",
+  "virtio-blk-device,id=linux-block,drive=linux-root,bus=virtio-mmio-bus.0",
+  "-append",
+  "root=/dev/vda rw init=/bin/sh",
+  "-netdev",
+  "hubport,id=linux-netdev,hubid=0",
+  "-device",
+  "virtio-net-device,id=linux-net,netdev=linux-netdev,bus=virtio-mmio-bus.1,mac=02:00:00:00:00:01",
+  "-netdev",
+  "hubport,id=zephyr-netdev,hubid=0",
+  "-device",
+  "virtio-net-device,id=zephyr-net,netdev=zephyr-netdev,bus=virtio-mmio-bus.2,mac=02:00:00:00:00:02",
+]
+
+fail_regex = [
+  "(?i)Failed to initialize guest VM",
+  "(?i)\\bpanic(?:ked)?\\b",
+  "(?i)kernel panic",
+]
+success_regex = []
+to_bin = true
+uefi = false

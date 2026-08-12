@@ -1,0 +1,22 @@
+args = [
+  "-nographic",
+  "-cpu",
+  "cortex-a72",
+  "-machine",
+  "virt,virtualization=on,gic-version=3",
+  "-smp",
+  "4",
+  "-m",
+  "8g",
+]
+fail_regex = [
+  "(?i)Failed to initialize guest VM",
+  "(?i)\\bpanic(?:ked)?\\b",
+  "(?i)fatal error",
+  "(?i)assertion failed",
+  "(?m)^TGOS_ZEPHYR_SMOKE_FAIL(?: .*)?\\r?$",
+]
+success_regex = ["(?m)^TGOS_ZEPHYR_SMOKE_PASS samples=10\\r?$"]
+to_bin = true
+uefi = false
+

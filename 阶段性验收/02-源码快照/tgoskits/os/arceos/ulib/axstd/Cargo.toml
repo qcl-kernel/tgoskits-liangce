@@ -1,0 +1,132 @@
+[package]
+name = "ax-std"
+version = "0.5.28"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = [
+    "Yuekai Jia <equation618@gmail.com>",
+    "yanjuguang <coolyanjg@163.com>",
+    "wudashuai <wu-ds20@mails.tsinghua.edu.cn>",
+    "yfblock <321353225@qq.com>",
+    "scPointer <bhy18@mails.tsinghua.edu.cn>",
+    "Shiping Yuan <robert_yuan@pku.edu.com>",
+]
+description = "ArceOS user library with an interface similar to rust std"
+license.workspace = true
+
+[lib]
+name = "ax_std"
+crate-type = ["rlib", "staticlib"]
+
+[features]
+default = ["alloc", "tls", "fd"]
+
+# Baseline required by every ArceOS Rust application. Applications enable this
+# through their own `arceos` feature instead of axbuild completing it at runtime.
+arceos = ["irq", "paging", "std-compat", "smp"]
+
+# libc compatibility surface used when ax-std is linked as fake libc for Rust std.
+std-compat = ["ax-alloc/global-allocator", "ax-runtime/std-compat"]
+
+# Multicore
+smp = ["ax-runtime/smp", "ax-kspin/smp", "ax-posix-api/smp"]
+
+# Floating point/SIMD
+fp-simd = ["ax-hal/fp-simd"]
+
+# User space support
+uspace = ["ax-runtime/uspace"]
+
+# Hypervisor support
+hv = ["ax-hal/hv"]
+host-carveout-allocator-evidence = ["ax-runtime/host-carveout-allocator-evidence"]
+host-dma-guard-allocator-evidence = ["ax-runtime/host-dma-guard-allocator-evidence"]
+
+# Interrupts
+irq = ["ax-api/irq", "ax-posix-api/irq", "ax-runtime/irq"]
+ipi = ["ax-api/ipi", "ax-runtime/ipi"]
+wake-ipi = ["ax-runtime/wake-ipi"]
+
+ext-ld = ["ax-runtime/ext-ld"]
+
+# Memory
+alloc = ["ax-api/alloc", "ax-io/alloc", "ax-posix-api/alloc"]
+paging = ["alloc", "ax-runtime/paging"]
+dma = ["ax-api/dma", "ax-runtime/paging"]
+tls = ["ax-runtime/tls"]
+
+# Multi-threading and scheduler
+multitask = ["ax-api/multitask", "ax-posix-api/multitask", "ax-runtime/multitask"]
+lockdep = ["multitask", "ax-posix-api/lockdep", "ax-runtime/lockdep"]
+task-ext = ["ax-task/task-ext"]
+tracepoint-hooks = ["ax-task/tracepoint-hooks"]
+sched-rr = ["irq", "multitask", "ax-task/sched-rr"]
+sched-cfs = ["irq", "multitask", "ax-task/sched-cfs"]
+stack-guard-page = ["ax-runtime/stack-guard-page"]
+stack-protector = ["ax-runtime/stack-protector"]
+
+# File system
+fs = [
+    "ax-api/fs",
+    "ax-posix-api/fs",
+    "ax-runtime/fs",
+    "ax-driver/virtio-blk",
+    "fd",
+]
+ext4fs = ["fs", "ax-runtime/ext4fs"]
+fatfs = ["fs", "ax-runtime/fatfs"]
+
+# Networking
+net = [
+    "ax-api/net",
+    "ax-posix-api/net",
+    "ax-runtime/net",
+    "ax-driver/virtio-net",
+    "fd",
+]
+vsock = ["ax-runtime/vsock"]
+aic8800-wifi = ["ax-runtime/aic8800-wifi"]
+dns = ["net"]
+
+# libc compatibility surface used when ax-std is linked as fake libc for Rust std.
+fd = ["ax-posix-api/fd", "ax-posix-api/poll"]
+
+# Driver feature forwards used by std-aware apps that depend on `axstd` directly.
+virtio-blk = ["ax-driver/virtio-blk"]
+virtio-net = ["ax-driver/virtio-net"]
+virtio-gpu = ["ax-driver/virtio-gpu"]
+virtio-input = ["ax-driver/virtio-input"]
+virtio-socket = ["ax-driver/virtio-socket"]
+
+# Display
+display = ["ax-api/display", "ax-runtime/display"]
+
+# Input
+input = ["ax-runtime/input"]
+
+# USB
+usb = ["irq", "ax-driver/usb"]
+
+# Real Time Clock (RTC) Driver.
+rtc = ["ax-runtime/rtc"]
+
+# Backtrace
+backtrace = ["axbacktrace/alloc"]
+dwarf = ["axbacktrace/dwarf"]
+
+[dependencies]
+ax-api.workspace = true
+ax-alloc.workspace = true
+axbacktrace.workspace = true
+ax-driver.workspace = true
+ax-errno.workspace = true
+ax-hal.workspace = true
+ax-io.workspace = true
+ax-kspin.workspace = true
+ax-lazyinit.workspace = true
+ax-posix-api.workspace = true
+ax-runtime.workspace = true
+ax-task.workspace = true
+libc.workspace = true
+lock_api.workspace = true
+spin.workspace = true

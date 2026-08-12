@@ -1,0 +1,15 @@
+# Disposable single-Guest profile for Host DMA-guard runtime observation.
+# It extends the proven Linux carveout profile with a separate default-off
+# allocator marker.  It does not enable a DMA device policy or lift the
+# dual-Guest `blocked_dma_console` gate.
+features = [
+    "ax-driver/virtio-blk",
+    "fs",
+    "guest-fdt-evidence",
+    "stage2-hpa-evidence",
+    "host-carveout-allocator-evidence",
+    "host-dma-guard-allocator-evidence",
+]
+log = "Info"
+target = "aarch64-unknown-none-softfloat"
+vm_configs = []

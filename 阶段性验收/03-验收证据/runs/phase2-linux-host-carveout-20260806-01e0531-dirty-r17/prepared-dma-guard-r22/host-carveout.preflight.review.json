@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "preflight-only",
+  "status": "carveout_artifacts_validated",
+  "proofScope": "host-dts-vm-carveout-static-contract",
+  "doesNotProve": [
+    "host allocator excluded the carveout",
+    "AxVM stage-2 maps the expected HPA",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity",
+    "decoded DTS is the DTB supplied to AxVisor",
+    "VM TOML was deserialized by the current AxVM build",
+    "QEMU used a DMA guard reservation",
+    "DMA guard changed host allocation or DMA behavior",
+    "DMA isolation"
+  ],
+  "fixedContract": {
+    "compatible": "axvisor,vm-carveout-v1",
+    "alignment": "0x200000",
+    "mapping": "exact MapReserved GPA=HPA and size match"
+  },
+  "carveouts": [
+    {
+      "vmId": 1,
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "end": "0x90000000",
+      "vmConfig": "vmconfig.map-reserved.toml"
+    }
+  ],
+  "dmaGuards": [
+    {
+      "hpa": "0x180000000",
+      "size": "0x200000",
+      "end": "0x180200000"
+    }
+  ],
+  "sources": {
+    "hostDts": {
+      "path": "host-carveout.dts",
+      "sha256": "4503e84b88ef56188035a70b00f08125df0d637abd7290cb2f24869248b1aab5"
+    },
+    "vmConfigs": [
+      {
+        "path": "vmconfig.map-reserved.toml",
+        "sha256": "6bc51680cc3509369efaa669dd3f9c8065f25c74250372edcf6b366112d61fa0"
+      }
+    ]
+  }
+}

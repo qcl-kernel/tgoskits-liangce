@@ -1,0 +1,9 @@
+*.ppm binary
+*.png binary
+*.jpg binary
+*.bin binary
+*.img binary
+/os/axvisor/scripts/quick-start.sh text eol=lf
+/os/axvisor/scripts/setup_qemu.sh text eol=lf
+/scripts/contest/*.sh text eol=lf
+/configs/contest/*.env text eol=lf

@@ -1,0 +1,118 @@
+use alloc::{sync::Arc, vec::Vec};
+
+use ax_errno::{AxError, AxResult};
+use linux_raw_sys::net::{SCM_RIGHTS, SOL_SOCKET, cmsghdr};
+
+use crate::{
+    file::{FileLike, get_file_like},
+    mm::{UserConstPtr, UserPtr},
+};
+
+fn cmsg_align(len: usize) -> usize {
+    let align = size_of::<usize>();
+    (len + align - 1) & !(align - 1)
+}
+
+fn cmsg_align_down(len: usize) -> usize {
+    let align = size_of::<usize>();
+    len & !(align - 1)
+}
+
+pub fn cmsg_space(len: usize) -> Option<usize> {
+    size_of::<cmsghdr>().checked_add(len).map(cmsg_align)
+}
+
+pub enum CMsg {
+    Rights { fds: Vec<Arc<dyn FileLike>> },
+}
+impl CMsg {
+    pub fn parse(hdr: &cmsghdr) -> AxResult<Self> {
+        if hdr.cmsg_len < size_of::<cmsghdr>() {
+            return Err(AxError::InvalidInput);
+        }
+
+        let data =
+            UserConstPtr::<u8>::from((hdr as *const cmsghdr as usize) + size_of::<cmsghdr>())
+                .get_as_slice(hdr.cmsg_len - size_of::<cmsghdr>())?;
+        Ok(match (hdr.cmsg_level as u32, hdr.cmsg_type as u32) {
+            (SOL_SOCKET, SCM_RIGHTS) => {
+                if data.len() % size_of::<i32>() != 0 {
+                    return Err(AxError::InvalidInput);
+                }
+                let mut fds = Vec::new();
+                for fd in data.as_chunks::<{ size_of::<i32>() }>().0 {
+                    let fd = i32::from_ne_bytes(*fd);
+                    if fd < 0 {
+                        return Err(AxError::BadFileDescriptor);
+                    }
+                    let f = get_file_like(fd)?;
+                    fds.push(f);
+                }
+                Self::Rights { fds }
+            }
+            _ => {
+                return Err(AxError::InvalidInput);
+            }
+        })
+    }
+}
+
+pub struct CMsgBuilder<'a> {
+    hdr: UserPtr<cmsghdr>,
+    len: &'a mut usize,
+    capacity: usize,
+    written: usize,
+}
+impl<'a> CMsgBuilder<'a> {
+    pub fn new(msg: UserPtr<cmsghdr>, len: &'a mut usize) -> Self {
+        let capacity = *len;
+        Self {
+            hdr: msg,
+            len,
+            capacity,
+            written: 0,
+        }
+    }
+
+    pub fn finish(self) {
+        *self.len = self.written;
+    }
+
+    pub fn push_sized(
+        &mut self,
+        level: u32,
+        ty: u32,
+        body_len: usize,
+        body: impl FnOnce(&mut [u8]) -> AxResult<usize>,
+    ) -> AxResult<bool> {
+        let Some(body_capacity) = self
+            .capacity
+            .checked_sub(self.written)
+            .and_then(|remaining| cmsg_align_down(remaining).checked_sub(size_of::<cmsghdr>()))
+        else {
+            return Ok(false);
+        };
+        if body_capacity < body_len {
+            return Ok(false);
+        }
+
+        let hdr_addr = self.hdr.address().as_usize();
+        let hdr = self.hdr.get_as_mut()?;
+        hdr.cmsg_level = level as _;
+        hdr.cmsg_type = ty as _;
+
+        let data =
+            UserPtr::<u8>::from(hdr_addr + size_of::<cmsghdr>()).get_as_mut_slice(body_len)?;
+        let written = body(data)?;
+        debug_assert_eq!(written, body_len);
+
+        let Some(cmsg_len) = size_of::<cmsghdr>().checked_add(body_len) else {
+            return Err(AxError::InvalidInput);
+        };
+        hdr.cmsg_len = cmsg_len;
+        let cmsg_space = cmsg_align(cmsg_len);
+        self.hdr = UserPtr::from(hdr_addr + cmsg_space);
+        self.written += cmsg_space;
+        Ok(true)
+    }
+}

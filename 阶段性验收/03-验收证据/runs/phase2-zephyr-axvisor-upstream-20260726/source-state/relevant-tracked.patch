@@ -1,0 +1,3504 @@
+diff --git a/.gitattributes b/.gitattributes
+index 3e427fdbb..a012a2c04 100644
+--- a/.gitattributes
++++ b/.gitattributes
+@@ -1,5 +1,9 @@
+-*.ppm binary
+-*.png binary
+-*.jpg binary
+-*.bin binary
+-*.img binary
++*.ppm binary
++*.png binary
++*.jpg binary
++*.bin binary
++*.img binary
++/os/axvisor/scripts/quick-start.sh text eol=lf
++/os/axvisor/scripts/setup_qemu.sh text eol=lf
++/scripts/contest/*.sh text eol=lf
++/configs/contest/*.env text eol=lf
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index f3272ab2f..9d54aae2f 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1,838 +1,863 @@
+-name: CI
++name: CI
++
++on:
++  push:
++    paths-ignore:
++      - "**/*.md"
++      - "**/*.rst"
++      - "**/*.adoc"
++      - "docs/**"
++      - "**/docs/**"
++      - "**/doc/**"
++  pull_request:
++    paths-ignore:
++      - "**/*.md"
++      - "**/*.rst"
++      - "**/*.adoc"
++      - "docs/**"
++      - "**/docs/**"
++      - "**/doc/**"
++  workflow_dispatch:
++    inputs:
++      container_target:
++        description: Container image(s) to publish manually.
++        required: true
++        default: both
++        type: choice
++        options:
++          - base
++          - axvisor-lvz
++          - both
++
++permissions:
++  contents: read
++  packages: read
++
++env:
++  CARGO_TERM_COLOR: always
++
++concurrency:
++  group: >-
++    ${{
++      github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
++      && format('ci-{0}-{1}', github.workflow, github.ref)
++      || format('ci-{0}-{1}', github.workflow, github.run_id)
++    }}
++  queue: max
++
++jobs:
++  cancel_stale_runs:
++    name: Cancel stale CI runs
++    runs-on: ubuntu-latest
++    permissions:
++      actions: write
++      contents: read
++    steps:
++      - name: Cancel older queued or running runs
++        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/dev'
++        env:
++          GH_TOKEN: ${{ github.token }}
++          CURRENT_RUN_NUMBER: ${{ github.run_number }}
++          EVENT_NAME: ${{ github.event_name }}
++          REF_NAME: ${{ github.ref_name }}
++          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
++        run: |
++          set -uo pipefail
++
++          statuses=(queued in_progress waiting requested)
++
++          if [ "$EVENT_NAME" = "pull_request" ]; then
++            selector='select(
++              .run_number < (env.CURRENT_RUN_NUMBER | tonumber)
++              and any(.pull_requests[]?; .number == (env.PR_NUMBER | tonumber))
++            )'
++          else
++            selector='select(
++              .run_number < (env.CURRENT_RUN_NUMBER | tonumber)
++              and .head_branch == env.REF_NAME
++              and .event != "pull_request"
++              and .event != "pull_request_target"
++            )'
++          fi
++
++          cancel_run() {
++            local run_id="$1"
++            local run_number="$2"
++            local run_url="$3"
++
++            if gh api \
++              --method POST \
++              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null; then
++              echo "Canceled stale CI run #${run_number}: ${run_url}"
++            else
++              echo "::warning::Failed to cancel stale CI run #${run_number}: ${run_url}"
++            fi
++          }
++
++          for status in "${statuses[@]}"; do
++            runs="$(
++              gh api \
++                --paginate \
++                "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=${status}&per_page=100" \
++                --jq ".workflow_runs[] | ${selector} | [.id, .run_number, .html_url] | @tsv" 2>api-error.log
++            )"
++            gh_status=$?
++
++            if [ "$gh_status" -ne 0 ]; then
++              while IFS= read -r line; do
++                echo "::warning::Failed to query stale CI runs with status '${status}': ${line}"
++              done < api-error.log
++              rm -f api-error.log
++              continue
++            fi
++            rm -f api-error.log
++
++            while IFS=$'\t' read -r run_id run_number run_url; do
++              if [ -n "$run_id" ]; then
++                cancel_run "$run_id" "$run_number" "$run_url"
++              fi
++            done <<< "$runs"
++          done
++
++  detect_changes:
++    name: Detect changed paths
++    needs: cancel_stale_runs
++    runs-on: ubuntu-latest
++    permissions:
++      contents: read
++      pull-requests: read
++    outputs:
++      ci_checks: ${{ steps.outputs.outputs.ci_checks }}
++      skip_duplicate_push_ci: ${{ steps.outputs.outputs.skip_duplicate_push_ci }}
++      base_container_publish: ${{ steps.outputs.outputs.base_container_publish }}
++      axvisor_lvz_container_publish: ${{ steps.outputs.outputs.axvisor_lvz_container_publish }}
++      base_container_image: ${{ steps.outputs.outputs.base_container_image }}
++      axvisor_lvz_container_image: ${{ steps.outputs.outputs.axvisor_lvz_container_image }}
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v6
++        with:
++          fetch-depth: 2
++
++      - name: Validate CI source paths
++        run: |
++          python3 scripts/test/check_ci_paths.py
++
++      - name: Validate AxVisor setup command
++        run: python3 scripts/test/check_axvisor_setup_command.py
++
++      - name: Validate AxVisor image CLI migration
++        run: python3 scripts/test/check_axvisor_image_cli.py
++
++      - name: Validate contest baseline contract
++        run: python3 scripts/test/check_contest_baseline.py
++
++      - name: Validate AxVisor Linux SMP2 configuration
++        run: python3 scripts/test/check_axvisor_linux_smp2.py
++
++      - name: Validate AxVisor Zephyr smoke configuration
++        run: python3 scripts/test/check_axvisor_zephyr_smoke.py
+ 
+-on:
+-  push:
+-    paths-ignore:
+-      - "**/*.md"
+-      - "**/*.rst"
+-      - "**/*.adoc"
+-      - "docs/**"
+-      - "**/docs/**"
+-      - "**/doc/**"
+-  pull_request:
+-    paths-ignore:
+-      - "**/*.md"
+-      - "**/*.rst"
+-      - "**/*.adoc"
+-      - "docs/**"
+-      - "**/docs/**"
+-      - "**/doc/**"
+-  workflow_dispatch:
+-    inputs:
+-      container_target:
+-        description: Container image(s) to publish manually.
+-        required: true
+-        default: both
+-        type: choice
+-        options:
+-          - base
+-          - axvisor-lvz
+-          - both
++      - name: Validate AxVisor AArch64 passthrough SPI routing
++        run: python3 scripts/test/check_axvisor_aarch64_irq_routing.py
+ 
+-permissions:
+-  contents: read
+-  packages: read
++      - name: Validate AxVM physical resource claims
++        run: python3 scripts/test/check_axvm_physical_resource_claims.py
+ 
+-env:
+-  CARGO_TERM_COLOR: always
+-
+-concurrency:
+-  group: >-
+-    ${{
+-      github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+-      && format('ci-{0}-{1}', github.workflow, github.ref)
+-      || format('ci-{0}-{1}', github.workflow, github.run_id)
+-    }}
+-  queue: max
+-
+-jobs:
+-  cancel_stale_runs:
+-    name: Cancel stale CI runs
+-    runs-on: ubuntu-latest
+-    permissions:
+-      actions: write
+-      contents: read
+-    steps:
+-      - name: Cancel older queued or running runs
+-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/dev'
+-        env:
+-          GH_TOKEN: ${{ github.token }}
+-          CURRENT_RUN_NUMBER: ${{ github.run_number }}
+-          EVENT_NAME: ${{ github.event_name }}
+-          REF_NAME: ${{ github.ref_name }}
+-          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+-        run: |
+-          set -uo pipefail
+-
+-          statuses=(queued in_progress waiting requested)
+-
+-          if [ "$EVENT_NAME" = "pull_request" ]; then
+-            selector='select(
+-              .run_number < (env.CURRENT_RUN_NUMBER | tonumber)
+-              and any(.pull_requests[]?; .number == (env.PR_NUMBER | tonumber))
+-            )'
+-          else
+-            selector='select(
+-              .run_number < (env.CURRENT_RUN_NUMBER | tonumber)
+-              and .head_branch == env.REF_NAME
+-              and .event != "pull_request"
+-              and .event != "pull_request_target"
+-            )'
+-          fi
+-
+-          cancel_run() {
+-            local run_id="$1"
+-            local run_number="$2"
+-            local run_url="$3"
+-
+-            if gh api \
+-              --method POST \
+-              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null; then
+-              echo "Canceled stale CI run #${run_number}: ${run_url}"
+-            else
+-              echo "::warning::Failed to cancel stale CI run #${run_number}: ${run_url}"
+-            fi
+-          }
+-
+-          for status in "${statuses[@]}"; do
+-            runs="$(
+-              gh api \
+-                --paginate \
+-                "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=${status}&per_page=100" \
+-                --jq ".workflow_runs[] | ${selector} | [.id, .run_number, .html_url] | @tsv" 2>api-error.log
+-            )"
+-            gh_status=$?
+-
+-            if [ "$gh_status" -ne 0 ]; then
+-              while IFS= read -r line; do
+-                echo "::warning::Failed to query stale CI runs with status '${status}': ${line}"
+-              done < api-error.log
+-              rm -f api-error.log
+-              continue
+-            fi
+-            rm -f api-error.log
+-
+-            while IFS=$'\t' read -r run_id run_number run_url; do
+-              if [ -n "$run_id" ]; then
+-                cancel_run "$run_id" "$run_number" "$run_url"
+-              fi
+-            done <<< "$runs"
+-          done
+-
+-  detect_changes:
+-    name: Detect changed paths
+-    needs: cancel_stale_runs
+-    runs-on: ubuntu-latest
+-    permissions:
+-      contents: read
+-      pull-requests: read
+-    outputs:
+-      ci_checks: ${{ steps.outputs.outputs.ci_checks }}
+-      skip_duplicate_push_ci: ${{ steps.outputs.outputs.skip_duplicate_push_ci }}
+-      base_container_publish: ${{ steps.outputs.outputs.base_container_publish }}
+-      axvisor_lvz_container_publish: ${{ steps.outputs.outputs.axvisor_lvz_container_publish }}
+-      base_container_image: ${{ steps.outputs.outputs.base_container_image }}
+-      axvisor_lvz_container_image: ${{ steps.outputs.outputs.axvisor_lvz_container_image }}
+-    steps:
+-      - name: Checkout code
+-        uses: actions/checkout@v6
+-        with:
+-          fetch-depth: 2
+-
+-      - name: Validate CI source paths
+-        run: |
+-          python3 scripts/test/check_ci_paths.py
++      - name: Validate AxVisor dual-guest topology probe
++        run: python3 scripts/test/check_axvisor_dual_guest_topology.py
+ 
+       - name: Detect CI-relevant changes
+-        id: filter
+-        if: github.event_name != 'workflow_dispatch'
+-        uses: dorny/paths-filter@v4
+-        with:
+-          base: ${{ github.event_name == 'push' && github.ref || '' }}
+-          token: ""
+-          filters: |
+-            ci_checks:
+-              - ".cargo/**"
+-              - ".github/workflows/container-publish.yml"
+-              - ".github/workflows/ci.yml"
+-              - ".github/workflows/reusable-command.yml"
+-              - "Cargo.toml"
+-              - "Cargo.lock"
+-              - "rust-toolchain.toml"
+-              - "apps/**"
+-              - "bootloader/**"
+-              - "components/**"
+-              - "drivers/**"
+-              - "memory/**"
+-              - "net/**"
+-              - "os/**"
+-              - "platforms/**"
+-              - "scripts/**"
+-              - "test-suit/**"
+-              - "tools/**"
+-              - "virtualization/**"
+-              - "xtask/**"
+-            base_container_publish:
+-              - "container/Dockerfile"
+-              - "rust-toolchain.toml"
+-            axvisor_lvz_container_publish:
+-              - "container/Dockerfile.axvisor-lvz"
+-              - "rust-toolchain.toml"
+-
+-      - name: Resolve workflow outputs
+-        id: outputs
+-        env:
+-          EVENT_NAME: ${{ github.event_name }}
+-          REF_NAME: ${{ github.ref_name }}
+-          MANUAL_TARGET: ${{ github.event.inputs.container_target }}
+-          FILTER_CI_CHECKS: ${{ steps.filter.outputs.ci_checks }}
+-          FILTER_BASE_CONTAINER_PUBLISH: ${{ steps.filter.outputs.base_container_publish }}
+-          FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH: ${{ steps.filter.outputs.axvisor_lvz_container_publish }}
+-          GH_TOKEN: ${{ github.token }}
+-        run: |
+-          repository="$(printf '%s' "$GITHUB_REPOSITORY" | LC_ALL=C tr '[:upper:]' '[:lower:]')"
+-          base_container_image="ghcr.io/${repository}-container"
+-          axvisor_lvz_container_image="ghcr.io/${repository}-container-axvisor-lvz"
+-          skip_duplicate_push_ci=false
+-
+-          if [ "$EVENT_NAME" = "push" ] \
+-            && [ "$REF_NAME" != "main" ] \
+-            && [ "$REF_NAME" != "dev" ]; then
+-            open_pr_count="$(
+-              gh pr list \
+-                --repo "$GITHUB_REPOSITORY" \
+-                --head "$REF_NAME" \
+-                --state open \
+-                --json number \
+-                --jq 'length'
+-            )"
+-
+-            if [ "$open_pr_count" != "0" ]; then
+-              skip_duplicate_push_ci=true
+-            fi
+-          fi
+-
+-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+-            ci_checks=false
+-            case "$MANUAL_TARGET" in
+-              base)
+-                base_container_publish=true
+-                axvisor_lvz_container_publish=false
+-                ;;
+-              axvisor-lvz)
+-                base_container_publish=false
+-                axvisor_lvz_container_publish=true
+-                ;;
+-              both)
+-                base_container_publish=true
+-                axvisor_lvz_container_publish=true
+-                ;;
+-              *)
+-                echo "Unexpected container_target: $MANUAL_TARGET" >&2
+-                exit 1
+-                ;;
+-            esac
+-          elif [ "$skip_duplicate_push_ci" = "true" ]; then
+-            ci_checks=false
+-            base_container_publish=false
+-            axvisor_lvz_container_publish=false
+-          else
+-            if [ "$EVENT_NAME" = "push" ] && { [ "$REF_NAME" = "main" ] || [ "$REF_NAME" = "dev" ]; }; then
+-              ci_checks=true
+-            else
+-              ci_checks="${FILTER_CI_CHECKS}"
+-            fi
+-            base_container_publish="${FILTER_BASE_CONTAINER_PUBLISH}"
+-            axvisor_lvz_container_publish="${FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH}"
+-          fi
+-
+-          {
+-            echo "ci_checks=${ci_checks}"
+-            echo "skip_duplicate_push_ci=${skip_duplicate_push_ci}"
+-            echo "base_container_publish=${base_container_publish}"
+-            echo "axvisor_lvz_container_publish=${axvisor_lvz_container_publish}"
+-            echo "base_container_image=${base_container_image}"
+-            echo "axvisor_lvz_container_image=${axvisor_lvz_container_image}"
+-          } >> "$GITHUB_OUTPUT"
+-
+-      - name: Summarize skipped CI checks
+-        if: steps.outputs.outputs.ci_checks != 'true'
+-        env:
+-          EVENT_NAME: ${{ github.event_name }}
+-          SKIP_DUPLICATE_PUSH_CI: ${{ steps.outputs.outputs.skip_duplicate_push_ci }}
+-        run: |
+-          {
+-            echo "## CI checks skipped"
+-            echo ""
+-            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+-              echo "This manual run is scoped to container publishing, so static checks and follow-up CI checks were skipped."
+-            elif [ "$SKIP_DUPLICATE_PUSH_CI" = "true" ]; then
+-              echo "This branch already has an open pull request. The duplicate push CI was skipped; the pull_request CI run will validate the same commit."
+-            else
+-              echo "Changed files do not match the test-relevant path set, so static checks and follow-up CI checks were skipped."
+-            fi
+-          } >> "$GITHUB_STEP_SUMMARY"
+-
+-      - name: Summarize manual container branch restriction
+-        if: >-
+-          ${{
+-            github.event_name == 'workflow_dispatch'
+-            && github.ref_name != 'main'
+-            && github.ref_name != 'dev'
+-          }}
+-        run: |
+-          {
+-            echo "## Container publish skipped"
+-            echo ""
+-            echo "Manual container publishing only runs from the \`main\` or \`dev\` branch. This run targeted \`${{ github.ref_name }}\`, so publish jobs were skipped."
+-          } >> "$GITHUB_STEP_SUMMARY"
+-
+-  static_checks:
+-    name: ${{ matrix.name }}
+-    needs: detect_changes
+-    if: needs.detect_changes.outputs.ci_checks == 'true'
+-    strategy:
+-      fail-fast: true
+-      matrix:
+-        include:
+-          - name: Check formatting
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: |
+-              cargo fmt --all -- --check
+-              cargo publish --workspace --dry-run --no-verify
+-            cache_key: ""
+-            container_image: base
+-            fetch_depth: "1"
+-          - name: Run sync-lint
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: cargo xtask sync-lint --since "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+-            cache_key: ""
+-            container_image: base
+-            fetch_depth: full
+-            upload_xtask_bin_artifact: true
+-          - name: Run spin-lint
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: cargo xtask spin-lint
+-            cache_key: ""
+-            container_image: base
+-            fetch_depth: "1"
+-    uses: ./.github/workflows/reusable-command.yml
+-    with:
+-      runs_on: >-
+-        ${{
+-          matrix.self_hosted_owner != ''
+-          && github.repository_owner != matrix.self_hosted_owner
+-          && '["ubuntu-latest"]'
+-          || matrix.runs_on
+-        }}
+-      use_container: >-
+-        ${{
+-          matrix.use_container
+-          || (
+-            matrix.self_hosted_owner != ''
+-            && github.repository_owner != matrix.self_hosted_owner
+-          )
+-        }}
+-      command: ${{ matrix.command }}
+-      cache_key: ${{ matrix.cache_key }}
+-      container_image: >-
+-        ${{
+-          matrix.container_image == 'base'
+-          && format('{0}:latest', needs.detect_changes.outputs.base_container_image)
+-          || matrix.container_image
+-        }}
+-      fetch_depth: >-
+-        ${{
+-          contains(matrix.runs_on, 'self-hosted')
+-          && !(
+-            matrix.self_hosted_owner != ''
+-            && github.repository_owner != matrix.self_hosted_owner
+-          )
+-          && matrix.fetch_depth == 'full'
+-          && '2'
+-          || (matrix.fetch_depth == 'full' && '0' || '1')
+-        }}
+-      upload_xtask_bin_artifact: ${{ matrix.upload_xtask_bin_artifact || false }}
+-      xtask_bin_artifact_name: tg-xtask-bin
+-
+-  test_checks:
+-    name: ${{ matrix.name }}
+-    if: needs.detect_changes.outputs.ci_checks == 'true'
+-    needs:
+-      - detect_changes
+-      - static_checks
+-    strategy:
+-      fail-fast: true
+-      matrix:
+-        include:
+-          - name: Run clippy
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask clippy --since "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+-            cache_key: ""
+-            container_image: base
+-            fetch_depth: full
+-            download_xtask_bin_artifact: true
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test with std
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask test
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test axvisor aarch64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask axvisor test qemu --arch aarch64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test axvisor riscv64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask axvisor test qemu --arch riscv64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test axvisor loongarch64 qemu
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: target/debug/tg-xtask axvisor test qemu --arch loongarch64
+-            cache_key: test-axvisor-loongarch64
+-            container_image: axvisor-lvz
+-            limit_to_owner: ""
+-            main_pr_only: false
+-            download_xtask_bin_artifact: true
+-          - name: Test starry riscv64 qemu
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: target/debug/tg-xtask starry test qemu --arch riscv64
+-            cache_key: test-starry-riscv64
+-            container_image: base
+-            apk_region: us
+-            limit_to_owner: ""
+-            main_pr_only: false
+-            download_xtask_bin_artifact: true
+-          - name: Test starry aarch64 qemu
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: target/debug/tg-xtask starry test qemu --arch aarch64
+-            cache_key: test-starry-aarch64
+-            container_image: base
+-            apk_region: us
+-            limit_to_owner: ""
+-            main_pr_only: false
+-            download_xtask_bin_artifact: true
+-          - name: Test starry loongarch64 qemu
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: target/debug/tg-xtask starry test qemu --arch loongarch64
+-            cache_key: test-starry-loongarch64
+-            container_image: base
+-            apk_region: us
+-            limit_to_owner: ""
+-            main_pr_only: false
+-            download_xtask_bin_artifact: true
+-          - name: Test starry x86_64 qemu
+-            use_container: true
+-            runs_on: '["ubuntu-latest"]'
+-            command: target/debug/tg-xtask starry test qemu --arch x86_64
+-            cache_key: test-starry-x86_64
+-            container_image: base
+-            apk_region: us
+-            limit_to_owner: ""
+-            main_pr_only: false
+-            download_xtask_bin_artifact: true
+-          - name: Test arceos x86_64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask arceos test qemu --arch x86_64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test arceos riscv64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask arceos test qemu --arch riscv64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test arceos aarch64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask arceos test qemu --arch aarch64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          - name: Test arceos loongarch64 qemu
+-            use_container: false
+-            runs_on: '["self-hosted","linux","qcs"]'
+-            self_hosted_owner: rcore-os
+-            command: cargo xtask arceos test qemu --arch loongarch64
+-            cache_key: ""
+-            container_image: base
+-            limit_to_owner: ""
+-            main_pr_only: false
+-          # Visual regression matrix: re-enable per arch once at least one
+-          # scenario has that arch listed in its `arches` file and a verified
+-          # golden is committed. Until then run_all.sh exits 1 (no scenarios
+-          # ran), so the matrix would be uniformly red. The DRM card0 PR (#506)
+-          # is the current prerequisite for weston_shm_baseline / xwayland_xeyes.
+-          # - name: Visual starry riscv64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: |
+-          #     apt-get update && apt-get install -y --no-install-recommends e2tools
+-          #     cargo xtask starry build --arch riscv64
+-          #     cargo xtask starry rootfs --arch riscv64
+-          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch riscv64 --scenario xwayland_xeyes
+-          #     bash scripts/visual-test/run_all.sh --arch riscv64
+-          #   cache_key: test-visual-riscv64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: false
+-          # - name: Visual starry aarch64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: |
+-          #     apt-get update && apt-get install -y --no-install-recommends e2tools
+-          #     cargo xtask starry build --arch aarch64
+-          #     cargo xtask starry rootfs --arch aarch64
+-          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch aarch64 --scenario xwayland_xeyes
+-          #     bash scripts/visual-test/run_all.sh --arch aarch64
+-          #   cache_key: test-visual-aarch64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: false
+-          # - name: Visual starry x86_64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: |
+-          #     apt-get update && apt-get install -y --no-install-recommends e2tools
+-          #     cargo xtask starry build --arch x86_64
+-          #     cargo xtask starry rootfs --arch x86_64
+-          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch x86_64 --scenario xwayland_xeyes
+-          #     bash scripts/visual-test/run_all.sh --arch x86_64
+-          #   cache_key: test-visual-x86_64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: false
+-          # Stress tests: uncomment to enable (runs only on PRs targeting main).
+-          # - name: Stress starry aarch64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: cargo xtask starry app qemu -t stress/git --arch aarch64
+-          #   cache_key: test-starry-stress-aarch64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: true
+-          # - name: Stress starry riscv64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: cargo xtask starry app qemu -t stress/git --arch riscv64
+-          #   cache_key: test-starry-stress-riscv64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: true
+-          # - name: Stress starry loongarch64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: cargo xtask starry app qemu -t stress/git --arch loongarch64
+-          #   cache_key: test-starry-stress-loongarch64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: true
+-          # - name: Stress starry x86_64
+-          #   use_container: true
+-          #   runs_on: '["ubuntu-latest"]'
+-          #   command: cargo xtask starry app qemu -t stress/git --arch x86_64
+-          #   cache_key: test-starry-stress-x86_64
+-          #   container_image: base
+-          #   apk_region: us
+-          #   limit_to_owner: ""
+-          #   main_pr_only: true
+-          - name: Test axvisor self-hosted x86_64(svm)
+-            use_container: false
+-            runs_on: '["self-hosted","linux","amd","kvm"]'
+-            require_kvm: true
+-            command: cargo xtask axvisor test qemu --arch x86_64 --test-case smoke-svm
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test axvisor self-hosted x86_64(vmx)
+-            use_container: false
+-            runs_on: '["self-hosted","linux","intel","kvm"]'
+-            require_kvm: true
+-            command: cargo xtask axvisor test qemu --arch x86_64 --test-case smoke-vmx
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          # - name: Test axvisor self-hosted x86_64(vmx) UEFI
+-          #   use_container: false
+-          #   runs_on: '["self-hosted","linux","intel","kvm"]'
+-          #   require_kvm: true
+-          #   timeout_minutes: 20
+-          #   command: |
+-          #     sudo apt-get update
+-          #     sudo apt-get install -y --no-install-recommends ovmf
+-          #     UEFI_FIRMWARE=""
+-          #     for candidate in \
+-          #       /usr/share/OVMF/OVMF_CODE_4M.fd \
+-          #       /usr/share/OVMF/OVMF_CODE.fd \
+-          #       /usr/share/ovmf/OVMF.fd \
+-          #       /usr/share/qemu/OVMF.fd; do
+-          #       if [ -f "${candidate}" ]; then
+-          #         UEFI_FIRMWARE="${candidate}"
+-          #         break
+-          #       fi
+-          #     done
+-          #     if [ -z "${UEFI_FIRMWARE}" ]; then
+-          #       echo "ERROR: installed OVMF firmware image was not found under /usr/share." >&2
+-          #       exit 1
+-          #     fi
+-          #     export AXVISOR_X86_64_UEFI_FIRMWARE="${UEFI_FIRMWARE}"
+-          #     cd os/axvisor
+-          #     ./scripts/setup_qemu.sh nimbos-uefi
+-          #     grep -q 'boot_protocol = "uefi"' tmp/vmconfigs/nimbos-x86_64-qemu-uefi-smp1.generated.toml
+-          #     grep -q 'uefi_firmware_path = "' tmp/vmconfigs/nimbos-x86_64-qemu-uefi-smp1.generated.toml
+-          #     cd ../..
+-          #     cargo xtask axvisor test qemu --arch x86_64 --test-group uefi --test-case qemu-nimbos
+-          #   cache_key: ""
+-          #   container_image: ""
+-          #   limit_to_owner: rcore-os
+-          #   main_pr_only: false
+-          - name: Test axloader HTTP smoke
+-            use_container: false
+-            runs_on: '["self-hosted","linux","intel","kvm"]'
+-            require_kvm: true
+-            timeout_minutes: 20
+-            command: |
+-              rustup target add x86_64-unknown-uefi
+-              find_uefi_firmware() {
+-                for candidate in \
+-                  /usr/share/OVMF/OVMF_CODE_4M.fd \
+-                  /usr/share/OVMF/OVMF_CODE.fd \
+-                  /usr/share/ovmf/OVMF.fd \
+-                  /usr/share/qemu/OVMF.fd; do
+-                  if [ -f "${candidate}" ]; then
+-                    printf '%s\n' "${candidate}"
+-                    return 0
+-                  fi
+-                done
+-                return 1
+-              }
+-              UEFI_FIRMWARE="$(find_uefi_firmware || true)"
+-              if [ -z "${UEFI_FIRMWARE}" ]; then
+-                sudo apt-get update
+-                sudo apt-get install -y --no-install-recommends ovmf
+-                UEFI_FIRMWARE="$(find_uefi_firmware || true)"
+-              fi
+-              if [ -z "${UEFI_FIRMWARE}" ]; then
+-                echo "ERROR: installed OVMF firmware image was not found under /usr/share." >&2
+-                exit 1
+-              fi
+-              export AXLOADER_X86_64_UEFI_FIRMWARE="${UEFI_FIRMWARE}"
+-              cargo axloader test qemu --target x86_64-unknown-uefi
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test axvisor self-hosted board orangepi-5-plus-linux
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask axvisor test board --board orangepi-5-plus-linux
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test axvisor self-hosted board roc-rk3568-pc-linux
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask axvisor test board --board roc-rk3568-pc-linux
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test axvisor self-hosted board phytiumpi-linux
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask axvisor test board --board phytiumpi-linux
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test axvisor self-hosted board asus-nuc15crh-linux
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            timeout_minutes: 20
+-            command: |
+-              mkdir -p tmp
+-              cargo xtask image pull qemu-x86_64 --output-dir tmp
+-              cargo xtask image pull initramfs-x86_64-busybox.cpio.gz --output-dir tmp
+-              gzip -dc \
+-                tmp/initramfs-x86_64-busybox.cpio.gz/initramfs-x86_64-busybox.cpio.gz \
+-                > tmp/initramfs-x86_64-busybox.cpio
+-              cargo xtask axvisor test board --board asus-nuc15crh-linux
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test starry self-hosted board orangepi-5-plus
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask starry test board --board orangepi-5-plus
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test starry self-hosted board aka-00-sg2002
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask starry test board --board aka-00-sg2002
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test starry self-hosted board visionfive2
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask starry test board --board visionfive2
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-          - name: Test starry self-hosted board jl-lsgd2k10
+-            use_container: false
+-            runs_on: '["self-hosted","linux","board"]'
+-            command: cargo xtask starry test board --board jl-lsgd2k10
+-            cache_key: ""
+-            container_image: ""
+-            limit_to_owner: rcore-os
+-            main_pr_only: false
+-    uses: ./.github/workflows/reusable-command.yml
+-    with:
+-      runs_on: >-
+-        ${{
+-          matrix.self_hosted_owner != ''
+-          && github.repository_owner != matrix.self_hosted_owner
+-          && '["ubuntu-latest"]'
+-          || matrix.runs_on
+-        }}
+-      use_container: >-
+-        ${{
+-          matrix.use_container
+-          || (
+-            matrix.self_hosted_owner != ''
+-            && github.repository_owner != matrix.self_hosted_owner
+-          )
+-        }}
+-      command: ${{ matrix.command }}
+-      cache_key: ${{ matrix.cache_key }}
+-      container_image: >-
+-        ${{
+-          matrix.container_image == 'base'
+-          && format('{0}:latest', needs.detect_changes.outputs.base_container_image)
+-          || matrix.container_image == 'axvisor-lvz'
+-          && format('{0}:latest', needs.detect_changes.outputs.axvisor_lvz_container_image)
+-          || matrix.container_image
+-        }}
+-      apk_region: ${{ matrix.apk_region || 'china' }}
+-      limit_to_owner: ${{ matrix.limit_to_owner }}
+-      main_pr_only: ${{ matrix.main_pr_only }}
+-      fetch_depth: >-
+-        ${{
+-          contains(matrix.runs_on, 'self-hosted')
+-          && !(
+-            matrix.self_hosted_owner != ''
+-            && github.repository_owner != matrix.self_hosted_owner
+-          )
+-          && matrix.fetch_depth == 'full'
+-          && '2'
+-          || (matrix.fetch_depth == 'full' && '0' || '1')
+-        }}
+-      timeout_minutes: ${{ matrix.timeout_minutes || 360 }}
+-      require_kvm: ${{ matrix.require_kvm || false }}
+-      download_xtask_bin_artifact: >-
+-        ${{
+-          matrix.download_xtask_bin_artifact
+-          || (
+-            matrix.self_hosted_owner != ''
+-            && github.repository_owner != matrix.self_hosted_owner
+-          )
+-        }}
+-      xtask_bin_artifact_name: tg-xtask-bin
+-    secrets:
+-      CLAW_API_KEY: ${{ secrets.CLAW_API_KEY }}
+-
+-  publish_base_container:
+-    name: Publish base container image
+-    if: >-
+-      ${{
+-        (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+-        && (github.ref_name == 'main' || github.ref_name == 'dev')
+-        && needs.detect_changes.outputs.base_container_publish == 'true'
+-      }}
+-    needs:
+-      - detect_changes
+-    uses: ./.github/workflows/container-publish.yml
+-    with:
+-      image_name: ${{ needs.detect_changes.outputs.base_container_image }}
+-      dockerfile: container/Dockerfile
+-      cache_scope: container
+-    permissions:
+-      contents: read
+-      packages: write
+-
+-  publish_axvisor_lvz_container:
+-    name: Publish axvisor-lvz container image
+-    if: >-
+-      ${{
+-        always()
+-        && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+-        && (github.ref_name == 'main' || github.ref_name == 'dev')
+-        && needs.detect_changes.outputs.axvisor_lvz_container_publish == 'true'
+-        && (
+-          needs.detect_changes.outputs.base_container_publish != 'true'
+-          || needs.publish_base_container.result == 'success'
+-        )
+-      }}
+-    needs:
+-      - detect_changes
+-      - publish_base_container
+-    uses: ./.github/workflows/container-publish.yml
+-    with:
+-      image_name: ${{ needs.detect_changes.outputs.axvisor_lvz_container_image }}
+-      dockerfile: container/Dockerfile.axvisor-lvz
+-      cache_scope: container-axvisor-lvz
+-      build_args: |
+-        BASE_IMAGE=${{ needs.detect_changes.outputs.base_container_image }}:latest
+-    permissions:
+-      contents: read
+-      packages: write
++        id: filter
++        if: github.event_name != 'workflow_dispatch'
++        uses: dorny/paths-filter@v4
++        with:
++          base: ${{ github.event_name == 'push' && github.ref || '' }}
++          token: ""
++          filters: |
++            ci_checks:
++              - ".cargo/**"
++              - ".github/workflows/container-publish.yml"
++              - ".github/workflows/ci.yml"
++              - ".github/workflows/reusable-command.yml"
++              - "Cargo.toml"
++              - "Cargo.lock"
++              - "rust-toolchain.toml"
++              - "apps/**"
++              - "bootloader/**"
++              - "components/**"
++              - "configs/**"
++              - "drivers/**"
++              - "memory/**"
++              - "net/**"
++              - "os/**"
++              - "platforms/**"
++              - "scripts/**"
++              - "test-suit/**"
++              - "tools/**"
++              - "virtualization/**"
++              - "xtask/**"
++            base_container_publish:
++              - "container/Dockerfile"
++              - "rust-toolchain.toml"
++            axvisor_lvz_container_publish:
++              - "container/Dockerfile.axvisor-lvz"
++              - "rust-toolchain.toml"
++
++      - name: Resolve workflow outputs
++        id: outputs
++        env:
++          EVENT_NAME: ${{ github.event_name }}
++          REF_NAME: ${{ github.ref_name }}
++          MANUAL_TARGET: ${{ github.event.inputs.container_target }}
++          FILTER_CI_CHECKS: ${{ steps.filter.outputs.ci_checks }}
++          FILTER_BASE_CONTAINER_PUBLISH: ${{ steps.filter.outputs.base_container_publish }}
++          FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH: ${{ steps.filter.outputs.axvisor_lvz_container_publish }}
++          GH_TOKEN: ${{ github.token }}
++        run: |
++          repository="$(printf '%s' "$GITHUB_REPOSITORY" | LC_ALL=C tr '[:upper:]' '[:lower:]')"
++          base_container_image="ghcr.io/${repository}-container"
++          axvisor_lvz_container_image="ghcr.io/${repository}-container-axvisor-lvz"
++          skip_duplicate_push_ci=false
++
++          if [ "$EVENT_NAME" = "push" ] \
++            && [ "$REF_NAME" != "main" ] \
++            && [ "$REF_NAME" != "dev" ]; then
++            open_pr_count="$(
++              gh pr list \
++                --repo "$GITHUB_REPOSITORY" \
++                --head "$REF_NAME" \
++                --state open \
++                --json number \
++                --jq 'length'
++            )"
++
++            if [ "$open_pr_count" != "0" ]; then
++              skip_duplicate_push_ci=true
++            fi
++          fi
++
++          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
++            ci_checks=false
++            case "$MANUAL_TARGET" in
++              base)
++                base_container_publish=true
++                axvisor_lvz_container_publish=false
++                ;;
++              axvisor-lvz)
++                base_container_publish=false
++                axvisor_lvz_container_publish=true
++                ;;
++              both)
++                base_container_publish=true
++                axvisor_lvz_container_publish=true
++                ;;
++              *)
++                echo "Unexpected container_target: $MANUAL_TARGET" >&2
++                exit 1
++                ;;
++            esac
++          elif [ "$skip_duplicate_push_ci" = "true" ]; then
++            ci_checks=false
++            base_container_publish=false
++            axvisor_lvz_container_publish=false
++          else
++            if [ "$EVENT_NAME" = "push" ] && { [ "$REF_NAME" = "main" ] || [ "$REF_NAME" = "dev" ]; }; then
++              ci_checks=true
++            else
++              ci_checks="${FILTER_CI_CHECKS}"
++            fi
++            base_container_publish="${FILTER_BASE_CONTAINER_PUBLISH}"
++            axvisor_lvz_container_publish="${FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH}"
++          fi
++
++          {
++            echo "ci_checks=${ci_checks}"
++            echo "skip_duplicate_push_ci=${skip_duplicate_push_ci}"
++            echo "base_container_publish=${base_container_publish}"
++            echo "axvisor_lvz_container_publish=${axvisor_lvz_container_publish}"
++            echo "base_container_image=${base_container_image}"
++            echo "axvisor_lvz_container_image=${axvisor_lvz_container_image}"
++          } >> "$GITHUB_OUTPUT"
++
++      - name: Summarize skipped CI checks
++        if: steps.outputs.outputs.ci_checks != 'true'
++        env:
++          EVENT_NAME: ${{ github.event_name }}
++          SKIP_DUPLICATE_PUSH_CI: ${{ steps.outputs.outputs.skip_duplicate_push_ci }}
++        run: |
++          {
++            echo "## CI checks skipped"
++            echo ""
++            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
++              echo "This manual run is scoped to container publishing, so static checks and follow-up CI checks were skipped."
++            elif [ "$SKIP_DUPLICATE_PUSH_CI" = "true" ]; then
++              echo "This branch already has an open pull request. The duplicate push CI was skipped; the pull_request CI run will validate the same commit."
++            else
++              echo "Changed files do not match the test-relevant path set, so static checks and follow-up CI checks were skipped."
++            fi
++          } >> "$GITHUB_STEP_SUMMARY"
++
++      - name: Summarize manual container branch restriction
++        if: >-
++          ${{
++            github.event_name == 'workflow_dispatch'
++            && github.ref_name != 'main'
++            && github.ref_name != 'dev'
++          }}
++        run: |
++          {
++            echo "## Container publish skipped"
++            echo ""
++            echo "Manual container publishing only runs from the \`main\` or \`dev\` branch. This run targeted \`${{ github.ref_name }}\`, so publish jobs were skipped."
++          } >> "$GITHUB_STEP_SUMMARY"
++
++  static_checks:
++    name: ${{ matrix.name }}
++    needs: detect_changes
++    if: needs.detect_changes.outputs.ci_checks == 'true'
++    strategy:
++      fail-fast: true
++      matrix:
++        include:
++          - name: Check formatting
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: |
++              cargo fmt --all -- --check
++              cargo publish --workspace --dry-run --no-verify
++            cache_key: ""
++            container_image: base
++            fetch_depth: "1"
++          - name: Run sync-lint
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: cargo xtask sync-lint --since "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
++            cache_key: ""
++            container_image: base
++            fetch_depth: full
++            upload_xtask_bin_artifact: true
++          - name: Run spin-lint
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: cargo xtask spin-lint
++            cache_key: ""
++            container_image: base
++            fetch_depth: "1"
++    uses: ./.github/workflows/reusable-command.yml
++    with:
++      runs_on: >-
++        ${{
++          matrix.self_hosted_owner != ''
++          && github.repository_owner != matrix.self_hosted_owner
++          && '["ubuntu-latest"]'
++          || matrix.runs_on
++        }}
++      use_container: >-
++        ${{
++          matrix.use_container
++          || (
++            matrix.self_hosted_owner != ''
++            && github.repository_owner != matrix.self_hosted_owner
++          )
++        }}
++      command: ${{ matrix.command }}
++      cache_key: ${{ matrix.cache_key }}
++      container_image: >-
++        ${{
++          matrix.container_image == 'base'
++          && format('{0}:latest', needs.detect_changes.outputs.base_container_image)
++          || matrix.container_image
++        }}
++      fetch_depth: >-
++        ${{
++          contains(matrix.runs_on, 'self-hosted')
++          && !(
++            matrix.self_hosted_owner != ''
++            && github.repository_owner != matrix.self_hosted_owner
++          )
++          && matrix.fetch_depth == 'full'
++          && '2'
++          || (matrix.fetch_depth == 'full' && '0' || '1')
++        }}
++      upload_xtask_bin_artifact: ${{ matrix.upload_xtask_bin_artifact || false }}
++      xtask_bin_artifact_name: tg-xtask-bin
++
++  test_checks:
++    name: ${{ matrix.name }}
++    if: needs.detect_changes.outputs.ci_checks == 'true'
++    needs:
++      - detect_changes
++      - static_checks
++    strategy:
++      fail-fast: true
++      matrix:
++        include:
++          - name: Run clippy
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask clippy --since "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
++            cache_key: ""
++            container_image: base
++            fetch_depth: full
++            download_xtask_bin_artifact: true
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test with std
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask test
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test axvisor aarch64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask axvisor test qemu --arch aarch64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test axvisor riscv64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask axvisor test qemu --arch riscv64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test axvisor loongarch64 qemu
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: target/debug/tg-xtask axvisor test qemu --arch loongarch64
++            cache_key: test-axvisor-loongarch64
++            container_image: axvisor-lvz
++            limit_to_owner: ""
++            main_pr_only: false
++            download_xtask_bin_artifact: true
++          - name: Test starry riscv64 qemu
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: target/debug/tg-xtask starry test qemu --arch riscv64
++            cache_key: test-starry-riscv64
++            container_image: base
++            apk_region: us
++            limit_to_owner: ""
++            main_pr_only: false
++            download_xtask_bin_artifact: true
++          - name: Test starry aarch64 qemu
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: target/debug/tg-xtask starry test qemu --arch aarch64
++            cache_key: test-starry-aarch64
++            container_image: base
++            apk_region: us
++            limit_to_owner: ""
++            main_pr_only: false
++            download_xtask_bin_artifact: true
++          - name: Test starry loongarch64 qemu
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: target/debug/tg-xtask starry test qemu --arch loongarch64
++            cache_key: test-starry-loongarch64
++            container_image: base
++            apk_region: us
++            limit_to_owner: ""
++            main_pr_only: false
++            download_xtask_bin_artifact: true
++          - name: Test starry x86_64 qemu
++            use_container: true
++            runs_on: '["ubuntu-latest"]'
++            command: target/debug/tg-xtask starry test qemu --arch x86_64
++            cache_key: test-starry-x86_64
++            container_image: base
++            apk_region: us
++            limit_to_owner: ""
++            main_pr_only: false
++            download_xtask_bin_artifact: true
++          - name: Test arceos x86_64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask arceos test qemu --arch x86_64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test arceos riscv64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask arceos test qemu --arch riscv64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test arceos aarch64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask arceos test qemu --arch aarch64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          - name: Test arceos loongarch64 qemu
++            use_container: false
++            runs_on: '["self-hosted","linux","qcs"]'
++            self_hosted_owner: rcore-os
++            command: cargo xtask arceos test qemu --arch loongarch64
++            cache_key: ""
++            container_image: base
++            limit_to_owner: ""
++            main_pr_only: false
++          # Visual regression matrix: re-enable per arch once at least one
++          # scenario has that arch listed in its `arches` file and a verified
++          # golden is committed. Until then run_all.sh exits 1 (no scenarios
++          # ran), so the matrix would be uniformly red. The DRM card0 PR (#506)
++          # is the current prerequisite for weston_shm_baseline / xwayland_xeyes.
++          # - name: Visual starry riscv64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: |
++          #     apt-get update && apt-get install -y --no-install-recommends e2tools
++          #     cargo xtask starry build --arch riscv64
++          #     cargo xtask starry rootfs --arch riscv64
++          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch riscv64 --scenario xwayland_xeyes
++          #     bash scripts/visual-test/run_all.sh --arch riscv64
++          #   cache_key: test-visual-riscv64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: false
++          # - name: Visual starry aarch64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: |
++          #     apt-get update && apt-get install -y --no-install-recommends e2tools
++          #     cargo xtask starry build --arch aarch64
++          #     cargo xtask starry rootfs --arch aarch64
++          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch aarch64 --scenario xwayland_xeyes
++          #     bash scripts/visual-test/run_all.sh --arch aarch64
++          #   cache_key: test-visual-aarch64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: false
++          # - name: Visual starry x86_64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: |
++          #     apt-get update && apt-get install -y --no-install-recommends e2tools
++          #     cargo xtask starry build --arch x86_64
++          #     cargo xtask starry rootfs --arch x86_64
++          #     python3 scripts/visual-test/prepare_rootfs_extras.py --arch x86_64 --scenario xwayland_xeyes
++          #     bash scripts/visual-test/run_all.sh --arch x86_64
++          #   cache_key: test-visual-x86_64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: false
++          # Stress tests: uncomment to enable (runs only on PRs targeting main).
++          # - name: Stress starry aarch64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: cargo xtask starry app qemu -t stress/git --arch aarch64
++          #   cache_key: test-starry-stress-aarch64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: true
++          # - name: Stress starry riscv64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: cargo xtask starry app qemu -t stress/git --arch riscv64
++          #   cache_key: test-starry-stress-riscv64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: true
++          # - name: Stress starry loongarch64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: cargo xtask starry app qemu -t stress/git --arch loongarch64
++          #   cache_key: test-starry-stress-loongarch64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: true
++          # - name: Stress starry x86_64
++          #   use_container: true
++          #   runs_on: '["ubuntu-latest"]'
++          #   command: cargo xtask starry app qemu -t stress/git --arch x86_64
++          #   cache_key: test-starry-stress-x86_64
++          #   container_image: base
++          #   apk_region: us
++          #   limit_to_owner: ""
++          #   main_pr_only: true
++          - name: Test axvisor self-hosted x86_64(svm)
++            use_container: false
++            runs_on: '["self-hosted","linux","amd","kvm"]'
++            require_kvm: true
++            command: cargo xtask axvisor test qemu --arch x86_64 --test-case smoke-svm
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test axvisor self-hosted x86_64(vmx)
++            use_container: false
++            runs_on: '["self-hosted","linux","intel","kvm"]'
++            require_kvm: true
++            command: cargo xtask axvisor test qemu --arch x86_64 --test-case smoke-vmx
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          # - name: Test axvisor self-hosted x86_64(vmx) UEFI
++          #   use_container: false
++          #   runs_on: '["self-hosted","linux","intel","kvm"]'
++          #   require_kvm: true
++          #   timeout_minutes: 20
++          #   command: |
++          #     sudo apt-get update
++          #     sudo apt-get install -y --no-install-recommends ovmf
++          #     UEFI_FIRMWARE=""
++          #     for candidate in \
++          #       /usr/share/OVMF/OVMF_CODE_4M.fd \
++          #       /usr/share/OVMF/OVMF_CODE.fd \
++          #       /usr/share/ovmf/OVMF.fd \
++          #       /usr/share/qemu/OVMF.fd; do
++          #       if [ -f "${candidate}" ]; then
++          #         UEFI_FIRMWARE="${candidate}"
++          #         break
++          #       fi
++          #     done
++          #     if [ -z "${UEFI_FIRMWARE}" ]; then
++          #       echo "ERROR: installed OVMF firmware image was not found under /usr/share." >&2
++          #       exit 1
++          #     fi
++          #     export AXVISOR_X86_64_UEFI_FIRMWARE="${UEFI_FIRMWARE}"
++          #     cd os/axvisor
++          #     ./scripts/setup_qemu.sh nimbos-uefi
++          #     grep -q 'boot_protocol = "uefi"' tmp/vmconfigs/nimbos-x86_64-qemu-uefi-smp1.generated.toml
++          #     grep -q 'uefi_firmware_path = "' tmp/vmconfigs/nimbos-x86_64-qemu-uefi-smp1.generated.toml
++          #     cd ../..
++          #     cargo xtask axvisor test qemu --arch x86_64 --test-group uefi --test-case qemu-nimbos
++          #   cache_key: ""
++          #   container_image: ""
++          #   limit_to_owner: rcore-os
++          #   main_pr_only: false
++          - name: Test axloader HTTP smoke
++            use_container: false
++            runs_on: '["self-hosted","linux","intel","kvm"]'
++            require_kvm: true
++            timeout_minutes: 20
++            command: |
++              rustup target add x86_64-unknown-uefi
++              find_uefi_firmware() {
++                for candidate in \
++                  /usr/share/OVMF/OVMF_CODE_4M.fd \
++                  /usr/share/OVMF/OVMF_CODE.fd \
++                  /usr/share/ovmf/OVMF.fd \
++                  /usr/share/qemu/OVMF.fd; do
++                  if [ -f "${candidate}" ]; then
++                    printf '%s\n' "${candidate}"
++                    return 0
++                  fi
++                done
++                return 1
++              }
++              UEFI_FIRMWARE="$(find_uefi_firmware || true)"
++              if [ -z "${UEFI_FIRMWARE}" ]; then
++                sudo apt-get update
++                sudo apt-get install -y --no-install-recommends ovmf
++                UEFI_FIRMWARE="$(find_uefi_firmware || true)"
++              fi
++              if [ -z "${UEFI_FIRMWARE}" ]; then
++                echo "ERROR: installed OVMF firmware image was not found under /usr/share." >&2
++                exit 1
++              fi
++              export AXLOADER_X86_64_UEFI_FIRMWARE="${UEFI_FIRMWARE}"
++              cargo axloader test qemu --target x86_64-unknown-uefi
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test axvisor self-hosted board orangepi-5-plus-linux
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask axvisor test board --board orangepi-5-plus-linux
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test axvisor self-hosted board roc-rk3568-pc-linux
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask axvisor test board --board roc-rk3568-pc-linux
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test axvisor self-hosted board phytiumpi-linux
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask axvisor test board --board phytiumpi-linux
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test axvisor self-hosted board asus-nuc15crh-linux
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            timeout_minutes: 20
++            command: |
++              mkdir -p tmp
++              cargo xtask image pull qemu-x86_64 --output-dir tmp
++              cargo xtask image pull initramfs-x86_64-busybox.cpio.gz --output-dir tmp
++              gzip -dc \
++                tmp/initramfs-x86_64-busybox.cpio.gz/initramfs-x86_64-busybox.cpio.gz \
++                > tmp/initramfs-x86_64-busybox.cpio
++              cargo xtask axvisor test board --board asus-nuc15crh-linux
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test starry self-hosted board orangepi-5-plus
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask starry test board --board orangepi-5-plus
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test starry self-hosted board aka-00-sg2002
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask starry test board --board aka-00-sg2002
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test starry self-hosted board visionfive2
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask starry test board --board visionfive2
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++          - name: Test starry self-hosted board jl-lsgd2k10
++            use_container: false
++            runs_on: '["self-hosted","linux","board"]'
++            command: cargo xtask starry test board --board jl-lsgd2k10
++            cache_key: ""
++            container_image: ""
++            limit_to_owner: rcore-os
++            main_pr_only: false
++    uses: ./.github/workflows/reusable-command.yml
++    with:
++      runs_on: >-
++        ${{
++          matrix.self_hosted_owner != ''
++          && github.repository_owner != matrix.self_hosted_owner
++          && '["ubuntu-latest"]'
++          || matrix.runs_on
++        }}
++      use_container: >-
++        ${{
++          matrix.use_container
++          || (
++            matrix.self_hosted_owner != ''
++            && github.repository_owner != matrix.self_hosted_owner
++          )
++        }}
++      command: ${{ matrix.command }}
++      cache_key: ${{ matrix.cache_key }}
++      container_image: >-
++        ${{
++          matrix.container_image == 'base'
++          && format('{0}:latest', needs.detect_changes.outputs.base_container_image)
++          || matrix.container_image == 'axvisor-lvz'
++          && format('{0}:latest', needs.detect_changes.outputs.axvisor_lvz_container_image)
++          || matrix.container_image
++        }}
++      apk_region: ${{ matrix.apk_region || 'china' }}
++      limit_to_owner: ${{ matrix.limit_to_owner }}
++      main_pr_only: ${{ matrix.main_pr_only }}
++      fetch_depth: >-
++        ${{
++          contains(matrix.runs_on, 'self-hosted')
++          && !(
++            matrix.self_hosted_owner != ''
++            && github.repository_owner != matrix.self_hosted_owner
++          )
++          && matrix.fetch_depth == 'full'
++          && '2'
++          || (matrix.fetch_depth == 'full' && '0' || '1')
++        }}
++      timeout_minutes: ${{ matrix.timeout_minutes || 360 }}
++      require_kvm: ${{ matrix.require_kvm || false }}
++      download_xtask_bin_artifact: >-
++        ${{
++          matrix.download_xtask_bin_artifact
++          || (
++            matrix.self_hosted_owner != ''
++            && github.repository_owner != matrix.self_hosted_owner
++          )
++        }}
++      xtask_bin_artifact_name: tg-xtask-bin
++    secrets:
++      CLAW_API_KEY: ${{ secrets.CLAW_API_KEY }}
++
++  publish_base_container:
++    name: Publish base container image
++    if: >-
++      ${{
++        (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
++        && (github.ref_name == 'main' || github.ref_name == 'dev')
++        && needs.detect_changes.outputs.base_container_publish == 'true'
++      }}
++    needs:
++      - detect_changes
++    uses: ./.github/workflows/container-publish.yml
++    with:
++      image_name: ${{ needs.detect_changes.outputs.base_container_image }}
++      dockerfile: container/Dockerfile
++      cache_scope: container
++    permissions:
++      contents: read
++      packages: write
++
++  publish_axvisor_lvz_container:
++    name: Publish axvisor-lvz container image
++    if: >-
++      ${{
++        always()
++        && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
++        && (github.ref_name == 'main' || github.ref_name == 'dev')
++        && needs.detect_changes.outputs.axvisor_lvz_container_publish == 'true'
++        && (
++          needs.detect_changes.outputs.base_container_publish != 'true'
++          || needs.publish_base_container.result == 'success'
++        )
++      }}
++    needs:
++      - detect_changes
++      - publish_base_container
++    uses: ./.github/workflows/container-publish.yml
++    with:
++      image_name: ${{ needs.detect_changes.outputs.axvisor_lvz_container_image }}
++      dockerfile: container/Dockerfile.axvisor-lvz
++      cache_scope: container-axvisor-lvz
++      build_args: |
++        BASE_IMAGE=${{ needs.detect_changes.outputs.base_container_image }}:latest
++    permissions:
++      contents: read
++      packages: write
+diff --git a/.gitignore b/.gitignore
+index 8e998466f..c4454fae7 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,74 +1,77 @@
+-# Sphinx documentation
+-/docs/_build/
+-
+-# PyBuilder
+-/target/
+-
+-# Jupyter Notebook
+-/.ipynb_checkpoints
+-
+-# pyenv
+-/.python-version
+-
+-
+-# Environments
+-/.env
+-/.venv
+-/env/
+-/venv/
+-/ENV/
+-/env.bak/
+-/venv.bak/
+-
+-# mkdocs documentation
+-/site
+-
+-# IDEs
+-/.idea/
+-/.vscode/*
+-!/.vscode/launch.json
+-!/.vscode/session.py
+-!/.vscode/tasks.json
+-/.zed/
+-
+-# Python cache
+-__pycache__/
+-*.pyc
+-*.pyo
+-
+-
+-*-schema.json
+-.qemu*
+-.build*
+-.uboot*
+-
+-/.cargo/.config-local.toml
+-.axconfig*
+-*.img
+-!.claude/skills/*
+-/tmp/*
+-*.vi
+-
+-.arceos*
+-.starry*
+-.axvisor*
+-.board*
+-
+-# Tooling artifacts
+-.codex
+-.agents
+-.image.toml
+-coverage/
+-third_party/
+-os/StarryOS-REF
+-.Ds_Store
+-starry-*.log
+-loongarch64-axvisor-guest-tests.md
+-
+-# GitHub page snapshots accidentally saved into the repo
+-*rcore-os_tgoskits*.html
+-
+-# Resource monitor local artifacts
+-/logs/offline-monitor/
+-/images/linux-qemu/
+-offline-monitor-analysis*.html
++# Sphinx documentation
++/docs/_build/
++
++# PyBuilder
++/target/
++
++# Jupyter Notebook
++/.ipynb_checkpoints
++
++# pyenv
++/.python-version
++
++
++# Environments
++/.env
++/.venv
++/env/
++/venv/
++/ENV/
++/env.bak/
++/venv.bak/
++
++# mkdocs documentation
++/site
++
++# IDEs
++/.idea/
++/.vscode/*
++!/.vscode/launch.json
++!/.vscode/session.py
++!/.vscode/tasks.json
++/.zed/
++
++# Python cache
++__pycache__/
++*.pyc
++*.pyo
++
++
++*-schema.json
++.qemu*
++.build*
++.uboot*
++
++/.cargo/.config-local.toml
++.axconfig*
++*.img
++!.claude/skills/*
++/tmp/*
++*.vi
++
++.arceos*
++.starry*
++.axvisor*
++.board*
++
++# Tooling artifacts
++.codex
++.agents
++.image.toml
++coverage/
++third_party/
++os/StarryOS-REF
++.Ds_Store
++starry-*.log
++loongarch64-axvisor-guest-tests.md
++
++# GitHub page snapshots accidentally saved into the repo
++*rcore-os_tgoskits*.html
++
++# Resource monitor local artifacts
++/logs/offline-monitor/
++/images/linux-qemu/
++offline-monitor-analysis*.html
++
++# Contest baseline raw evidence (machine-specific and potentially large)
++/results/baseline/runs/
+diff --git a/os/axvisor/doc/qemu-quickstart.md b/os/axvisor/doc/qemu-quickstart.md
+index 708380820..576b26d6d 100644
+--- a/os/axvisor/doc/qemu-quickstart.md
++++ b/os/axvisor/doc/qemu-quickstart.md
+@@ -1,229 +1,244 @@
+-# QEMU Quickstart Guide
+-
+-English | [中文](qemu-quickstart_cn.md)
+-
+-This guide covers how to set up the AxVisor development environment locally and run different guest operating systems on QEMU.
+-
+-## Prerequisites
+-
+-- **OS**: Linux (native or WSL2)
+-- **Architecture**: x86_64 host
+-
+-## 1. Install System Dependencies
+-
+-```bash
+-sudo apt update && sudo apt install -y \
+-  build-essential gcc libssl-dev libudev-dev pkg-config \
+-  qemu-system-x86 qemu-system-arm qemu-system-misc \
+-  git curl wget
+-```
+-
+-## 2. Install Rust Toolchain
+-
+-```bash
+-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+-source "$HOME/.cargo/env"
+-```
+-
+-Once you enter the project directory, Rust will automatically install the required nightly toolchain, components, and cross-compilation targets based on `rust-toolchain.toml` — no manual configuration needed.
+-
+-Install additional Cargo tools:
+-
+-```bash
+-cargo install cargo-binutils
+-cargo +stable install ostool --version '^0.15'
+-```
+-
+-- `cargo-binutils`: provides `rust-objcopy`, `rust-objdump`, etc.
+-- `ostool`: custom build runner for AxVisor
+-
+-## 3. KVM and UEFI Firmware Setup (NimbOS x86_64 Only)
+-
+-NimbOS runs on x86_64 QEMU and requires KVM hardware acceleration. ArceOS and Linux use AArch64 QEMU (TCG mode) and do not need KVM — you can skip this section.
+-
+-Verify the KVM device exists:
+-
+-```bash
+-ls -la /dev/kvm
+-```
+-
+-Add your user to the `kvm` group:
+-
+-```bash
+-sudo usermod -aG kvm $USER
+-```
+-
+-Apply the group change in the current terminal without re-logging:
+-
+-```bash
+-newgrp kvm
+-```
+-
+-Verify:
+-
+-```bash
+-id  # output should include "kvm"
+-```
+-
+-The optional x86_64 UEFI guest path uses an external OVMF-compatible firmware image. On Debian/Ubuntu, install it with:
+-
+-```bash
+-sudo apt install ovmf
+-```
+-
+-If your firmware is not installed in a standard location, export:
+-
+-```bash
+-export AXVISOR_X86_64_UEFI_FIRMWARE=/path/to/OVMF_CODE.fd
+-```
+-
+-## 4. Running Guest OSes
+-
+-This branch provides a one-click setup script `scripts/setup_qemu.sh` that automatically downloads guest images, patches configuration paths, and prepares the rootfs.
+-
+-LoongArch64 AxVisor shell smoke is a separate path: it does not need guest images, but it does require a virtualization-capable LoongArch QEMU build such as QEMU-LVZ. It also does not use `scripts/setup_qemu.sh`; if you try `./scripts/setup_qemu.sh loongarch64`, the script will point you back to `./scripts/quick-start.sh qemu-loongarch64 start`.
+-
+-### ArceOS (AArch64)
+-
+-```bash
+-./scripts/setup_qemu.sh arceos
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-aarch64.toml \
+-  --qemu-config .github/workflows/qemu-aarch64.toml \
+-  --vmconfigs tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
+-```
+-
+-Success indicator: `Hello, world!` appears in the output.
+-
+-### Linux (AArch64)
+-
+-```bash
+-./scripts/setup_qemu.sh linux
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-aarch64.toml \
+-  --qemu-config .github/workflows/qemu-aarch64.toml \
+-  --vmconfigs tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml
+-```
+-
+-Success indicator: `test pass!` appears in the output.
+-
+-### NimbOS (x86_64, requires KVM)
+-
+-```bash
+-./scripts/setup_qemu.sh nimbos
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-x86_64.toml \
+-  --qemu-config .github/workflows/qemu-x86_64-kvm.toml \
+-  --vmconfigs tmp/vmconfigs/nimbos-x86_64-qemu-smp1.generated.toml
+-```
+-
+-After booting, you will enter the Rust user shell (`>>` prompt). Type `usertests` to run the test suite. All tests passing will print `usertests passed!`
+-
+-> **Note**: NimbOS requires VT-x/KVM. If `/dev/kvm` does not exist or has insufficient permissions, you will get a `Permission denied` error. WSL2 requires nested virtualization support in the kernel to use KVM.
+-
+-### Linux UEFI (x86_64, requires KVM and OVMF)
+-
+-```bash
+-./scripts/setup_qemu.sh linux-x86_64-uefi
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-x86_64.toml \
+-  --qemu-config .github/workflows/qemu-x86_64-uefi.toml \
+-  --vmconfigs tmp/vmconfigs/linux-x86_64-qemu-uefi-smp1.generated.toml
+-```
+-
+-The UEFI VM config sets `boot_protocol = "uefi"` and `uefi_firmware_path`, which tells AxVisor to load the external firmware image without applying the legacy axvm-bios multiboot patch. This Linux guest also provides `ramdisk_path` so the initramfs is available before boot.
+-
+-### ArceOS UEFI (x86_64, requires KVM, OVMF, and a local guest image)
+-
+-The ArceOS x86_64 UEFI path is provided as a local bring-up flow because the image registry does not currently publish a prebuilt ArceOS x86_64 UEFI guest. Build or place the guest image locally, then export:
+-
+-```bash
+-export AXVISOR_X86_64_ARCEOS_UEFI_KERNEL=/path/to/arceos-x86_64-uefi.bin
+-export AXVISOR_X86_64_UEFI_FIRMWARE=/path/to/OVMF_CODE.fd
+-```
+-
+-Then run:
+-
+-```bash
+-./scripts/quick-start.sh qemu-x86_64 start --arceos-uefi
+-```
+-
+-This flow uses `configs/vms/qemu/x86_64/arceos-uefi-smp1.toml` with `.github/workflows/qemu-x86_64-arceos-uefi.toml`, sets `boot_protocol = "uefi"`, and loads the configured firmware image from `uefi_firmware_path`.
+-
+-### ArceOS (RISC-V64)
+-
+-```bash
+-./scripts/setup_qemu.sh arceos-riscv64
+-
+-cargo xtask qemu \
+-  --build-config configs/board/qemu-riscv64.toml \
+-  --qemu-config .github/workflows/qemu-riscv64.toml \
+-  --vmconfigs tmp/vmconfigs/arceos-riscv64-qemu-smp1.generated.toml
+-```
+-
+-Success indicator: `Hello, world!` appears in the output.
+-
+-`qemu-riscv64` currently supports the RISC-V ArceOS guest path. Cross-ISA boot such as `riscv64 AxVisor -> aarch64 ArceOS` is not wired up in the current hypervisor stack.
+-
+-### AxVisor Shell (LoongArch64, requires QEMU-LVZ)
+-
+-```bash
+-./scripts/quick-start.sh qemu-loongarch64 start
+-```
+-
+-This command launches AxVisor directly and enters the built-in shell instead of booting a guest image.
+-
+-Success indicator: `Welcome to AxVisor Shell!` appears in the output.
+-
+-> **Note**: Stock `qemu-system-loongarch64` usually does not expose LoongArch virtualization extensions. Use `QEMU-LVZ`, or set `AXBUILD_QEMU_SYSTEM_LOONGARCH64=/path/to/qemu-system-loongarch64` to a validated virtualization-capable binary.
+-
+-## 5. What Does setup_qemu.sh Do?
+-
+-For guest-image flows, the script automates three steps, eliminating manual work:
+-
+-1. **Download images**: calls `cargo axvisor image pull` to fetch and extract guest images to `/tmp/.axvisor-images/`
+-2. **Generate temp configs**: copies VM config templates to `tmp/vmconfigs/*.generated.toml`, then uses `sed` to update `kernel_path` and firmware paths (`bios_path` for legacy NimbOS BIOS mode, `uefi_firmware_path` for UEFI mode) to actual image paths without modifying tracked files in `configs/vms/**/*.toml`
+-3. **Prepare rootfs**: copies `rootfs.img` to the project's `tmp/` directory for QEMU to use
+-
+-You can also perform these steps manually if you prefer not to use the script.
+-
+-## Troubleshooting
+-
+-### `Path tmp/Image not found`
+-
+-The `kernel_path` in the VM config points to a non-existent file. Run `./scripts/setup_qemu.sh <guest>` to automatically fix the paths.
+-
+-### `Could not access KVM kernel module: Permission denied`
+-
+-Your user is not in the `kvm` group. See the "KVM Setup" section above.
+-
+-### `UEFI firmware image not found`
+-
+-Install OVMF or set `AXVISOR_X86_64_UEFI_FIRMWARE` to the firmware image path before running `./scripts/setup_qemu.sh linux-x86_64-uefi`.
+-
+-### `qemu-system-aarch64: command not found`
+-
+-QEMU is not installed. Run the `apt install` command from Step 1.
+-
+-### `Hardware support: false` followed by a panic on LoongArch64
+-
+-AxVisor was launched with a LoongArch QEMU binary that does not provide virtualization extensions. Switch to `QEMU-LVZ`, or export `AXBUILD_QEMU_SYSTEM_LOONGARCH64` to point at a validated `qemu-system-loongarch64` binary before running `./scripts/quick-start.sh qemu-loongarch64 start`.
+-
+-### `Auto syncing from registry ... timed out`
+-
+-This usually indicates unstable access to GitHub Raw endpoints. `cargo axvisor image pull` now handles registry bootstrap internally: it prefers the default registry, follows the included registry when present, and falls back to the built-in fallback registry (`v0.0.25.toml`) when the default endpoint is unavailable.
+-
+-If your network is unstable for specific registry URLs, you can override the fallback registry:
+-
+-```bash
+-export AXVISOR_REGISTRY_FALLBACK_URL="https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.25.toml"
+-./scripts/setup_qemu.sh arceos
+-```
+-
+-### First build is very slow
+-
+-This is expected. AxVisor has many dependencies, and the first compilation needs to download and build all crates. Subsequent incremental builds will be much faster.
++# QEMU Quickstart Guide
++
++English | [中文](qemu-quickstart_cn.md)
++
++This guide covers how to set up the AxVisor development environment locally and run different guest operating systems on QEMU.
++
++## Prerequisites
++
++- **OS**: Linux (native or WSL2)
++- **Architecture**: x86_64 host
++
++## 1. Install System Dependencies
++
++```bash
++sudo apt update && sudo apt install -y \
++  build-essential gcc clang libclang-19-dev cmake zlib1g-dev \
++  libssl-dev libudev-dev pkg-config ipxe-qemu \
++  qemu-system-x86 qemu-system-arm qemu-system-misc \
++  git curl wget xz-utils
++```
++
++The AArch64 AxVisor host build targets musl.  Install the same prebuilt
++toolchain source used by `container/Dockerfile`:
++
++```bash
++wget -q \
++  https://github.com/arceos-org/setup-musl/releases/download/prebuilt/aarch64-linux-musl-cross.tgz \
++  -O /tmp/aarch64-linux-musl-cross.tgz
++sudo tar -xzf /tmp/aarch64-linux-musl-cross.tgz -C /opt
++export PATH="/opt/aarch64-linux-musl-cross/bin:$PATH"
++```
++
++## 2. Install Rust Toolchain
++
++```bash
++curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
++source "$HOME/.cargo/env"
++```
++
++Once you enter the project directory, Rust will automatically install the required nightly toolchain, components, and cross-compilation targets based on `rust-toolchain.toml` — no manual configuration needed.
++
++Install additional Cargo tools:
++
++```bash
++cargo install cargo-binutils --version 0.4.0 --locked
++cargo +stable install ostool --version '^0.15'
++```
++
++- `cargo-binutils`: provides `rust-objcopy`, `rust-objdump`, etc.
++- `ostool`: custom build runner for AxVisor
++
++## 3. KVM and UEFI Firmware Setup (NimbOS x86_64 Only)
++
++NimbOS runs on x86_64 QEMU and requires KVM hardware acceleration. ArceOS and Linux use AArch64 QEMU (TCG mode) and do not need KVM — you can skip this section.
++
++Verify the KVM device exists:
++
++```bash
++ls -la /dev/kvm
++```
++
++Add your user to the `kvm` group:
++
++```bash
++sudo usermod -aG kvm $USER
++```
++
++Apply the group change in the current terminal without re-logging:
++
++```bash
++newgrp kvm
++```
++
++Verify:
++
++```bash
++id  # output should include "kvm"
++```
++
++The optional x86_64 UEFI guest path uses an external OVMF-compatible firmware image. On Debian/Ubuntu, install it with:
++
++```bash
++sudo apt install ovmf
++```
++
++If your firmware is not installed in a standard location, export:
++
++```bash
++export AXVISOR_X86_64_UEFI_FIRMWARE=/path/to/OVMF_CODE.fd
++```
++
++## 4. Running Guest OSes
++
++This branch provides a one-click setup script `scripts/setup_qemu.sh` that automatically downloads guest images, patches configuration paths, and prepares the rootfs.
++
++LoongArch64 AxVisor shell smoke is a separate path: it does not need guest images, but it does require a virtualization-capable LoongArch QEMU build such as QEMU-LVZ. It also does not use `scripts/setup_qemu.sh`; if you try `./scripts/setup_qemu.sh loongarch64`, the script will point you back to `./scripts/quick-start.sh qemu-loongarch64 start`.
++
++### ArceOS (AArch64)
++
++```bash
++./scripts/setup_qemu.sh arceos
++
++cargo xtask qemu \
++  --config configs/board/qemu-aarch64.toml \
++  --qemu-config .github/workflows/qemu-aarch64.toml \
++  --vmconfigs tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
++```
++
++Success indicator: `Hello, world!` appears in the output.
++
++### Linux (AArch64)
++
++```bash
++./scripts/setup_qemu.sh linux
++
++cargo xtask qemu \
++  --config configs/board/qemu-aarch64.toml \
++  --qemu-config .github/workflows/qemu-aarch64.toml \
++  --vmconfigs tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml
++```
++
++When the `~ #` prompt appears, type `echo 'test pass!'`.  The success indicator
++is a standalone `test pass!` line in the output.  Automated runs should use a
++runner configuration with `shell_prefix` and `shell_init_cmd` instead of
++waiting passively for this marker.
++
++### NimbOS (x86_64, requires KVM)
++
++```bash
++./scripts/setup_qemu.sh nimbos
++
++cargo xtask qemu \
++  --config configs/board/qemu-x86_64.toml \
++  --qemu-config .github/workflows/qemu-x86_64-kvm.toml \
++  --vmconfigs tmp/vmconfigs/nimbos-x86_64-qemu-smp1.generated.toml
++```
++
++After booting, you will enter the Rust user shell (`>>` prompt). Type `usertests` to run the test suite. All tests passing will print `usertests passed!`
++
++> **Note**: NimbOS requires VT-x/KVM. If `/dev/kvm` does not exist or has insufficient permissions, you will get a `Permission denied` error. WSL2 requires nested virtualization support in the kernel to use KVM.
++
++### Linux UEFI (x86_64, requires KVM and OVMF)
++
++```bash
++./scripts/setup_qemu.sh linux-x86_64-uefi
++
++cargo xtask qemu \
++  --config configs/board/qemu-x86_64.toml \
++  --qemu-config .github/workflows/qemu-x86_64-uefi.toml \
++  --vmconfigs tmp/vmconfigs/linux-x86_64-qemu-uefi-smp1.generated.toml
++```
++
++The UEFI VM config sets `boot_protocol = "uefi"` and `uefi_firmware_path`, which tells AxVisor to load the external firmware image without applying the legacy axvm-bios multiboot patch. This Linux guest also provides `ramdisk_path` so the initramfs is available before boot.
++
++### ArceOS UEFI (x86_64, requires KVM, OVMF, and a local guest image)
++
++The ArceOS x86_64 UEFI path is provided as a local bring-up flow because the image registry does not currently publish a prebuilt ArceOS x86_64 UEFI guest. Build or place the guest image locally, then export:
++
++```bash
++export AXVISOR_X86_64_ARCEOS_UEFI_KERNEL=/path/to/arceos-x86_64-uefi.bin
++export AXVISOR_X86_64_UEFI_FIRMWARE=/path/to/OVMF_CODE.fd
++```
++
++Then run:
++
++```bash
++./scripts/quick-start.sh qemu-x86_64 start --arceos-uefi
++```
++
++This flow uses `configs/vms/qemu/x86_64/arceos-uefi-smp1.toml` with `.github/workflows/qemu-x86_64-arceos-uefi.toml`, sets `boot_protocol = "uefi"`, and loads the configured firmware image from `uefi_firmware_path`.
++
++### ArceOS (RISC-V64)
++
++```bash
++./scripts/setup_qemu.sh arceos-riscv64
++
++cargo xtask qemu \
++  --build-config configs/board/qemu-riscv64.toml \
++  --qemu-config .github/workflows/qemu-riscv64.toml \
++  --vmconfigs tmp/vmconfigs/arceos-riscv64-qemu-smp1.generated.toml
++```
++
++Success indicator: `Hello, world!` appears in the output.
++
++`qemu-riscv64` currently supports the RISC-V ArceOS guest path. Cross-ISA boot such as `riscv64 AxVisor -> aarch64 ArceOS` is not wired up in the current hypervisor stack.
++
++### AxVisor Shell (LoongArch64, requires QEMU-LVZ)
++
++```bash
++./scripts/quick-start.sh qemu-loongarch64 start
++```
++
++This command launches AxVisor directly and enters the built-in shell instead of booting a guest image.
++
++Success indicator: `Welcome to AxVisor Shell!` appears in the output.
++
++> **Note**: Stock `qemu-system-loongarch64` usually does not expose LoongArch virtualization extensions. Use `QEMU-LVZ`, or set `AXBUILD_QEMU_SYSTEM_LOONGARCH64=/path/to/qemu-system-loongarch64` to a validated virtualization-capable binary.
++
++## 5. What Does setup_qemu.sh Do?
++
++For guest-image flows, the script automates three steps, eliminating manual work:
++
++1. **Download images**: changes to the TGOSKits workspace root and runs `cargo xtask image --local-storage /tmp/.axvisor-images pull` to fetch and extract guest images to `/tmp/.axvisor-images/`. From the `os/axvisor` directory, the equivalent manual form is `(cd ../.. && cargo xtask image --local-storage /tmp/.axvisor-images pull <IMAGE>)`.
++2. **Generate temp configs**: copies VM config templates to `tmp/vmconfigs/*.generated.toml`, then uses `sed` to update `kernel_path` and firmware paths (`bios_path` for legacy NimbOS BIOS mode, `uefi_firmware_path` for UEFI mode) to actual image paths without modifying tracked files in `configs/vms/**/*.toml`
++3. **Prepare rootfs**: copies `rootfs.img` to the project's `tmp/` directory for QEMU to use
++
++You can also perform these steps manually if you prefer not to use the script.
++
++## Troubleshooting
++
++### `Path tmp/Image not found`
++
++The `kernel_path` in the VM config points to a non-existent file. Run `./scripts/setup_qemu.sh <guest>` to automatically fix the paths.
++
++### `Could not access KVM kernel module: Permission denied`
++
++Your user is not in the `kvm` group. See the "KVM Setup" section above.
++
++### `UEFI firmware image not found`
++
++Install OVMF or set `AXVISOR_X86_64_UEFI_FIRMWARE` to the firmware image path before running `./scripts/setup_qemu.sh linux-x86_64-uefi`.
++
++### `qemu-system-aarch64: command not found`
++
++QEMU is not installed. Run the `apt install` command from Step 1.
++
++### `Hardware support: false` followed by a panic on LoongArch64
++
++AxVisor was launched with a LoongArch QEMU binary that does not provide virtualization extensions. Switch to `QEMU-LVZ`, or export `AXBUILD_QEMU_SYSTEM_LOONGARCH64` to point at a validated `qemu-system-loongarch64` binary before running `./scripts/quick-start.sh qemu-loongarch64 start`.
++
++### `Auto syncing from registry ... timed out`
++
++This usually indicates unstable access to GitHub Raw endpoints. The workspace-level `cargo xtask image pull` command handles registry synchronization, while `setup_qemu.sh` adds bootstrap and fallback handling: it prefers the default registry, follows the included registry when present, and falls back to the built-in fallback registry (`v0.0.25.toml`) when the default endpoint is unavailable.
++
++If your network is unstable for specific registry URLs, you can override the fallback registry:
++
++```bash
++export AXVISOR_REGISTRY_FALLBACK_URL="https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.25.toml"
++./scripts/setup_qemu.sh arceos
++```
++
++### First build is very slow
++
++This is expected. AxVisor has many dependencies, and the first compilation needs to download and build all crates. Subsequent incremental builds will be much faster.
+diff --git a/os/axvisor/doc/qemu-quickstart_cn.md b/os/axvisor/doc/qemu-quickstart_cn.md
+index 37ee3f140..23dde214a 100644
+--- a/os/axvisor/doc/qemu-quickstart_cn.md
++++ b/os/axvisor/doc/qemu-quickstart_cn.md
+@@ -1,183 +1,197 @@
+-# QEMU 快速上手指南
+-
+-[English](qemu-quickstart.md) | 中文
+-
+-本文档介绍如何在本地搭建 AxVisor 的开发运行环境，并通过 QEMU 运行不同的客户机系统。
+-
+-## 环境要求
+-
+-- **操作系统**：Linux（原生 / WSL2 均可）
+-- **架构**：x86_64 宿主机
+-
+-## 1. 安装系统依赖
+-
+-```bash
+-sudo apt update && sudo apt install -y \
+-  build-essential gcc libssl-dev libudev-dev pkg-config \
+-  qemu-system-x86 qemu-system-arm qemu-system-misc \
+-  git curl wget
+-```
+-
+-## 2. 安装 Rust 工具链
+-
+-```bash
+-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+-source "$HOME/.cargo/env"
+-```
+-
+-进入项目目录后，Rust 会根据 `rust-toolchain.toml` 自动安装所需的 nightly 工具链、组件和交叉编译目标，无需手动配置。
+-
+-安装额外的 Cargo 工具：
+-
+-```bash
+-cargo install cargo-binutils
+-cargo +stable install ostool --version '^0.15'
+-```
+-
+-- `cargo-binutils`：提供 `rust-objcopy`、`rust-objdump` 等工具
+-- `ostool`：AxVisor 的自定义构建运行器
+-
+-## 3. KVM 配置（仅 NimbOS x86_64 需要）
+-
+-NimbOS 运行在 x86_64 QEMU 上并依赖 KVM 硬件加速。ArceOS 和 Linux 使用 AArch64 QEMU（TCG 模式），不需要 KVM，可跳过本节。
+-
+-确认 KVM 设备存在：
+-
+-```bash
+-ls -la /dev/kvm
+-```
+-
+-将当前用户加入 `kvm` 组：
+-
+-```bash
+-sudo usermod -aG kvm $USER
+-```
+-
+-使组权限在当前终端立即生效（无需重新登录）：
+-
+-```bash
+-newgrp kvm
+-```
+-
+-验证：
+-
+-```bash
+-id  # 输出应包含 "kvm"
+-```
+-
+-## 4. 运行客户机
+-
+-本分支提供了一键部署脚本 `scripts/setup_qemu.sh`，自动完成镜像下载、配置路径修改和 rootfs 准备。
+-
+-LoongArch64 的 AxVisor shell smoke 是另一条单独路径：它不依赖 guest 镜像，但要求使用带虚拟化扩展支持的 LoongArch QEMU，例如 `QEMU-LVZ`。它也不走 `scripts/setup_qemu.sh`；如果你误用了 `./scripts/setup_qemu.sh loongarch64`，脚本会直接提示改用 `./scripts/quick-start.sh qemu-loongarch64 start`。
+-
+-### ArceOS（AArch64）
+-
+-```bash
+-./scripts/setup_qemu.sh arceos
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-aarch64.toml \
+-  --qemu-config .github/workflows/qemu-aarch64.toml \
+-  --vmconfigs tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
+-```
+-
+-启动成功标志：输出中出现 `Hello, world!`
+-
+-### Linux（AArch64）
+-
+-```bash
+-./scripts/setup_qemu.sh linux
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-aarch64.toml \
+-  --qemu-config .github/workflows/qemu-aarch64.toml \
+-  --vmconfigs tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml
+-```
+-
+-启动成功标志：输出中出现 `test pass!`
+-
+-### NimbOS（x86_64，需要 KVM）
+-
+-```bash
+-./scripts/setup_qemu.sh nimbos
+-
+-cargo xtask qemu \
+-  --config configs/board/qemu-x86_64.toml \
+-  --qemu-config .github/workflows/qemu-x86_64-kvm.toml \
+-  --vmconfigs tmp/vmconfigs/nimbos-x86_64-qemu-smp1.generated.toml
+-```
+-
+-启动成功后会进入 Rust user shell（`>>` 提示符），输入 `usertests` 运行测试套件，全部通过后输出 `usertests passed!`
+-
+-> **注意**：NimbOS 依赖 VT-x/KVM。如果 `/dev/kvm` 不存在或权限不足，会报 `Permission denied` 错误。WSL2 需要内核支持嵌套虚拟化才能使用 KVM。
+-
+-### ArceOS（RISC-V64）
+-
+-```bash
+-./scripts/setup_qemu.sh arceos-riscv64
+-
+-cargo xtask qemu \
+-  --build-config configs/board/qemu-riscv64.toml \
+-  --qemu-config .github/workflows/qemu-riscv64.toml \
+-  --vmconfigs tmp/vmconfigs/arceos-riscv64-qemu-smp1.generated.toml
+-```
+-
+-启动成功标志：输出中出现 `Hello, world!`
+-
+-当前 `qemu-riscv64` 这条快速启动链路支持的是 RISC-V 版 ArceOS Guest。像 `riscv64 AxVisor -> aarch64 ArceOS` 这样的跨 ISA 启动，在现有 hypervisor 栈里还没有接通。
+-
+-### AxVisor Shell（LoongArch64，需要 QEMU-LVZ）
+-
+-```bash
+-./scripts/quick-start.sh qemu-loongarch64 start
+-```
+-
+-这条命令会直接启动 AxVisor 并进入内建 shell，而不是先引导 guest 镜像。
+-
+-启动成功标志：输出中出现 `Welcome to AxVisor Shell!`
+-
+-> **注意**：标准版 `qemu-system-loongarch64` 通常不会暴露 LoongArch 虚拟化扩展。请使用 `QEMU-LVZ`，或者通过 `AXBUILD_QEMU_SYSTEM_LOONGARCH64=/path/to/qemu-system-loongarch64` 指向一个已经确认支持虚拟化扩展的二进制。
+-
+-## 5. setup_qemu.sh 做了什么
+-
+-对于需要 guest 镜像的启动链路，该脚本自动完成以下三步，省去手动操作：
+-
+-1. **下载镜像**：调用 `cargo axvisor image pull` 将 Guest 镜像下载并解压到 `/tmp/.axvisor-images/`
+-2. **生成临时配置**：复制模板 VM 配置到 `tmp/vmconfigs/*.generated.toml`，并用 `sed` 更新 `kernel_path`（以及 NimbOS 的 `bios_path`）到实际镜像路径，不修改仓库内 `configs/vms/**/*.toml`
+-3. **准备 rootfs**：将 `rootfs.img` 复制到项目的 `tmp/` 目录下供 QEMU 使用
+-
+-如果不想使用脚本，也可以手动执行上述步骤。
+-
+-## 常见问题
+-
+-### `Path tmp/Image not found`
+-
+-VM 配置中的 `kernel_path` 指向了不存在的文件。运行 `./scripts/setup_qemu.sh <guest>` 会自动修正路径。
+-
+-### `Could not access KVM kernel module: Permission denied`
+-
+-当前用户不在 `kvm` 组中。参见上文「KVM 配置」一节。
+-
+-### `qemu-system-aarch64: command not found`
+-
+-未安装 QEMU。执行第 1 步的 `apt install` 命令。
+-
+-### LoongArch64 下出现 `Hardware support: false`，随后 panic
+-
+-这说明当前启动使用的 LoongArch QEMU 二进制没有提供虚拟化扩展。请切换到 `QEMU-LVZ`，或在运行 `./scripts/quick-start.sh qemu-loongarch64 start` 前导出 `AXBUILD_QEMU_SYSTEM_LOONGARCH64`，把它指向一个已验证支持虚拟化扩展的 `qemu-system-loongarch64`。
+-
+-### `Auto syncing from registry ... timed out`
+-
+-这通常是访问 GitHub Raw 不稳定导致的。`cargo axvisor image pull` 现在会在命令内部处理 registry 引导逻辑：优先使用默认 registry，若其中声明了 include 就继续跟随 include；若默认入口不可用，则自动回退到内建 fallback registry（当前指向 `v0.0.25.toml`）。
+-
+-如果你所在网络环境对部分 URL 不稳定，可显式覆盖 fallback registry：
+-
+-```bash
+-export AXVISOR_REGISTRY_FALLBACK_URL="https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.25.toml"
+-./scripts/setup_qemu.sh arceos
+-```
+-
+-### 首次构建非常慢
+-
+-正常现象。AxVisor 依赖较多，首次编译需要下载并编译所有 crate。后续增量编译会快很多。
++# QEMU 快速上手指南
++
++[English](qemu-quickstart.md) | 中文
++
++本文档介绍如何在本地搭建 AxVisor 的开发运行环境，并通过 QEMU 运行不同的客户机系统。
++
++## 环境要求
++
++- **操作系统**：Linux（原生 / WSL2 均可）
++- **架构**：x86_64 宿主机
++
++## 1. 安装系统依赖
++
++```bash
++sudo apt update && sudo apt install -y \
++  build-essential gcc clang libclang-19-dev cmake zlib1g-dev \
++  libssl-dev libudev-dev pkg-config ipxe-qemu \
++  qemu-system-x86 qemu-system-arm qemu-system-misc \
++  git curl wget xz-utils
++```
++
++AxVisor 的 AArch64 宿主构建目标使用 musl。安装与
++`container/Dockerfile` 相同来源的预编译工具链：
++
++```bash
++wget -q \
++  https://github.com/arceos-org/setup-musl/releases/download/prebuilt/aarch64-linux-musl-cross.tgz \
++  -O /tmp/aarch64-linux-musl-cross.tgz
++sudo tar -xzf /tmp/aarch64-linux-musl-cross.tgz -C /opt
++export PATH="/opt/aarch64-linux-musl-cross/bin:$PATH"
++```
++
++## 2. 安装 Rust 工具链
++
++```bash
++curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
++source "$HOME/.cargo/env"
++```
++
++进入项目目录后，Rust 会根据 `rust-toolchain.toml` 自动安装所需的 nightly 工具链、组件和交叉编译目标，无需手动配置。
++
++安装额外的 Cargo 工具：
++
++```bash
++cargo install cargo-binutils --version 0.4.0 --locked
++cargo +stable install ostool --version '^0.15'
++```
++
++- `cargo-binutils`：提供 `rust-objcopy`、`rust-objdump` 等工具
++- `ostool`：AxVisor 的自定义构建运行器
++
++## 3. KVM 配置（仅 NimbOS x86_64 需要）
++
++NimbOS 运行在 x86_64 QEMU 上并依赖 KVM 硬件加速。ArceOS 和 Linux 使用 AArch64 QEMU（TCG 模式），不需要 KVM，可跳过本节。
++
++确认 KVM 设备存在：
++
++```bash
++ls -la /dev/kvm
++```
++
++将当前用户加入 `kvm` 组：
++
++```bash
++sudo usermod -aG kvm $USER
++```
++
++使组权限在当前终端立即生效（无需重新登录）：
++
++```bash
++newgrp kvm
++```
++
++验证：
++
++```bash
++id  # 输出应包含 "kvm"
++```
++
++## 4. 运行客户机
++
++本分支提供了一键部署脚本 `scripts/setup_qemu.sh`，自动完成镜像下载、配置路径修改和 rootfs 准备。
++
++LoongArch64 的 AxVisor shell smoke 是另一条单独路径：它不依赖 guest 镜像，但要求使用带虚拟化扩展支持的 LoongArch QEMU，例如 `QEMU-LVZ`。它也不走 `scripts/setup_qemu.sh`；如果你误用了 `./scripts/setup_qemu.sh loongarch64`，脚本会直接提示改用 `./scripts/quick-start.sh qemu-loongarch64 start`。
++
++### ArceOS（AArch64）
++
++```bash
++./scripts/setup_qemu.sh arceos
++
++cargo xtask qemu \
++  --config configs/board/qemu-aarch64.toml \
++  --qemu-config .github/workflows/qemu-aarch64.toml \
++  --vmconfigs tmp/vmconfigs/arceos-aarch64-qemu-smp1.generated.toml
++```
++
++启动成功标志：输出中出现 `Hello, world!`
++
++### Linux（AArch64）
++
++```bash
++./scripts/setup_qemu.sh linux
++
++cargo xtask qemu \
++  --config configs/board/qemu-aarch64.toml \
++  --qemu-config .github/workflows/qemu-aarch64.toml \
++  --vmconfigs tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml
++```
++
++出现 `~ #` 提示符后，输入 `echo 'test pass!'`；输出中出现独立一行
++`test pass!` 即为成功。自动化运行应使用带 `shell_prefix` 和
++`shell_init_cmd` 的 runner 配置，不能只被动等待该标志。
++
++### NimbOS（x86_64，需要 KVM）
++
++```bash
++./scripts/setup_qemu.sh nimbos
++
++cargo xtask qemu \
++  --config configs/board/qemu-x86_64.toml \
++  --qemu-config .github/workflows/qemu-x86_64-kvm.toml \
++  --vmconfigs tmp/vmconfigs/nimbos-x86_64-qemu-smp1.generated.toml
++```
++
++启动成功后会进入 Rust user shell（`>>` 提示符），输入 `usertests` 运行测试套件，全部通过后输出 `usertests passed!`
++
++> **注意**：NimbOS 依赖 VT-x/KVM。如果 `/dev/kvm` 不存在或权限不足，会报 `Permission denied` 错误。WSL2 需要内核支持嵌套虚拟化才能使用 KVM。
++
++### ArceOS（RISC-V64）
++
++```bash
++./scripts/setup_qemu.sh arceos-riscv64
++
++cargo xtask qemu \
++  --build-config configs/board/qemu-riscv64.toml \
++  --qemu-config .github/workflows/qemu-riscv64.toml \
++  --vmconfigs tmp/vmconfigs/arceos-riscv64-qemu-smp1.generated.toml
++```
++
++启动成功标志：输出中出现 `Hello, world!`
++
++当前 `qemu-riscv64` 这条快速启动链路支持的是 RISC-V 版 ArceOS Guest。像 `riscv64 AxVisor -> aarch64 ArceOS` 这样的跨 ISA 启动，在现有 hypervisor 栈里还没有接通。
++
++### AxVisor Shell（LoongArch64，需要 QEMU-LVZ）
++
++```bash
++./scripts/quick-start.sh qemu-loongarch64 start
++```
++
++这条命令会直接启动 AxVisor 并进入内建 shell，而不是先引导 guest 镜像。
++
++启动成功标志：输出中出现 `Welcome to AxVisor Shell!`
++
++> **注意**：标准版 `qemu-system-loongarch64` 通常不会暴露 LoongArch 虚拟化扩展。请使用 `QEMU-LVZ`，或者通过 `AXBUILD_QEMU_SYSTEM_LOONGARCH64=/path/to/qemu-system-loongarch64` 指向一个已经确认支持虚拟化扩展的二进制。
++
++## 5. setup_qemu.sh 做了什么
++
++对于需要 guest 镜像的启动链路，该脚本自动完成以下三步，省去手动操作：
++
++1. **下载镜像**：先切换到 TGOSKits 工作区根目录，再调用 `cargo xtask image --local-storage /tmp/.axvisor-images pull` 将 Guest 镜像下载并解压到 `/tmp/.axvisor-images/`。如果从 `os/axvisor` 目录手工执行，对应写法是 `(cd ../.. && cargo xtask image --local-storage /tmp/.axvisor-images pull <IMAGE>)`。
++2. **生成临时配置**：复制模板 VM 配置到 `tmp/vmconfigs/*.generated.toml`，并用 `sed` 更新 `kernel_path`（以及 NimbOS 的 `bios_path`）到实际镜像路径，不修改仓库内 `configs/vms/**/*.toml`
++3. **准备 rootfs**：将 `rootfs.img` 复制到项目的 `tmp/` 目录下供 QEMU 使用
++
++如果不想使用脚本，也可以手动执行上述步骤。
++
++## 常见问题
++
++### `Path tmp/Image not found`
++
++VM 配置中的 `kernel_path` 指向了不存在的文件。运行 `./scripts/setup_qemu.sh <guest>` 会自动修正路径。
++
++### `Could not access KVM kernel module: Permission denied`
++
++当前用户不在 `kvm` 组中。参见上文「KVM 配置」一节。
++
++### `qemu-system-aarch64: command not found`
++
++未安装 QEMU。执行第 1 步的 `apt install` 命令。
++
++### LoongArch64 下出现 `Hardware support: false`，随后 panic
++
++这说明当前启动使用的 LoongArch QEMU 二进制没有提供虚拟化扩展。请切换到 `QEMU-LVZ`，或在运行 `./scripts/quick-start.sh qemu-loongarch64 start` 前导出 `AXBUILD_QEMU_SYSTEM_LOONGARCH64`，把它指向一个已验证支持虚拟化扩展的 `qemu-system-loongarch64`。
++
++### `Auto syncing from registry ... timed out`
++
++这通常是访问 GitHub Raw 不稳定导致的。工作区级命令 `cargo xtask image pull` 负责 registry 同步，而 `setup_qemu.sh` 会补充引导和回退逻辑：优先使用默认 registry，若其中声明了 include 就继续跟随 include；若默认入口不可用，则自动回退到内建 fallback registry（当前指向 `v0.0.25.toml`）。
++
++如果你所在网络环境对部分 URL 不稳定，可显式覆盖 fallback registry：
++
++```bash
++export AXVISOR_REGISTRY_FALLBACK_URL="https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.25.toml"
++./scripts/setup_qemu.sh arceos
++```
++
++### 首次构建非常慢
++
++正常现象。AxVisor 依赖较多，首次编译需要下载并编译所有 crate。后续增量编译会快很多。
+diff --git a/os/axvisor/scripts/quick-start.sh b/os/axvisor/scripts/quick-start.sh
+index 2e5483585..9906093c0 100755
+--- a/os/axvisor/scripts/quick-start.sh
++++ b/os/axvisor/scripts/quick-start.sh
+@@ -32,6 +32,14 @@ run_cmd() {
+     "$@"
+ }
+ 
++run_image_cmd() {
++    echo -e "${BLUE}(cd ${WORKSPACE_ROOT} && cargo xtask image $*)${NC}"
++    (
++        cd "${WORKSPACE_ROOT}"
++        cargo xtask image "$@"
++    )
++}
++
+ # Check if running in AxVisor root directory
+ check_root_dir() {
+     if [ ! -f "Cargo.toml" ]; then
+@@ -191,10 +199,10 @@ setup_qemu_aarch64() {
+     run_cmd mkdir -p tmp/{configs,images}
+ 
+     info "Downloading ArceOS image..."
+-    run_cmd cargo axvisor image pull qemu_aarch64_arceos --output-dir tmp/images
++    run_image_cmd pull qemu_aarch64_arceos --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Downloading Linux image..."
+-    run_cmd cargo axvisor image pull qemu_aarch64_linux --output-dir tmp/images
++    run_image_cmd pull qemu_aarch64_linux --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing board config file..."
+     run_cmd cp configs/board/qemu-aarch64.toml tmp/configs/
+@@ -256,7 +264,7 @@ setup_qemu_riscv64() {
+     run_cmd mkdir -p tmp/{configs,images}
+ 
+     info "Downloading ArceOS image..."
+-    run_cmd cargo axvisor image pull qemu_riscv64_arceos --output-dir tmp/images
++    run_image_cmd pull qemu_riscv64_arceos --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing board config file..."
+     run_cmd cp configs/board/qemu-riscv64.toml tmp/configs/
+@@ -329,7 +337,7 @@ setup_qemu_x86_64() {
+     run_cmd mkdir -p tmp/{configs,images}
+ 
+     info "Downloading NimbOS image..."
+-    run_cmd cargo axvisor image pull qemu_x86_64_nimbos --output-dir tmp/images
++    run_image_cmd pull qemu_x86_64_nimbos --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing board config file..."
+     run_cmd cp configs/board/qemu-x86_64.toml tmp/configs/
+@@ -392,7 +400,7 @@ setup_qemu_x86_64_linux() {
+     run_cmd mkdir -p tmp/{configs,images}
+ 
+     info "Downloading Linux image..."
+-    run_cmd cargo axvisor image pull qemu_x86_64_linux --output-dir tmp/images
++    run_image_cmd pull qemu_x86_64_linux --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing dynamic board config file..."
+     run_cmd cp configs/board/qemu-x86_64-linux.toml tmp/configs/
+@@ -535,10 +543,10 @@ setup_phytiumpi() {
+     ensure_ostool
+ 
+     info "Downloading ArceOS image..."
+-    run_cmd cargo axvisor image pull phytiumpi_arceos --output-dir tmp/images
++    run_image_cmd pull phytiumpi_arceos --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Downloading Linux image (including device tree)..."
+-    run_cmd cargo axvisor image pull phytiumpi_linux --output-dir tmp/images
++    run_image_cmd pull phytiumpi_linux --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing board config file..."
+     run_cmd cp configs/board/phytiumpi.toml tmp/configs/
+@@ -649,10 +657,10 @@ setup_roc_rk3568_pc() {
+     ensure_ostool
+ 
+     info "Downloading ArceOS image..."
+-    run_cmd cargo axvisor image pull roc-rk3568-pc_arceos --output-dir tmp/images
++    run_image_cmd pull roc-rk3568-pc_arceos --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Downloading Linux image (including device tree)..."
+-    run_cmd cargo axvisor image pull roc-rk3568-pc_linux --output-dir tmp/images
++    run_image_cmd pull roc-rk3568-pc_linux --output-dir "${AXVISOR_ROOT}/tmp/images"
+ 
+     info "Preparing board config file..."
+     run_cmd cp configs/board/roc-rk3568-pc.toml tmp/configs/
+@@ -741,7 +749,7 @@ setup_rdk_s100() {
+     local arceos_image="${AXVISOR_RDK_S100P_ARCEOS_IMAGE:-rdk-s100p_arceos}"
+     local linux_image="${AXVISOR_RDK_S100P_LINUX_IMAGE:-rdk-s100p_linux}"
+     local image_storage="${AXVISOR_IMAGE_LOCAL_STORAGE:-/tmp/.axvisor-images}"
+-    local image_pull_args=()
++    local image_pull_args=(-S "${image_storage}")
+ 
+     while [[ $# -gt 0 ]]; do
+         case $1 in
+@@ -764,9 +772,6 @@ setup_rdk_s100() {
+ 
+     run_cmd mkdir -p tmp/{configs,images}
+ 
+-    if [ -n "${AXVISOR_IMAGE_LOCAL_STORAGE:-}" ]; then
+-        image_pull_args+=(-S "${AXVISOR_IMAGE_LOCAL_STORAGE}")
+-    fi
+     if [ -n "${AXVISOR_IMAGE_REGISTRY:-}" ]; then
+         image_pull_args+=(-R "${AXVISOR_IMAGE_REGISTRY}")
+     fi
+@@ -780,14 +785,14 @@ setup_rdk_s100() {
+         info "Using existing ArceOS image directory: tmp/images/${arceos_image}"
+     else
+         info "Downloading ArceOS image..."
+-        run_cmd cargo axvisor image "${image_pull_args[@]}" pull "${arceos_image}" --output-dir tmp/images
++        run_image_cmd "${image_pull_args[@]}" pull "${arceos_image}" --output-dir "${AXVISOR_ROOT}/tmp/images"
+     fi
+ 
+     if [ -d "tmp/images/${linux_image}" ]; then
+         info "Using existing Linux image directory: tmp/images/${linux_image}"
+     else
+         info "Downloading Linux image (including device tree)..."
+-        run_cmd cargo axvisor image "${image_pull_args[@]}" pull "${linux_image}" --output-dir tmp/images
++        run_image_cmd "${image_pull_args[@]}" pull "${linux_image}" --output-dir "${AXVISOR_ROOT}/tmp/images"
+     fi
+ 
+     info "Preparing board config file..."
+@@ -1417,6 +1422,8 @@ cmd_run_rdk_s100() {
+ # ============================================================================
+ 
+ check_root_dir
++AXVISOR_ROOT="$(pwd -P)"
++WORKSPACE_ROOT="$(cd "${AXVISOR_ROOT}/../.." && pwd -P)"
+ 
+ if [ $# -eq 0 ]; then
+     # Default to QEMU AArch64 ArceOS
+diff --git a/os/axvisor/scripts/setup_qemu.sh b/os/axvisor/scripts/setup_qemu.sh
+index 26f93d97f..74f8bd58e 100755
+--- a/os/axvisor/scripts/setup_qemu.sh
++++ b/os/axvisor/scripts/setup_qemu.sh
+@@ -6,68 +6,52 @@ set -euo pipefail
+ #   ./scripts/setup_qemu.sh [--guest] <guest>
+ #   ./scripts/setup_qemu.sh arceos
+ #   ./scripts/setup_qemu.sh --guest linux
++#   ./scripts/setup_qemu.sh linux-smp2
+ #   ./scripts/setup_qemu.sh nimbos
+ #   ./scripts/setup_qemu.sh nimbos-uefi
+ #   ./scripts/setup_qemu.sh linux-x86_64
+ #   ./scripts/setup_qemu.sh linux-x86_64-uefi
+ #
+-# Supported guests: arceos, arceos-riscv64, linux, linux-x86_64, nimbos, nimbos-uefi, linux-x86_64-uefi
++# Supported guests: arceos, arceos-riscv64, linux, linux-smp2, linux-x86_64, nimbos, nimbos-uefi, linux-x86_64-uefi
+ # LoongArch64 AxVisor shell smoke uses quick-start.sh instead of this script.
+ 
+ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+-IMAGE_STORAGE_ROOT="/tmp/.axvisor-images"
+-DEFAULT_REGISTRY_URL="https://raw.githubusercontent.com/rcore-os/tgosimages/refs/heads/main/registry/default.toml"
++WORKSPACE_ROOT="$(cd "${REPO_ROOT}/../.." && pwd)"
++IMAGE_STORAGE_ROOT="${AXVISOR_IMAGE_LOCAL_STORAGE:-/tmp/.axvisor-images}"
+ # Keep this version aligned with the guest release used in this branch.
+-BUILTIN_FALLBACK_REGISTRY_URL="https://raw.githubusercontent.com/rcore-os/tgosimages/refs/heads/main/registry/v0.0.25.toml"
++BUILTIN_FALLBACK_REGISTRY_URL="https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.25.toml"
+ IMAGE_DOWNLOAD_MAX_ATTEMPTS=2
+ TGOSIMAGES_RELEASE="${AXVISOR_TGOSIMAGES_RELEASE:-v0.0.5}"
+ TGOSIMAGES_QEMU_X86_64_ARCHIVE="qemu-x86_64.tar.xz"
+ TGOSIMAGES_QEMU_X86_64_URL="${AXVISOR_TGOSIMAGES_QEMU_X86_64_URL:-https://github.com/rcore-os/tgosimages/releases/download/${TGOSIMAGES_RELEASE}/${TGOSIMAGES_QEMU_X86_64_ARCHIVE}}"
+ TGOSIMAGES_QEMU_X86_64_SHA256="${AXVISOR_TGOSIMAGES_QEMU_X86_64_SHA256:-64434d91166bf70ebfab42481d935c68640301fd031d0836d2bdec3f82bb2e20}"
+ 
+-bootstrap_image_registry() {
++pull_image() {
++  local image_name="$1"
++
++  # The image command is owned by the top-level tg-xtask binary. Run it from
++  # the workspace root because os/axvisor has a local `cargo xtask` alias.
++  (
++    cd "${WORKSPACE_ROOT}"
++    cargo xtask image --local-storage "${IMAGE_STORAGE_ROOT}" pull "${image_name}"
++  )
++}
++
++bootstrap_fallback_image_registry() {
+   local storage_dir="${IMAGE_STORAGE_ROOT}"
+-  local default_registry_url="${DEFAULT_REGISTRY_URL}"
+-  # Built-in fallback keeps setup resilient when default/include URLs are flaky.
+   local fallback_registry_url="${AXVISOR_REGISTRY_FALLBACK_URL:-${BUILTIN_FALLBACK_REGISTRY_URL}}"
+-  local default_registry_file
+-  local include_url
+-  local source_kind
+-  local source_url
++  local registry_tmp
+ 
+   mkdir -p "${storage_dir}"
+-  if [ -f "${storage_dir}/images.toml" ]; then
+-    return 0
+-  fi
+-
+-  default_registry_file="$(mktemp)"
+-  if ! curl -4 --retry 5 --retry-delay 2 -fL "${default_registry_url}" -o "${default_registry_file}"; then
+-    rm -f "${default_registry_file}"
+-    echo "  -> Warning: failed to fetch default registry: ${default_registry_url}" >&2
+-    source_kind="fallback registry"
+-    source_url="${fallback_registry_url}"
+-  else
+-    include_url="$(sed -n 's/^[[:space:]]*url[[:space:]]*=[[:space:]]*"\([^"]*\)".*$/\1/p' "${default_registry_file}" | sed -n '1p')"
+-    rm -f "${default_registry_file}"
+-    if [ -n "${include_url}" ]; then
+-      source_kind="included registry from default.toml"
+-      source_url="${include_url}"
+-    else
+-      source_kind="default registry"
+-      source_url="${default_registry_url}"
+-    fi
+-  fi
+-
+-  echo "  -> Bootstrapping local image registry from ${source_kind}: ${source_url}"
+-  if ! curl -4 --retry 5 --retry-delay 2 -fL "${source_url}" -o "${storage_dir}/images.toml"; then
+-    if [ "${source_url}" != "${fallback_registry_url}" ]; then
+-      echo "  -> Warning: failed to fetch ${source_kind}, retrying fallback registry: ${fallback_registry_url}" >&2
+-      curl -4 --retry 5 --retry-delay 2 -fL "${fallback_registry_url}" -o "${storage_dir}/images.toml"
+-    else
+-      echo "  -> Error: failed to bootstrap local image registry from fallback registry." >&2
+-      return 1
+-    fi
++  registry_tmp="$(mktemp "${storage_dir}/images.toml.XXXXXX")"
++  echo "  -> Replacing the stale registry with fallback registry: ${fallback_registry_url}"
++  if ! curl -4 --retry 5 --retry-delay 2 --show-error --silent -fL \
++      "${fallback_registry_url}" -o "${registry_tmp}"; then
++    rm -f "${registry_tmp}"
++    echo "  -> Error: failed to bootstrap local image registry from fallback registry." >&2
++    return 1
+   fi
++  mv "${registry_tmp}" "${storage_dir}/images.toml"
+   date +%s > "${storage_dir}/.last_sync" || true
+ }
+ 
+@@ -160,11 +144,12 @@ prepare_nimbos_from_tgosimages() {
+ }
+ 
+ usage() {
+-  echo "Usage: $0 [--guest] <arceos|arceos-riscv64|linux|linux-x86_64|nimbos|nimbos-uefi|linux-x86_64-uefi>"
++  echo "Usage: $0 [--guest] <arceos|arceos-riscv64|linux|linux-smp2|linux-x86_64|nimbos|nimbos-uefi|linux-x86_64-uefi>"
+   echo ""
+   echo "  arceos          - aarch64 ArceOS guest"
+   echo "  arceos-riscv64  - riscv64 ArceOS guest"
+   echo "  linux           - aarch64 Linux guest"
++  echo "  linux-smp2     - aarch64 Linux guest with two pinned vCPUs"
+   echo "  linux-x86_64    - x86_64 Linux guest through direct boot"
+   echo "  nimbos          - x86_64 NimbOS guest (requires VT-x/KVM)"
+   echo "  nimbos-uefi     - x86_64 NimbOS guest through external UEFI firmware"
+@@ -210,7 +195,7 @@ while [[ $# -gt 0 ]]; do
+       shift
+       break
+       ;;
+-    arceos|arceos-riscv64|linux|linux-x86_64|nimbos|nimbos-uefi|linux-x86_64-uefi)
++    arceos|arceos-riscv64|linux|linux-smp2|linux-x86_64|nimbos|nimbos-uefi|linux-x86_64-uefi)
+       GUEST="$1"
+       shift
+       break
+@@ -236,6 +221,7 @@ case "$GUEST" in
+   arceos)         CFG="qemu_aarch64_arceos|qemu/aarch64/arceos-smp1.toml|arceos-aarch64-qemu-smp1.toml|qemu-aarch64.toml|.github/workflows/qemu-aarch64.toml|qemu-aarch64|Hello, world!" ;;
+   arceos-riscv64) CFG="qemu_riscv64_arceos|qemu/riscv64/arceos-smp1.toml|arceos-riscv64-qemu-smp1.toml|qemu-riscv64.toml|.github/workflows/qemu-riscv64.toml|qemu-riscv64|Hello, world!" ;;
+   linux)          CFG="qemu_aarch64_linux|qemu/aarch64/linux-smp1.toml|linux-aarch64-qemu-smp1.toml|qemu-aarch64.toml|.github/workflows/qemu-aarch64.toml|qemu-aarch64|test pass!" ;;
++  linux-smp2)     CFG="qemu_aarch64_linux|qemu/aarch64/linux-smp2.toml|linux-aarch64-qemu-smp2.toml|qemu-aarch64.toml|.github/workflows/qemu-aarch64.toml|qemu-aarch64|linux-smp2-pass" ;;
+   linux-x86_64)   CFG="qemu_x86_64_linux|qemu/x86_64/linux-smp1.toml|linux-x86_64-qemu-smp1.toml|qemu-x86_64-linux.toml|configs/qemu/qemu-x86_64-linux.toml|linux-qemu|test pass!" ;;
+   nimbos)         CFG="qemu_x86_64_nimbos|qemu/x86_64/nimbos-smp1.toml|nimbos-x86_64-qemu-smp1.toml|qemu-x86_64.toml|.github/workflows/qemu-x86_64-kvm.toml|qemu-x86_64|usertests passed!" ;;
+   nimbos-uefi)    CFG="qemu_x86_64_nimbos|qemu/x86_64/nimbos-uefi-smp1.toml|nimbos-x86_64-qemu-uefi-smp1.toml|qemu-x86_64.toml|.github/workflows/qemu-x86_64-uefi.toml|qemu-x86_64|usertests passed!" ;;
+@@ -245,7 +231,7 @@ esac
+ 
+ IFS='|' read -r IMAGE_NAME VMCONFIG VMCONFIG_OUTPUT_NAME BUILD_CONFIG QEMU_CONFIG_PATH KERNEL_FILE SUCCESS_MSG <<< "$CFG"
+ # NOTE:
+-#  - `cargo axvisor image pull` extracts images to
++#  - `cargo xtask image --local-storage /tmp/.axvisor-images pull` extracts images to
+ #    `/tmp/.axvisor-images/<IMAGE_NAME>` by default.
+ #  - NimbOS x86_64 is normalized into the same directory layout even when it is
+ #    sourced from the rcore-os/tgosimages qemu-x86_64 release archive.
+@@ -268,19 +254,19 @@ echo "[setup_qemu] Guest: ${GUEST} | Repo: ${REPO_ROOT}"
+ echo "[setup_qemu] Step 1: ensure guest image is downloaded..."
+ if [[ "$GUEST" == "nimbos" || "$GUEST" == "nimbos-uefi" ]]; then
+   if ! prepare_nimbos_from_tgosimages; then
+-    echo "  -> Warning: failed to prepare NimbOS from tgosimages; falling back to cargo axvisor image." >&2
++    echo "  -> Warning: failed to prepare NimbOS from tgosimages; falling back to cargo xtask image." >&2
+     rm -rf "${IMAGE_DIR}"
+     mkdir -p "${IMAGE_DIR}"
+-    (cd "${REPO_ROOT}" && cargo axvisor image pull "${IMAGE_NAME}")
++    pull_image "${IMAGE_NAME}"
+   fi
+ elif [ ! -d "${IMAGE_DIR}" ]; then
+-  echo "  -> Image directory ${IMAGE_DIR} not found, downloading via cargo axvisor image..."
++  echo "  -> Image directory ${IMAGE_DIR} not found, downloading via cargo xtask image..."
+   echo "  -> Download attempt 1/${IMAGE_DOWNLOAD_MAX_ATTEMPTS}"
+-  if ! (cd "${REPO_ROOT}" && cargo axvisor image pull "${IMAGE_NAME}"); then
++  if ! pull_image "${IMAGE_NAME}"; then
+     echo "  -> Attempt 1/${IMAGE_DOWNLOAD_MAX_ATTEMPTS} failed. Trying to bootstrap registry..."
+-    bootstrap_image_registry
++    bootstrap_fallback_image_registry
+     echo "  -> Download attempt 2/${IMAGE_DOWNLOAD_MAX_ATTEMPTS}"
+-    (cd "${REPO_ROOT}" && cargo axvisor image pull "${IMAGE_NAME}")
++    pull_image "${IMAGE_NAME}"
+   fi
+ else
+   echo "  -> Found existing image directory: ${IMAGE_DIR}"
+@@ -309,7 +295,8 @@ if [[ "$GUEST" == "nimbos" ]]; then
+   BIOS_IMAGE="${IMAGE_DIR}/axvm-bios.bin"
+   if [ ! -f "${BIOS_IMAGE}" ]; then
+     echo "ERROR: axvm-bios.bin not found at ${BIOS_IMAGE}" >&2
+-    echo "  -> Please re-download the NimbOS image via 'cargo axvisor image pull qemu_x86_64_nimbos'." >&2
++    echo "  -> Please re-download the NimbOS image from ${WORKSPACE_ROOT}:" >&2
++    echo "     cargo xtask image --local-storage /tmp/.axvisor-images pull qemu_x86_64_nimbos" >&2
+     exit 1
+   fi
+ fi
+@@ -395,7 +382,7 @@ cat <<EOF
+ You can now run the QEMU test with:
+ 
+   cd ${REPO_ROOT}
+-  cargo xtask axvisor qemu \\
++  cargo xtask qemu \\
+     --config configs/board/${BUILD_CONFIG} \\
+     --qemu-config ${QEMU_CONFIG_PATH} \\
+     --vmconfigs ${GENERATED_VMCONFIG_PATH}
+diff --git a/os/axvisor/xtask/src/main.rs b/os/axvisor/xtask/src/main.rs
+index e7ca70ed3..f2ed92dfe 100644
+--- a/os/axvisor/xtask/src/main.rs
++++ b/os/axvisor/xtask/src/main.rs
+@@ -1,183 +1,168 @@
+-// Copyright 2025 The Axvisor Team
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-//! Build tool for Axvisor hypervisor.
+-//!
+-//! This crate provides the `xtask` binary for building, running, and managing
+-//! the Axvisor hypervisor project.
+-
+-#![cfg_attr(not(any(windows, all(unix, not(target_env = "musl")))), no_main)]
+-#![cfg_attr(not(any(windows, all(unix, not(target_env = "musl")))), no_std)]
+-
+-#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
+-mod lang;
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-use std::{
+-    ffi::OsString,
+-    path::{Path, PathBuf},
+-};
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-#[derive(clap::Parser)]
+-struct Cli {
+-    #[command(subcommand)]
+-    command: axbuild::axvisor::Command,
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-#[tokio::main]
+-async fn main() -> anyhow::Result<()> {
+-    use clap::Parser;
+-
+-    let mut cli = Cli::parse_from(normalize_legacy_args(std::env::args_os()));
+-    let invocation_dir = std::env::current_dir()?;
+-    let workspace_root = workspace_root();
+-    normalize_command_paths(&mut cli.command, &invocation_dir, &workspace_root);
+-    std::env::set_current_dir(&workspace_root)?;
+-    axbuild::axvisor::Axvisor::new()?
+-        .execute(cli.command)
+-        .await?;
+-    Ok(())
+-}
+-
+-#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
+-#[unsafe(no_mangle)]
+-fn main() -> ! {
+-    loop {
+-        core::hint::spin_loop();
+-    }
+-}
+-
+-#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
+-#[rustfmt::skip]
+-#[unsafe(no_mangle)]
+-extern "C" fn _head() -> ! {
+-    main()
+-}
+-
+-#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
+-#[rustfmt::skip]
+-#[unsafe(no_mangle)]
+-extern "C" fn kernel_entry() -> ! {
+-    main()
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn normalize_legacy_args(args: impl IntoIterator<Item = OsString>) -> Vec<OsString> {
+-    args.into_iter()
+-        .map(|arg| match arg.to_str() {
+-            Some("--build-config") => OsString::from("--config"),
+-            Some(value) if value.starts_with("--build-config=") => {
+-                OsString::from(value.replacen("--build-config=", "--config=", 1))
+-            }
+-            _ => arg,
+-        })
+-        .collect()
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn workspace_root() -> PathBuf {
+-    Path::new(env!("CARGO_MANIFEST_DIR"))
+-        .parent()
+-        .and_then(Path::parent)
+-        .map(Path::to_path_buf)
+-        .expect("failed to locate workspace root from os/axvisor")
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn normalize_command_paths(
+-    command: &mut axbuild::axvisor::Command,
+-    invocation_dir: &Path,
+-    workspace_root: &Path,
+-) {
+-    use axbuild::axvisor::{Command, TestCommand, image};
+-
+-    match command {
+-        Command::Build(args) => normalize_build_paths(args, invocation_dir, workspace_root),
+-        Command::Qemu(args) => {
+-            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
+-            normalize_existing_path(&mut args.qemu_config, invocation_dir, workspace_root);
+-            normalize_existing_path(&mut args.rootfs, invocation_dir, workspace_root);
+-        }
+-        Command::Board(args) => {
+-            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
+-            normalize_existing_path(&mut args.board_config, invocation_dir, workspace_root);
+-        }
+-        Command::Uboot(args) => {
+-            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
+-            normalize_existing_path(&mut args.uboot_config, invocation_dir, workspace_root);
+-        }
+-        Command::Image(args) => {
+-            normalize_output_path(&mut args.overrides.local_storage, invocation_dir);
+-            if let image::Command::Pull(args) = &mut args.command {
+-                normalize_output_path(&mut args.output_dir, invocation_dir);
+-            }
+-        }
+-        Command::Test(args) => match &mut args.command {
+-            TestCommand::Uboot(args) => {
+-                normalize_existing_path(&mut args.uboot_config, invocation_dir, workspace_root);
+-            }
+-            TestCommand::Qemu(_) | TestCommand::Board(_) => {}
+-        },
+-        Command::Defconfig(_) | Command::Config(_) => {}
+-    }
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn normalize_build_paths(
+-    args: &mut axbuild::axvisor::ArgsBuild,
+-    invocation_dir: &Path,
+-    workspace_root: &Path,
+-) {
+-    normalize_existing_path(&mut args.config, invocation_dir, workspace_root);
+-    for path in &mut args.vmconfigs {
+-        *path = resolve_existing_path(path, invocation_dir, workspace_root);
+-    }
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn normalize_existing_path(
+-    path: &mut Option<PathBuf>,
+-    invocation_dir: &Path,
+-    workspace_root: &Path,
+-) {
+-    if let Some(path) = path {
+-        *path = resolve_existing_path(path, invocation_dir, workspace_root);
+-    }
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn resolve_existing_path(path: &Path, invocation_dir: &Path, workspace_root: &Path) -> PathBuf {
+-    if path.is_absolute() {
+-        return path.to_path_buf();
+-    }
+-
+-    let cwd_path = invocation_dir.join(path);
+-    let workspace_path = workspace_root.join(path);
+-    if workspace_path.exists() && !cwd_path.exists() {
+-        workspace_path
+-    } else {
+-        cwd_path
+-    }
+-}
+-
+-#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
+-fn normalize_output_path(path: &mut Option<PathBuf>, invocation_dir: &Path) {
+-    if let Some(path) = path
+-        && path.is_relative()
+-    {
+-        *path = invocation_dir.join(&path);
+-    }
+-}
++// Copyright 2025 The Axvisor Team
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++//! Build tool for Axvisor hypervisor.
++//!
++//! This crate provides the `xtask` binary for building, running, and managing
++//! the Axvisor hypervisor project.
++
++#![cfg_attr(not(any(windows, all(unix, not(target_env = "musl")))), no_main)]
++#![cfg_attr(not(any(windows, all(unix, not(target_env = "musl")))), no_std)]
++
++#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
++mod lang;
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++use std::{
++    ffi::OsString,
++    path::{Path, PathBuf},
++};
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++#[derive(clap::Parser)]
++struct Cli {
++    #[command(subcommand)]
++    command: axbuild::axvisor::Command,
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++#[tokio::main]
++async fn main() -> anyhow::Result<()> {
++    use clap::Parser;
++
++    let mut cli = Cli::parse_from(normalize_legacy_args(std::env::args_os()));
++    let invocation_dir = std::env::current_dir()?;
++    let workspace_root = workspace_root();
++    normalize_command_paths(&mut cli.command, &invocation_dir, &workspace_root);
++    std::env::set_current_dir(&workspace_root)?;
++    axbuild::axvisor::Axvisor::new()?
++        .execute(cli.command)
++        .await?;
++    Ok(())
++}
++
++#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
++#[unsafe(no_mangle)]
++fn main() -> ! {
++    loop {
++        core::hint::spin_loop();
++    }
++}
++
++#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
++#[rustfmt::skip]
++#[unsafe(no_mangle)]
++extern "C" fn _head() -> ! {
++    main()
++}
++
++#[cfg(not(any(windows, all(unix, not(target_env = "musl")))))]
++#[rustfmt::skip]
++#[unsafe(no_mangle)]
++extern "C" fn kernel_entry() -> ! {
++    main()
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn normalize_legacy_args(args: impl IntoIterator<Item = OsString>) -> Vec<OsString> {
++    args.into_iter()
++        .map(|arg| match arg.to_str() {
++            Some("--build-config") => OsString::from("--config"),
++            Some(value) if value.starts_with("--build-config=") => {
++                OsString::from(value.replacen("--build-config=", "--config=", 1))
++            }
++            _ => arg,
++        })
++        .collect()
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn workspace_root() -> PathBuf {
++    Path::new(env!("CARGO_MANIFEST_DIR"))
++        .parent()
++        .and_then(Path::parent)
++        .map(Path::to_path_buf)
++        .expect("failed to locate workspace root from os/axvisor")
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn normalize_command_paths(
++    command: &mut axbuild::axvisor::Command,
++    invocation_dir: &Path,
++    workspace_root: &Path,
++) {
++    use axbuild::axvisor::{Command, TestCommand};
++
++    match command {
++        Command::Build(args) => normalize_build_paths(args, invocation_dir, workspace_root),
++        Command::Qemu(args) => {
++            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
++            normalize_existing_path(&mut args.qemu_config, invocation_dir, workspace_root);
++            normalize_existing_path(&mut args.rootfs, invocation_dir, workspace_root);
++        }
++        Command::Board(args) => {
++            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
++            normalize_existing_path(&mut args.board_config, invocation_dir, workspace_root);
++        }
++        Command::Uboot(args) => {
++            normalize_build_paths(&mut args.build, invocation_dir, workspace_root);
++            normalize_existing_path(&mut args.uboot_config, invocation_dir, workspace_root);
++        }
++        Command::Test(args) => match &mut args.command {
++            TestCommand::Uboot(args) => {
++                normalize_existing_path(&mut args.uboot_config, invocation_dir, workspace_root);
++            }
++            TestCommand::Qemu(_) | TestCommand::Board(_) => {}
++        },
++        Command::Defconfig(_) | Command::Config(_) => {}
++    }
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn normalize_build_paths(
++    args: &mut axbuild::axvisor::ArgsBuild,
++    invocation_dir: &Path,
++    workspace_root: &Path,
++) {
++    normalize_existing_path(&mut args.config, invocation_dir, workspace_root);
++    for path in &mut args.vmconfigs {
++        *path = resolve_existing_path(path, invocation_dir, workspace_root);
++    }
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn normalize_existing_path(
++    path: &mut Option<PathBuf>,
++    invocation_dir: &Path,
++    workspace_root: &Path,
++) {
++    if let Some(path) = path {
++        *path = resolve_existing_path(path, invocation_dir, workspace_root);
++    }
++}
++
++#[cfg(any(windows, all(unix, not(target_env = "musl"))))]
++fn resolve_existing_path(path: &Path, invocation_dir: &Path, workspace_root: &Path) -> PathBuf {
++    if path.is_absolute() {
++        return path.to_path_buf();
++    }
++
++    let cwd_path = invocation_dir.join(path);
++    let workspace_path = workspace_root.join(path);
++    if workspace_path.exists() && !cwd_path.exists() {
++        workspace_path
++    } else {
++        cwd_path
++    }
++}
+diff --git a/scripts/test/check_ci_paths.py b/scripts/test/check_ci_paths.py
+index b2b8f2407..5b6e424a5 100644
+--- a/scripts/test/check_ci_paths.py
++++ b/scripts/test/check_ci_paths.py
+@@ -1,44 +1,46 @@
+-#!/usr/bin/env python3
+-
+-import re
+-import sys
+-from pathlib import Path
+-
+-
+-WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+-WORKSPACE_MANIFEST = WORKSPACE_ROOT / "Cargo.toml"
+-CI_WORKFLOW = WORKSPACE_ROOT / ".github/workflows/ci.yml"
+-
+-
+-def main() -> int:
+-    source_roots = workspace_source_roots()
+-    ci_paths = ci_check_paths()
+-    missing_paths = sorted(f"{root}/**" for root in source_roots if f"{root}/**" not in ci_paths)
+-
+-    if not missing_paths:
+-        return 0
+-
+-    print("CI path filter is missing workspace source directories:", file=sys.stderr)
+-    for path in missing_paths:
+-        print(f"  - {path}", file=sys.stderr)
+-    return 1
+-
+-
+-def workspace_source_roots() -> set[str]:
+-    manifest = WORKSPACE_MANIFEST.read_text(encoding="utf-8")
+-    members = manifest.split("members = [", maxsplit=1)[1].split("]", maxsplit=1)[0]
+-    package_paths = re.findall(r'^\s+"([^"]+)",?$', members, flags=re.MULTILINE)
+-    package_paths.extend(re.findall(r'\bpath\s*=\s*"([^"]+)"', manifest))
+-    return {Path(package_path).parts[0] for package_path in package_paths}
+-
+-
+-def ci_check_paths() -> set[str]:
+-    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+-    ci_checks = workflow.split("            ci_checks:\n", maxsplit=1)[1].split(
+-        "            base_container_publish:\n", maxsplit=1
+-    )[0]
+-    return set(re.findall(r'^\s+- "([^"]+)"$', ci_checks, flags=re.MULTILINE))
+-
+-
+-if __name__ == "__main__":
+-    sys.exit(main())
++#!/usr/bin/env python3
++
++import re
++import sys
++from pathlib import Path
++
++
++WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
++WORKSPACE_MANIFEST = WORKSPACE_ROOT / "Cargo.toml"
++CI_WORKFLOW = WORKSPACE_ROOT / ".github/workflows/ci.yml"
++REQUIRED_CI_PATHS = {"configs/**"}
++
++
++def main() -> int:
++    source_roots = workspace_source_roots()
++    ci_paths = ci_check_paths()
++    expected_paths = {f"{root}/**" for root in source_roots} | REQUIRED_CI_PATHS
++    missing_paths = sorted(path for path in expected_paths if path not in ci_paths)
++
++    if not missing_paths:
++        return 0
++
++    print("CI path filter is missing workspace source directories:", file=sys.stderr)
++    for path in missing_paths:
++        print(f"  - {path}", file=sys.stderr)
++    return 1
++
++
++def workspace_source_roots() -> set[str]:
++    manifest = WORKSPACE_MANIFEST.read_text(encoding="utf-8")
++    members = manifest.split("members = [", maxsplit=1)[1].split("]", maxsplit=1)[0]
++    package_paths = re.findall(r'^\s+"([^"]+)",?$', members, flags=re.MULTILINE)
++    package_paths.extend(re.findall(r'\bpath\s*=\s*"([^"]+)"', manifest))
++    return {Path(package_path).parts[0] for package_path in package_paths}
++
++
++def ci_check_paths() -> set[str]:
++    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
++    ci_checks = workflow.split("            ci_checks:\n", maxsplit=1)[1].split(
++        "            base_container_publish:\n", maxsplit=1
++    )[0]
++    return set(re.findall(r'^\s+- "([^"]+)"$', ci_checks, flags=re.MULTILINE))
++
++
++if __name__ == "__main__":
++    sys.exit(main())

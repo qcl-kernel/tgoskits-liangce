@@ -1,0 +1,68 @@
+[package]
+name = "ax-libc"
+version = "0.5.28"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = [
+    "Yuekai Jia <equation618@gmail.com>",
+    "yanjuguang <coolyanjg@163.com>",
+    "wudashuai <wu-ds20@mails.tsinghua.edu.cn>",
+    "yfblock <321353225@qq.com>",
+    "scPointer <bhy18@mails.tsinghua.edu.cn>",
+    "Shiping Yuan <robert_yuan@pku.edu.com>",
+]
+description = "ArceOS user program library for C apps"
+license.workspace = true
+
+[lib]
+name = "ax_libc"
+crate-type = ["staticlib"]
+
+[features]
+default = []
+
+# Multicore
+smp = ["ax-runtime/smp", "ax-kspin/smp", "ax-posix-api/smp"]
+
+# Floating point/SIMD
+fp-simd = ["ax-hal/fp-simd"]
+
+# Interrupts
+irq = ["ax-posix-api/irq", "ax-runtime/irq"]
+
+# Memory
+alloc = ["ax-posix-api/alloc"]
+paging = ["ax-runtime/paging"]
+tls = ["alloc", "ax-runtime/tls"]
+
+# Multi-task
+multitask = ["ax-posix-api/multitask", "ax-runtime/multitask"]
+lockdep = ["ax-posix-api/lockdep", "ax-runtime/lockdep"]
+stack-protector = ["ax-runtime/stack-protector"]
+
+# File system
+fs = ["ax-posix-api/fs", "ax-runtime/fs", "fd"]
+ext4fs = ["fs", "ax-runtime/ext4fs"]
+fatfs = ["fs", "ax-runtime/fatfs"]
+
+# Networking
+net = ["ax-posix-api/net", "ax-runtime/net", "fd"]
+
+# Libc features
+fd = ["ax-posix-api/fd"]
+pipe = ["ax-posix-api/pipe", "fd"]
+select = ["ax-posix-api/select", "fd"]
+poll = ["ax-posix-api/poll", "fd"]
+epoll = ["ax-posix-api/epoll", "fd"]
+
+[dependencies]
+ax-driver.workspace = true
+ax-hal.workspace = true
+ax-kspin.workspace = true
+ax-posix-api.workspace = true
+ax-errno.workspace = true
+ax-io.workspace = true
+ax-runtime.workspace = true
+
+[build-dependencies]
+bindgen.workspace = true

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "guest": "zephyr-smoke",
+  "scope": "axvisor",
+  "log": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-axvisor-upstream-20260726/axvisor-qemu.log",
+  "qemuExitCode": 0,
+  "status": "passed",
+  "checks": {
+    "axvisor_vm_created": true,
+    "axvisor_kernel_loaded": true,
+    "axvisor_vcpu0_spawn": true,
+    "axvisor_vcpu0_affinity": true,
+    "axvisor_vm_boot_success": true,
+    "smoke_start": true,
+    "sample_count": 10,
+    "sample_sequences": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "sample_uptimes_ms": [
+      110,
+      220,
+      330,
+      440,
+      550,
+      660,
+      770,
+      880,
+      990,
+      1100
+    ],
+    "sample_deltas_ms": [
+      110,
+      110,
+      110,
+      110,
+      110,
+      110,
+      110,
+      110,
+      110,
+      110
+    ],
+    "sample_sequence_valid": true,
+    "sample_uptime_monotonic": true,
+    "sample_delta_in_range": true,
+    "success_marker": true,
+    "guest_init_failed": false
+  }
+}

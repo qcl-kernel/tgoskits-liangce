@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase2-zephyr-axvisor-upstream-20260726",
+  "mode": "axvisor",
+  "status": "passed",
+  "buildStatus": "passed",
+  "nativeStatus": "not_requested",
+  "nativeExitCode": -1,
+  "axvisorStatus": "passed",
+  "axvisorExitCode": 0,
+  "successMarker": "TGOS_ZEPHYR_SMOKE_PASS samples=10",
+  "zephyrRevision": "684c9e8f32e4373a21098559f748f06915f950c9",
+  "zephyrManifestSha256": "9c3661dd82e5ab7f487e3c0a4eee8726978736eadb470a3a09a76c77a8f10f92",
+  "zephyrSdkVersion": "1.0.1"
+}

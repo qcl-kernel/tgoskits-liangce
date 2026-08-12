@@ -1,0 +1,464 @@
+//! StarryOS-specific rootfs orchestration for run and test flows.
+//!
+//! Main responsibilities:
+//! - Resolve and prepare the default managed rootfs used by StarryOS targets
+//! - Patch QEMU configs so StarryOS boots with the expected rootfs image
+
+use std::{
+    fs,
+    io::{Read, Seek, SeekFrom},
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use anyhow::{Context, bail};
+use clap::Args;
+use ostool::{build::config::Cargo, run::qemu::QemuConfig};
+
+use super::{Starry, apk, build};
+pub(crate) use crate::rootfs::qemu::{RootfsPatchMode, patch_rootfs};
+use crate::{
+    context::{DEFAULT_STARRY_ARCH, ResolvedStarryRequest, starry_target_for_arch_checked},
+    rootfs::inject,
+    test::qemu as qemu_test,
+};
+
+#[derive(Args)]
+pub struct ArgsRootfs {
+    #[arg(long)]
+    pub arch: Option<String>,
+}
+
+pub(super) async fn rootfs(starry: &mut Starry, args: ArgsRootfs) -> anyhow::Result<()> {
+    let arch = args.arch.unwrap_or_else(|| DEFAULT_STARRY_ARCH.to_string());
+    let target = starry_target_for_arch_checked(&arch)?.to_string();
+    let disk_img = ensure_rootfs_in_tmp_dir(starry.app.workspace_root(), &arch, &target).await?;
+    println!("rootfs ready at {}", disk_img.display());
+    Ok(())
+}
+
+pub(super) async fn ensure_quick_start_qemu_rootfs(
+    workspace_root: &Path,
+    arch: &str,
+) -> anyhow::Result<PathBuf> {
+    let target = starry_target_for_arch_checked(arch)?.to_string();
+    ensure_rootfs_in_tmp_dir(workspace_root, arch, &target).await
+}
+
+pub(super) async fn qemu_with_explicit_rootfs(
+    starry: &mut Starry,
+    request: ResolvedStarryRequest,
+    rootfs: PathBuf,
+) -> anyhow::Result<()> {
+    let rootfs = crate::image::storage::resolve_explicit_rootfs(
+        starry.app.workspace_root(),
+        &request.arch,
+        rootfs,
+    )?;
+    ensure_qemu_rootfs_ready(&request, starry.app.workspace_root(), Some(&rootfs)).await?;
+    starry.app.set_debug_mode(request.debug)?;
+    let cargo = build::load_cargo_config(&request)?;
+    let qemu = load_patched_qemu_config(starry, &request, &cargo, Some(&rootfs), false).await?;
+    starry.run_qemu_artifact(&request, cargo, qemu).await
+}
+
+pub(super) async fn qemu(
+    starry: &mut Starry,
+    request: ResolvedStarryRequest,
+) -> anyhow::Result<()> {
+    starry.app.set_debug_mode(request.debug)?;
+    let cargo = build::load_cargo_config(&request)?;
+    ensure_qemu_rootfs_ready(&request, starry.app.workspace_root(), None).await?;
+    let qemu = load_patched_qemu_config(starry, &request, &cargo, None, true).await?;
+    starry.run_qemu_artifact(&request, cargo, qemu).await
+}
+
+pub(super) async fn load_patched_qemu_config(
+    starry: &mut Starry,
+    request: &ResolvedStarryRequest,
+    cargo: &Cargo,
+    explicit_rootfs: Option<&Path>,
+    apply_default_args: bool,
+) -> anyhow::Result<QemuConfig> {
+    let mut qemu = match request.qemu_config.as_deref() {
+        Some(path) => {
+            starry
+                .app
+                .read_qemu_config_from_path_for_cargo(cargo, path)
+                .await?
+        }
+        None => {
+            let path = super::default_qemu_config_template_path(
+                starry.app.workspace_root(),
+                &request.arch,
+            );
+            starry
+                .app
+                .read_qemu_config_from_path_for_cargo(cargo, &path)
+                .await?
+        }
+    };
+
+    let mode = rootfs_patch_mode(cargo);
+    if let Some(rootfs) = explicit_rootfs {
+        patch_qemu_rootfs_path_with_mode(&mut qemu, rootfs, mode);
+    } else if apply_default_args {
+        patch_qemu_rootfs(&mut qemu, request, starry.app.workspace_root(), None, mode)?;
+    }
+    qemu_test::apply_smp_qemu_arg(&mut qemu, request.smp);
+
+    Ok(qemu)
+}
+
+const APK_REPOSITORIES_PATH: &str = "/etc/apk/repositories";
+const QEMU_SLIRP_RESOLV_CONF: &str = "nameserver 10.0.2.3\n";
+const EXT_SUPER_MAGIC_OFFSET: u64 = 1080;
+const EXT_SUPER_MAGIC: [u8; 2] = [0x53, 0xef];
+
+/// Ensures the default managed rootfs for a Starry arch/target is available.
+pub(crate) async fn ensure_rootfs_in_tmp_dir(
+    workspace_root: &Path,
+    arch: &str,
+    target: &str,
+) -> anyhow::Result<PathBuf> {
+    let expected_target = starry_target_for_arch_checked(arch)?;
+    if target != expected_target {
+        bail!("Starry arch `{arch}` maps to target `{expected_target}`, but got `{target}`");
+    }
+
+    let rootfs = crate::image::storage::ensure_rootfs_for_arch(workspace_root, arch).await?;
+    let _lock = crate::support::download::acquire_path_lock(&rootfs).await?;
+    ensure_apk_region_in_rootfs(&rootfs)?;
+    Ok(rootfs)
+}
+
+/// Ensures a selected rootfs image exists without modifying its contents.
+pub(crate) async fn ensure_qemu_rootfs_ready(
+    request: &ResolvedStarryRequest,
+    workspace_root: &Path,
+    explicit_rootfs: Option<&Path>,
+) -> anyhow::Result<()> {
+    let rootfs_path = qemu_rootfs_path(request, workspace_root, explicit_rootfs)?;
+    crate::image::storage::ensure_optional_managed_rootfs(
+        workspace_root,
+        &request.arch,
+        Some(&rootfs_path),
+    )
+    .await
+}
+
+pub(crate) fn ensure_apk_region_in_rootfs(rootfs_img: &Path) -> anyhow::Result<()> {
+    if !looks_like_ext_image(rootfs_img)? {
+        return Ok(());
+    }
+
+    let Some(original) = inject::read_text_file(rootfs_img, APK_REPOSITORIES_PATH)? else {
+        sync_qemu_slirp_resolver_in_rootfs(rootfs_img)?;
+        return Ok(());
+    };
+    let region = apk::apk_region_from_env()?;
+    let rewritten = apk::rewrite_apk_repositories_content(&original, region);
+    replace_rootfs_text_file_if_changed(rootfs_img, APK_REPOSITORIES_PATH, &rewritten)?;
+    sync_qemu_slirp_resolver_in_rootfs(rootfs_img)
+}
+
+fn sync_qemu_slirp_resolver_in_rootfs(rootfs_img: &Path) -> anyhow::Result<()> {
+    replace_rootfs_text_file_if_changed(rootfs_img, "/etc/resolv.conf", QEMU_SLIRP_RESOLV_CONF)
+}
+
+fn replace_rootfs_text_file_if_changed(
+    rootfs_img: &Path,
+    guest_path: &str,
+    content: &str,
+) -> anyhow::Result<()> {
+    if inject::read_text_file(rootfs_img, guest_path)?.as_deref() == Some(content) {
+        return Ok(());
+    }
+
+    let temp_purpose = guest_path.trim_start_matches('/').replace('/', "-");
+    let temp_path = unique_temp_file_path(rootfs_img, &temp_purpose)?;
+    fs::write(&temp_path, content)
+        .with_context(|| format!("failed to write {}", temp_path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temp_path, fs::Permissions::from_mode(0o644))
+            .with_context(|| format!("failed to chmod {}", temp_path.display()))?;
+    }
+    let replace_result = inject::replace_file(rootfs_img, guest_path, &temp_path);
+    let cleanup_result = fs::remove_file(&temp_path)
+        .with_context(|| format!("failed to remove {}", temp_path.display()));
+
+    replace_result?;
+    cleanup_result?;
+    Ok(())
+}
+
+fn looks_like_ext_image(path: &Path) -> anyhow::Result<bool> {
+    let mut file =
+        fs::File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
+    if file
+        .metadata()
+        .with_context(|| format!("failed to stat {}", path.display()))?
+        .len()
+        < EXT_SUPER_MAGIC_OFFSET + EXT_SUPER_MAGIC.len() as u64
+    {
+        return Ok(false);
+    }
+
+    let mut magic = [0_u8; 2];
+    file.seek(SeekFrom::Start(EXT_SUPER_MAGIC_OFFSET))
+        .with_context(|| format!("failed to seek {}", path.display()))?;
+    file.read_exact(&mut magic)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+    Ok(magic == EXT_SUPER_MAGIC)
+}
+
+fn unique_temp_file_path(rootfs_img: &Path, purpose: &str) -> anyhow::Result<PathBuf> {
+    let dir = rootfs_img
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("rootfs image has no parent: {}", rootfs_img.display()))?;
+    let image_name = rootfs_img
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow::anyhow!("invalid rootfs image path: {}", rootfs_img.display()))?;
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("system clock is before UNIX_EPOCH")?
+        .as_nanos();
+    Ok(dir.join(format!(
+        ".{image_name}.{purpose}.{}.{}.tmp",
+        std::process::id(),
+        nanos
+    )))
+}
+
+/// Patches a QEMU config with the rootfs selected for a Starry request.
+pub(crate) fn patch_qemu_rootfs(
+    qemu: &mut QemuConfig,
+    request: &ResolvedStarryRequest,
+    workspace_root: &Path,
+    explicit_rootfs: Option<&Path>,
+    mode: RootfsPatchMode,
+) -> anyhow::Result<()> {
+    let expected_target = starry_target_for_arch_checked(&request.arch)?;
+    if request.target != expected_target {
+        bail!(
+            "Starry arch `{}` maps to target `{expected_target}`, but got `{}`",
+            request.arch,
+            request.target
+        );
+    }
+    let rootfs_path = qemu_rootfs_path(request, workspace_root, explicit_rootfs)?;
+    patch_qemu_rootfs_path_with_mode(qemu, &rootfs_path, mode);
+    Ok(())
+}
+
+/// Resolves the rootfs path selected for a Starry QEMU request.
+pub(crate) fn qemu_rootfs_path(
+    request: &ResolvedStarryRequest,
+    workspace_root: &Path,
+    explicit_rootfs: Option<&Path>,
+) -> anyhow::Result<PathBuf> {
+    if let Some(explicit) = explicit_rootfs {
+        return Ok(explicit.to_path_buf());
+    }
+
+    crate::image::storage::default_rootfs_path(workspace_root, &request.arch)
+}
+
+/// Patches a QEMU config with a concrete Starry rootfs path.
+pub(crate) fn patch_qemu_rootfs_path_with_mode(
+    qemu: &mut QemuConfig,
+    rootfs_path: &Path,
+    mode: RootfsPatchMode,
+) {
+    patch_rootfs(qemu, rootfs_path, mode);
+}
+
+fn rootfs_patch_mode(cargo: &Cargo) -> RootfsPatchMode {
+    if cargo.features.iter().any(|feature| {
+        matches!(
+            feature.as_str(),
+            "plat-dyn" | "ax-std/plat-dyn" | "starry-kernel/plat-dyn"
+        )
+    }) {
+        RootfsPatchMode::ReplaceDriveOnly
+    } else {
+        RootfsPatchMode::EnsureDiskBootNet
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    fn managed_rootfs_path(root: &Path, image_name: &str) -> PathBuf {
+        root.join(".tgos-images").join(image_name).join(image_name)
+    }
+
+    fn write_test_image_config(root: &Path) {
+        let config = crate::image::config::ImageConfig {
+            local_storage: root.join(".tgos-images"),
+            registry: crate::image::config::DEFAULT_REGISTRY_URL.to_string(),
+            auto_sync: true,
+            auto_sync_threshold: 60,
+        };
+        crate::image::config::ImageConfig::write_config(root, &config).unwrap();
+    }
+
+    #[tokio::test]
+    async fn patch_qemu_rootfs_includes_rootfs_and_network_defaults() {
+        let root = tempdir().unwrap();
+        write_test_image_config(root.path());
+        let rootfs = managed_rootfs_path(root.path(), "rootfs-x86_64-alpine.img");
+
+        let request = ResolvedStarryRequest {
+            package: "starryos".to_string(),
+            arch: "x86_64".to_string(),
+            target: "x86_64-unknown-none".to_string(),
+            smp: None,
+            debug: false,
+            build_info_path: PathBuf::from("/tmp/.build.toml"),
+            build_info_override: None,
+            qemu_config: None,
+            uboot_config: None,
+        };
+        let mut qemu = QemuConfig::default();
+
+        patch_qemu_rootfs(
+            &mut qemu,
+            &request,
+            root.path(),
+            None,
+            RootfsPatchMode::EnsureDiskBootNet,
+        )
+        .unwrap();
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-device".to_string(),
+                "virtio-blk-pci,drive=disk0".to_string(),
+                "-drive".to_string(),
+                format!("id=disk0,if=none,format=raw,file={}", rootfs.display()),
+                "-device".to_string(),
+                "virtio-net-pci,netdev=net0".to_string(),
+                "-netdev".to_string(),
+                "user,id=net0".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_qemu_rootfs_preserves_existing_base_args() {
+        let root = tempdir().unwrap();
+        write_test_image_config(root.path());
+        let rootfs = managed_rootfs_path(root.path(), "rootfs-riscv64-alpine.img");
+
+        let request = ResolvedStarryRequest {
+            package: "starryos".to_string(),
+            arch: "riscv64".to_string(),
+            target: "riscv64gc-unknown-none-elf".to_string(),
+            smp: None,
+            debug: false,
+            build_info_path: PathBuf::from("/tmp/.build.toml"),
+            build_info_override: None,
+            qemu_config: None,
+            uboot_config: None,
+        };
+        let mut qemu = QemuConfig {
+            args: vec![
+                "-nographic".to_string(),
+                "-cpu".to_string(),
+                "rv64".to_string(),
+                "-machine".to_string(),
+                "virt".to_string(),
+            ],
+            ..Default::default()
+        };
+
+        patch_qemu_rootfs(
+            &mut qemu,
+            &request,
+            root.path(),
+            None,
+            RootfsPatchMode::EnsureDiskBootNet,
+        )
+        .unwrap();
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-nographic".to_string(),
+                "-cpu".to_string(),
+                "rv64".to_string(),
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-device".to_string(),
+                "virtio-blk-pci,drive=disk0".to_string(),
+                "-drive".to_string(),
+                format!("id=disk0,if=none,format=raw,file={}", rootfs.display()),
+                "-device".to_string(),
+                "virtio-net-pci,netdev=net0".to_string(),
+                "-netdev".to_string(),
+                "user,id=net0".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_qemu_rootfs_for_dynamic_platform_replaces_drive_only() {
+        let root = tempdir().unwrap();
+        write_test_image_config(root.path());
+        let rootfs = managed_rootfs_path(root.path(), "rootfs-riscv64-alpine.img");
+
+        let request = ResolvedStarryRequest {
+            package: "starryos".to_string(),
+            arch: "riscv64".to_string(),
+            target: "riscv64gc-unknown-none-elf".to_string(),
+            smp: None,
+            debug: false,
+            build_info_path: PathBuf::from("/tmp/.build.toml"),
+            build_info_override: None,
+            qemu_config: None,
+            uboot_config: None,
+        };
+        let mut qemu = QemuConfig {
+            args: vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-device".to_string(),
+                "virtio-blk-device,drive=disk0".to_string(),
+                "-drive".to_string(),
+                "id=disk0,if=none,format=raw,file=/old/rootfs.img".to_string(),
+            ],
+            ..Default::default()
+        };
+
+        patch_qemu_rootfs(
+            &mut qemu,
+            &request,
+            root.path(),
+            None,
+            RootfsPatchMode::ReplaceDriveOnly,
+        )
+        .unwrap();
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-device".to_string(),
+                "virtio-blk-device,drive=disk0".to_string(),
+                "-drive".to_string(),
+                format!("id=disk0,if=none,format=raw,file={}", rootfs.display()),
+            ]
+        );
+    }
+}

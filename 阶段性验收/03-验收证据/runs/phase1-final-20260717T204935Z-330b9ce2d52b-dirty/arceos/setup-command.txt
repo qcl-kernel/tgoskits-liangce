@@ -1,0 +1,2 @@
+cd /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+  bash scripts/setup_qemu.sh arceos 
