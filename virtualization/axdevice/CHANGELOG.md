@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.7...axdevice-v0.5.8) - 2026-08-12
+
+### Added
+
+- *(axvisor)* add dual-guest virtio-net support ([#1927](https://github.com/rcore-os/tgoskits/pull/1927))
+
+### Other
+
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.5.7](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.6...axdevice-v0.5.7) - 2026-08-09
 
 ### Added

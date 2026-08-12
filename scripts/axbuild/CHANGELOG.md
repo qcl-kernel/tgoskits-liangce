@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.24](https://github.com/rcore-os/tgoskits/compare/axbuild-v0.4.23...axbuild-v0.4.24) - 2026-08-12
+
+### Fixed
+
+- *(axbuild)* preserve Axvisor QEMU group artifacts ([#1969](https://github.com/rcore-os/tgoskits/pull/1969))
+- *(axbuild)* suppress debugfs copy noise in Starry image builds ([#1964](https://github.com/rcore-os/tgoskits/pull/1964))
+- *(visionfive2)* restore booti and SD rootfs boot ([#1954](https://github.com/rcore-os/tgoskits/pull/1954))
+
+### Other
+
+- *(repo)* move starry-process, starry-signal, and starry-vm to os/StarryOS ([#1974](https://github.com/rcore-os/tgoskits/pull/1974))
+- *(sync)* move lock implementation into ax-task ([#1962](https://github.com/rcore-os/tgoskits/pull/1962))
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+- *(axvm)* layer RISC-V SBI IPI routing ([#1920](https://github.com/rcore-os/tgoskits/pull/1920))
+- *(axvisor)* validate x86 OVMF ACPI on VMX and SVM ([#1931](https://github.com/rcore-os/tgoskits/pull/1931))
+
 ### Fixed
 
 - *(axvisor)* preserve one QEMU executable per VM configuration build group

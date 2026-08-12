@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4](https://github.com/rcore-os/tgoskits/compare/somehal-v0.8.3...somehal-v0.8.4) - 2026-08-12
+
+### Other
+
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.8.3](https://github.com/rcore-os/tgoskits/compare/somehal-v0.8.2...somehal-v0.8.3) - 2026-08-09
 
 ### Added

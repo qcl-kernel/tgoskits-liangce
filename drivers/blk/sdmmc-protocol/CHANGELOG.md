@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5](https://github.com/rcore-os/tgoskits/compare/sdmmc-protocol-v0.4.4...sdmmc-protocol-v0.4.5) - 2026-08-12
+
+### Other
+
+- updated the following local packages: dma-api, rdif-block, sdio-host2
+
 ## [0.4.4](https://github.com/rcore-os/tgoskits/compare/sdmmc-protocol-v0.4.3...sdmmc-protocol-v0.4.4) - 2026-08-09
 
 ### Fixed

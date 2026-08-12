@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4](https://github.com/rcore-os/tgoskits/compare/ax-driver-v0.12.3...ax-driver-v0.12.4) - 2026-08-12
+
+### Added
+
+- *(axvisor)* add dual-guest virtio-net support ([#1927](https://github.com/rcore-os/tgoskits/pull/1927))
+
+### Fixed
+
+- *(visionfive2)* restore booti and SD rootfs boot ([#1954](https://github.com/rcore-os/tgoskits/pull/1954))
+
+### Other
+
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.12.3](https://github.com/rcore-os/tgoskits/compare/ax-driver-v0.12.2...ax-driver-v0.12.3) - 2026-08-09
 
 ### Fixed

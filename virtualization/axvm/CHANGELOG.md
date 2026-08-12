@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.27](https://github.com/rcore-os/tgoskits/compare/axvm-v0.5.26...axvm-v0.5.27) - 2026-08-12
+
+### Added
+
+- *(axvisor)* add dual-guest virtio-net support ([#1927](https://github.com/rcore-os/tgoskits/pull/1927))
+
+### Fixed
+
+- *(axvm)* preserve console device poll wakeups ([#1977](https://github.com/rcore-os/tgoskits/pull/1977))
+- *(axvm)* prevent dual guest startup and wake races ([#1966](https://github.com/rcore-os/tgoskits/pull/1966))
+- *(aarch64)* restore RK3588 guest cpufreq and SCMI support ([#1919](https://github.com/rcore-os/tgoskits/pull/1919))
+
+### Other
+
+- *(sync)* move lock implementation into ax-task ([#1962](https://github.com/rcore-os/tgoskits/pull/1962))
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+- *(axvm)* layer RISC-V SBI IPI routing ([#1920](https://github.com/rcore-os/tgoskits/pull/1920))
+- *(axvisor)* validate x86 OVMF ACPI on VMX and SVM ([#1931](https://github.com/rcore-os/tgoskits/pull/1931))
+
 ## [0.5.26](https://github.com/rcore-os/tgoskits/compare/axvm-v0.5.25...axvm-v0.5.26) - 2026-08-09
 
 ### Added

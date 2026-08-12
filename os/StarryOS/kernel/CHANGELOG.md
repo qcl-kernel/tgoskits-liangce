@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8](https://github.com/rcore-os/tgoskits/compare/starry-kernel-v0.7.7...starry-kernel-v0.7.8) - 2026-08-12
+
+### Fixed
+
+- *(ax-hal)* normalize hypervisor IRQ entry state ([#1949](https://github.com/rcore-os/tgoskits/pull/1949))
+- *(starry-kernel)* reject threads in new PID namespaces ([#1947](https://github.com/rcore-os/tgoskits/pull/1947))
+- *(starry-kernel)* align event notification semantics with Linux ([#1925](https://github.com/rcore-os/tgoskits/pull/1925))
+- *(starry-kernel)* preserve netlink sockopt writeback order ([#1944](https://github.com/rcore-os/tgoskits/pull/1944))
+- *(starry-kernel)* rescan wait candidates after wake ([#1940](https://github.com/rcore-os/tgoskits/pull/1940))
+- *(tty)* handle input flush and wakeups ([#1922](https://github.com/rcore-os/tgoskits/pull/1922))
+- *(starry-kernel)* support IPv4 ping syscall paths ([#1896](https://github.com/rcore-os/tgoskits/pull/1896))
+
+### Other
+
+- *(repo)* move starry-process, starry-signal, and starry-vm to os/StarryOS ([#1974](https://github.com/rcore-os/tgoskits/pull/1974))
+- *(sync)* move lock implementation into ax-task ([#1962](https://github.com/rcore-os/tgoskits/pull/1962))
+- Fix UVC asynchronous transfer lifecycle ([#1924](https://github.com/rcore-os/tgoskits/pull/1924))
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.7.7](https://github.com/rcore-os/tgoskits/compare/starry-kernel-v0.7.6...starry-kernel-v0.7.7) - 2026-08-09
 
 ### Fixed

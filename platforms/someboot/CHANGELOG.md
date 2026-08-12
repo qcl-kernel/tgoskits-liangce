@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9](https://github.com/rcore-os/tgoskits/compare/someboot-v0.3.8...someboot-v0.3.9) - 2026-08-12
+
+### Fixed
+
+- *(visionfive2)* restore booti and SD rootfs boot ([#1954](https://github.com/rcore-os/tgoskits/pull/1954))
+
+### Other
+
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.3.8](https://github.com/rcore-os/tgoskits/compare/someboot-v0.3.7...someboot-v0.3.8) - 2026-08-09
 
 ### Fixed

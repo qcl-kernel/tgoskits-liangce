@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.10](https://github.com/rcore-os/tgoskits/compare/rdrive-v0.23.9...rdrive-v0.23.10) - 2026-08-12
+
+### Other
+
+- *(sync)* unify lock primitives in ax-sync ([#1956](https://github.com/rcore-os/tgoskits/pull/1956))
+
 ## [0.23.9](https://github.com/rcore-os/tgoskits/compare/rdrive-v0.23.8...rdrive-v0.23.9) - 2026-08-09
 
 ### Added
