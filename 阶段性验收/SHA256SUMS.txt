@@ -2773,11 +2773,6 @@ e1b3cf3baaa730325d593fb624b20e3d08e11017f9c2ac9375a1b0ffd927b842 *02-源码快�
 b975cfdff847a7bf57561bfd270d786c0d487c278b711b616c047802775dc064 *02-源码快照/tgoskits/docs/docs/debug/panic-recursion-guards.md
 e61f522394204b9f4905fe6342435b8cc34be84a86bd5f7167c9fe5b2243397a *02-源码快照/tgoskits/docs/docs/debug/platform.md
 9016d743cad677f5a18f8c23463160e09f6e4bab3158a435a078655d8823e2ff *02-源码快照/tgoskits/docs/docs/debug/task-stack-guard-page.md
-108c469c2645f7372ec091a81bc222375fa3e885eef6db2835b9f72caddf000f *02-源码快照/tgoskits/docs/docs/development/arceos.md
-3d2c789982a821ae2c7759dbeac0a7483a6df7f5dd2aa7dfb45514a77867689c *02-源码快照/tgoskits/docs/docs/development/axvisor.md
-619d397c61714726dcac668443cea0e0e178bf2092b585c6a27b15259d7fafad *02-源码快照/tgoskits/docs/docs/development/components.md
-32514bb9ac713f95737082c20f4b8b60099e20a48b6de70dfa5a49da0d3a0894 *02-源码快照/tgoskits/docs/docs/development/starryos-signal-extension-syscalls.md
-406970f34dd1f0fd00905e0a3702075b1fb807c0d0b19192323d62a0e6d68c9c *02-源码快照/tgoskits/docs/docs/development/starryos.md
 d0767fccbbe7b187287c84608ff41e0f7476c63021caee8703528477a229e06c *02-源码快照/tgoskits/docs/docs/introduction/overview.md
 d9811845fecad23502f0a75963bb7bab18c39a8318d39f67de424043064bcddd *02-源码快照/tgoskits/docs/docs/introduction/platform.md
 e769d3b5a57d05eb3caf54fc117329507854a9286f58faaaaec76fccfc34e5a7 *02-源码快照/tgoskits/docs/docs/quickstart/arceos.md
