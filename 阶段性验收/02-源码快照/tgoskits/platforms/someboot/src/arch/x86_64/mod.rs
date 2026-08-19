@@ -138,8 +138,8 @@ impl ArchTrait for Arch {
         _secondary_entry as *const ()
     }
 
-    fn cpu_on(hartid: usize, entry: usize, arg: usize) -> Result<(), CpuOnError> {
-        power::cpu_on(hartid, entry, arg)
+    fn kick_secondary_cpu(hartid: usize, entry: usize, arg: usize) -> Result<(), CpuOnError> {
+        power::kick_secondary_cpu(hartid, entry, arg)
     }
 
     fn systimer_enable() {
@@ -172,6 +172,10 @@ impl ArchTrait for Arch {
 
     fn systimer_tick() -> usize {
         trap::ticks_now() as usize
+    }
+
+    fn systimer_stability() -> crate::timer::CounterStability {
+        trap::scheduler_counter_stability()
     }
 
     fn irq_all_is_enabled() -> bool {

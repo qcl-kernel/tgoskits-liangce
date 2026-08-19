@@ -1,4 +1,4 @@
-use alloc::string::{String, ToString};
+use std::string::{String, ToString};
 
 use super::{StopReason, VmStatus};
 use crate::{AxVmError, AxVmResult};
@@ -95,11 +95,21 @@ impl<R, H> Machine<R, H> {
         }
     }
 
+    pub(crate) fn interrupt_runtime(&self) -> AxVmResult<&H> {
+        match self {
+            Machine::Running { runtime, .. } | Machine::Paused { runtime, .. } => Ok(runtime),
+            state => Err(AxVmError::invalid_state(
+                "send vCPU interrupt",
+                std::format!("VM cannot accept interrupts in {:?}", state.status()),
+            )),
+        }
+    }
+
     pub fn start_with<F>(&mut self, f: F) -> AxVmResult
     where
         F: FnOnce(&mut R) -> AxVmResult<H>,
     {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Ready(mut resources) => match f(&mut resources) {
                 Ok(runtime) => {
@@ -158,7 +168,7 @@ impl<R, H> Machine<R, H> {
     }
 
     pub fn pause(&mut self) -> AxVmResult {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Running { resources, runtime } => {
                 *self = Machine::Paused { resources, runtime };
@@ -177,7 +187,7 @@ impl<R, H> Machine<R, H> {
     }
 
     pub fn resume(&mut self) -> AxVmResult {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Paused { resources, runtime } => {
                 *self = Machine::Running { resources, runtime };
@@ -199,7 +209,7 @@ impl<R, H> Machine<R, H> {
     where
         F: FnOnce(Option<&mut R>, &StopReason) -> AxVmResult,
     {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Ready(resources) => {
                 let mut resources = Some(resources);
@@ -266,7 +276,7 @@ impl<R, H> Machine<R, H> {
     where
         F: FnOnce(Option<&mut R>, &StopReason) -> AxVmResult,
     {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Ready(mut resources) => {
                 f(Some(&mut resources), &reason)?;
@@ -334,7 +344,7 @@ impl<R, H> Machine<R, H> {
     }
 
     pub fn finish_stop(&mut self) -> AxVmResult {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Stopping {
                 resources,
@@ -383,7 +393,7 @@ impl<R, H> Machine<R, H> {
     where
         F: FnOnce(&mut R) -> AxVmResult,
     {
-        let old = core::mem::replace(self, Machine::Switching);
+        let old = std::mem::replace(self, Machine::Switching);
         match old {
             Machine::Ready(mut resources) => {
                 f(&mut resources)?;
@@ -463,7 +473,7 @@ impl<R, H> Machine<R, H> {
     where
         F: FnOnce(Option<R>) -> AxVmResult,
     {
-        let old = core::mem::replace(self, Machine::Destroying);
+        let old = std::mem::replace(self, Machine::Destroying);
         match old {
             Machine::Destroyed => {
                 *self = Machine::Destroyed;
@@ -691,5 +701,35 @@ mod tests {
         assert_eq!(machine.resources(), Some(&7));
         assert!(machine.runtime().is_none());
         assert_eq!(machine.take_stopped_runtime(), Some(8));
+    }
+
+    #[test]
+    fn interrupt_runtime_accepts_only_running_and_paused_states() {
+        let running = Machine::Running {
+            resources: (),
+            runtime: 7,
+        };
+        assert_eq!(running.interrupt_runtime(), Ok(&7));
+
+        let paused = Machine::Paused {
+            resources: (),
+            runtime: 8,
+        };
+        assert_eq!(paused.interrupt_runtime(), Ok(&8));
+
+        for machine in [
+            Machine::<(), usize>::Ready(()),
+            Machine::Stopped {
+                resources: Some(()),
+                runtime: None,
+                reason: StopReason::Forced,
+            },
+            Machine::Destroyed,
+        ] {
+            assert!(matches!(
+                machine.interrupt_runtime(),
+                Err(AxVmError::InvalidState { .. })
+            ));
+        }
     }
 }

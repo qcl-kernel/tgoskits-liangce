@@ -20,7 +20,7 @@
 
 use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 
-use ax_sync::spin::SpinNoIrq;
+use ax_sync::SpinLock;
 use irq_framework::IrqId;
 use rd_net::{Net, NetError, RxQueue, TxQueue};
 
@@ -33,19 +33,25 @@ const RX_PREFETCH_TARGET: usize = 1;
 /// padding.
 pub(crate) const ETH_ZLEN: usize = 60;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum NetDeviceError {
     /// Operation should be retried later.
+    #[error("network device operation should be retried")]
     Again,
     /// Device is not in a state that can perform the operation.
+    #[error("network device is in an invalid state")]
     BadState,
     /// Caller supplied an invalid size or argument.
+    #[error("invalid network device parameter")]
     InvalidParam,
     /// Driver or transport I/O failed.
+    #[error("network device I/O failed")]
     Io,
     /// Driver could not allocate required resources.
+    #[error("network device memory allocation failed")]
     NoMemory,
     /// Operation is not supported by this device.
+    #[error("network device operation is not supported")]
     Unsupported,
 }
 
@@ -209,7 +215,7 @@ pub struct RdNetDriver {
     irq: Option<IrqId>,
     control: Net,
     irq_handler: Option<rd_net::IrqHandler>,
-    state: SpinNoIrq<RdNetState>,
+    state: SpinLock<RdNetState>,
 }
 
 impl RdNetDriver {
@@ -226,7 +232,7 @@ impl RdNetDriver {
             irq,
             control: net,
             irq_handler,
-            state: SpinNoIrq::new(RdNetState {
+            state: SpinLock::new(RdNetState {
                 tx_queue,
                 rx_queue,
                 pending_rx: VecDeque::with_capacity(RX_PREFETCH_TARGET),
@@ -269,7 +275,7 @@ impl EthernetDriver for RdNetDriver {
     }
 
     fn alloc_tx_buffer(&mut self, size: usize) -> NetDeviceResult<Box<dyn NetTxBuffer>> {
-        let capacity = self.state.lock().tx_queue.buf_size();
+        let capacity = self.state.lock_irqsave().tx_queue.buf_size();
         if size > capacity {
             return Err(NetDeviceError::InvalidParam);
         }
@@ -283,7 +289,7 @@ impl EthernetDriver for RdNetDriver {
     fn transmit(&mut self, tx_buf: &mut dyn NetTxBuffer) -> NetDeviceResult {
         let packet_len = tx_buf.packet_len();
         let tx_len = packet_len.max(ETH_ZLEN);
-        let mut state = self.state.lock();
+        let mut state = self.state.lock_irqsave();
         let (_ret, mut pending) = state
             .tx_queue
             .prepare_send(tx_len, |buffer| {
@@ -296,7 +302,7 @@ impl EthernetDriver for RdNetDriver {
     }
 
     fn receive(&mut self) -> NetDeviceResult<Box<dyn NetRxBuffer>> {
-        let mut state = self.state.lock();
+        let mut state = self.state.lock_irqsave();
         self.prefetch_rx_packets(&mut state, RX_PREFETCH_TARGET)?;
         state
             .pending_rx
@@ -356,5 +362,18 @@ fn map_net_error(err: NetError) -> NetDeviceError {
         NetError::NoMemory => NetDeviceError::NoMemory,
         NetError::NotSupported => NetDeviceError::Unsupported,
         NetError::LinkDown | NetError::Other(_) => NetDeviceError::Io,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn network_device_errors_have_domain_messages() {
+        assert_eq!(
+            alloc::format!("{}", NetDeviceError::NoMemory),
+            "network device memory allocation failed"
+        );
     }
 }

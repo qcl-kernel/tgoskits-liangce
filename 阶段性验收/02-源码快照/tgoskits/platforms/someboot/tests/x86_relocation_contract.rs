@@ -16,9 +16,12 @@ const FIXTURE_LINK_BASE: u64 = 0xffff_ffff_8000_0000;
 #[test]
 fn raw_x86_entry_relocates_in_naked_pic_code_before_rust() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let head = normalized_text(manifest_dir.join("src/arch/x86_64/head.rs"));
-    let entry = normalized_text(manifest_dir.join("src/arch/x86_64/entry.rs"));
-    let linker = normalized_text(manifest_dir.join("src/arch/x86_64/link.ld"));
+    let head = fs::read_to_string(manifest_dir.join("src/arch/x86_64/head.rs"))
+        .expect("x86 head source must be readable");
+    let entry = fs::read_to_string(manifest_dir.join("src/arch/x86_64/entry.rs"))
+        .expect("x86 entry source must be readable");
+    let linker = fs::read_to_string(manifest_dir.join("src/arch/x86_64/link.ld"))
+        .expect("x86 linker template must be readable");
 
     let raw_entry = function_body(&head, "pub unsafe extern \"C\" fn x86_64_raw_entry(");
     assert!(
@@ -86,12 +89,6 @@ fn raw_x86_entry_relocates_in_naked_pic_code_before_rust() {
     );
 
     verify_three_runtime_load_biases(&archive);
-}
-
-fn normalized_text(path: PathBuf) -> String {
-    fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
-        .replace("\r\n", "\n")
 }
 
 fn verify_three_runtime_load_biases(archive: &Path) {

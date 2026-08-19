@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "host-log-derived-unreviewed",
+  "status": "console_frames_demuxed",
+  "proofScope": "provided-host-log-frame-validation-and-per-vm-byte-reconstruction",
+  "doesNotProve": [
+    "the frames were produced by a real AxVisor execution",
+    "either guest booted",
+    "guest PL011 MMIO accesses occurred",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "sourcePathBase": "console-manifest.json parent directory",
+  "source": {
+    "hostLog": {
+      "path": "axvisor-live.log",
+      "sha256": "e8a375ec026e900efa875402f0fb6058cfa445a1e5856f7957a912bc5f11da4d",
+      "bytes": 1650518
+    }
+  },
+  "frameProtocol": {
+    "marker": "AXVISOR_GUEST_CONSOLE_FRAME",
+    "version": 1,
+    "encoding": "one ASCII record per line with lowercase hex payload",
+    "fieldOrder": [
+      "v",
+      "vm",
+      "name",
+      "gen",
+      "seq",
+      "len",
+      "total",
+      "dropped",
+      "dma",
+      "hex"
+    ],
+    "sequenceScope": "per VM and generation, contiguous from zero",
+    "totalScope": "per VM generation, exact cumulative payload bytes"
+  },
+  "frameCount": 14002,
+  "guests": [
+    {
+      "vmId": 1,
+      "name": "linux",
+      "path": "guest-vm-1.console.log",
+      "sha256": "e54c224e384a436a9537d01c5aa614e1bf215624d4ca9682e7d9f4fda018dc23",
+      "bytes": 14964,
+      "records": 3263,
+      "firstGeneration": 0,
+      "lastGeneration": 0,
+      "droppedBytes": 0,
+      "dmaEnableAttempts": 0,
+      "generations": [
+        {
+          "generation": 0,
+          "records": 3263,
+          "firstSequence": 0,
+          "lastSequence": 3262,
+          "byteStart": 0,
+          "byteEnd": 14964,
+          "bytes": 14964
+        }
+      ]
+    },
+    {
+      "vmId": 2,
+      "name": "zephyr",
+      "path": "guest-vm-2.console.log",
+      "sha256": "c77f75bb7078bc2afdef6c79dfabdac9ceafba31822a20a57660e205af3a4169",
+      "bytes": 59578,
+      "records": 10739,
+      "firstGeneration": 0,
+      "lastGeneration": 0,
+      "droppedBytes": 0,
+      "dmaEnableAttempts": 0,
+      "generations": [
+        {
+          "generation": 0,
+          "records": 10739,
+          "firstSequence": 0,
+          "lastSequence": 10738,
+          "byteStart": 0,
+          "byteEnd": 59578,
+          "bytes": 59578
+        }
+      ]
+    }
+  ],
+  "publication": "guest console files published first; this manifest published last"
+}

@@ -12,29 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{string::String, vec::Vec};
-use core::ptr::NonNull;
+use std::{ptr::NonNull, string::String, vec::Vec};
 
 use ax_memory_addr::MemoryAddr;
-use axvmconfig::AxVMCrateConfig;
-use fdt_edit::{Fdt, Node, NodeId};
+use axvmconfig::GuestConfig;
+use fdt_edit::{Fdt, Node, NodeId, Property};
+use fdt_raw::RegInfo;
 
-use super::tree::{FdtTree, GuestMemorySpec};
+use super::tree::{FdtTree, GuestMemorySpec, prop_string, prop_u32_list};
 use crate::{
     AxVMRef, AxVmResult, GuestPhysAddr, VMMemoryRegion, ax_err_type,
     boot::images::load_vm_image_from_memory,
+    machine::{GuestIvcChannel, GuestSerialFdtInterrupt},
 };
 
 pub fn create_guest_fdt(
     fdt: &Fdt,
     passthrough_device_names: &[String],
-    crate_config: &AxVMCrateConfig,
+    crate_config: &GuestConfig,
 ) -> AxVmResult<Vec<u8>> {
     let phys_cpu_ids = crate_config
         .base
         .phys_cpu_ids
         .as_deref()
         .ok_or_else(|| ax_err_type!(InvalidInput, "phys_cpu_ids is missing"))?;
+    let machine_interrupt_providers = fdt
+        .iter_node_ids()
+        .filter_map(|node_id| {
+            let node = fdt.node(node_id)?;
+            is_machine_interrupt_provider(node).then(|| fdt.path_of(node_id))
+        })
+        .collect::<Vec<_>>();
 
     let mut guest_tree = FdtTree::clone_filtered(fdt, |node_id, path, node| {
         should_keep_generated_node(
@@ -44,10 +52,10 @@ pub fn create_guest_fdt(
             node,
             passthrough_device_names,
             phys_cpu_ids,
-            &crate_config.devices.excluded_devices,
+            &machine_interrupt_providers,
         )
     })?;
-    super::sanitize::sanitize_guest_fdt(guest_tree.inner_mut())?;
+    prune_dangling_interrupts_extended(fdt, &mut guest_tree)?;
     Ok(guest_tree.finish())
 }
 
@@ -58,24 +66,8 @@ fn should_keep_generated_node(
     node: &Node,
     passthrough_device_names: &[String],
     phys_cpu_ids: &[usize],
-    excluded_devices: &[Vec<String>],
+    machine_interrupt_providers: &[String],
 ) -> bool {
-    if excluded_devices.iter().flatten().any(|excluded| {
-        node_path == excluded
-            || node_path
-                .strip_prefix(excluded)
-                .is_some_and(|suffix| suffix.starts_with('/'))
-    }) {
-        return false;
-    }
-
-    // Host reservations describe host ownership.  In particular, a host VM
-    // carveout can exactly cover the guest's RAM, so it must not be inherited
-    // by a generated guest DTB even when the root node is passed through.
-    if node_path == "/reserved-memory" || node_path.starts_with("/reserved-memory/") {
-        return false;
-    }
-
     if node.name().starts_with("memory") {
         return false;
     }
@@ -88,11 +80,131 @@ fn should_keep_generated_node(
         return need_cpu_node(phys_cpu_ids, fdt, node_id, node_path);
     }
 
+    if machine_interrupt_providers
+        .iter()
+        .any(|controller| is_path_or_ancestor(node_path, controller))
+    {
+        return true;
+    }
+
+    if node
+        .compatibles()
+        .any(|compatible| matches!(compatible, "arm,psci" | "arm,psci-0.2" | "arm,psci-1.0"))
+    {
+        return true;
+    }
+
     passthrough_device_names
         .iter()
         .any(|device_path| device_path == node_path)
         || is_descendant_of_passthrough_device(node_path, passthrough_device_names)
         || is_ancestor_of_passthrough_device(node_path, passthrough_device_names)
+}
+
+fn is_machine_interrupt_provider(node: &Node) -> bool {
+    node.compatibles().any(|compatible| {
+        compatible == "arm,gic-v3-its"
+            || (node.get_property("interrupt-controller").is_some()
+                && matches!(
+                    compatible,
+                    "arm,gic-v3"
+                        | "arm,cortex-a15-gic"
+                        | "arm,gic-400"
+                        | "riscv,plic0"
+                        | "sifive,plic-1.0.0"
+                ))
+    })
+}
+
+fn is_path_or_ancestor(candidate: &str, path: &str) -> bool {
+    candidate == path
+        || path
+            .strip_prefix(candidate)
+            .is_some_and(|suffix| candidate == "/" || suffix.starts_with('/'))
+}
+
+fn prune_dangling_interrupts_extended(source: &Fdt, guest: &mut FdtTree) -> AxVmResult {
+    let nodes = guest
+        .inner()
+        .iter_node_ids()
+        .filter_map(|node_id| {
+            guest
+                .inner()
+                .node(node_id)?
+                .get_property("interrupts-extended")
+                .map(|_| (node_id, guest.inner().path_of(node_id)))
+        })
+        .collect::<Vec<_>>();
+
+    for (node_id, path) in nodes {
+        let property = source
+            .get_by_path(&path)
+            .and_then(|node| node.as_node().get_property("interrupts-extended"))
+            .ok_or_else(|| {
+                ax_err_type!(
+                    InvalidData,
+                    std::format!("source FDT node {path} lost interrupts-extended")
+                )
+            })?;
+        let cells = property.get_u32_iter().collect::<Vec<_>>();
+        let mut filtered = Vec::with_capacity(cells.len());
+        let mut cursor = 0;
+        while cursor < cells.len() {
+            let phandle = cells[cursor];
+            let provider = find_node_by_phandle(source, phandle)
+                .and_then(|node_id| source.node(node_id))
+                .ok_or_else(|| {
+                    ax_err_type!(
+                        InvalidData,
+                        std::format!(
+                            "FDT node {path} references missing interrupt provider {phandle:#x}"
+                        )
+                    )
+                })?;
+            let interrupt_cells = provider
+                .get_property("#interrupt-cells")
+                .and_then(Property::get_u32)
+                .ok_or_else(|| {
+                    ax_err_type!(
+                        InvalidData,
+                        std::format!(
+                            "interrupt provider {phandle:#x} for {path} has no #interrupt-cells"
+                        )
+                    )
+                })? as usize;
+            let end = cursor
+                .checked_add(interrupt_cells + 1)
+                .filter(|end| *end <= cells.len())
+                .ok_or_else(|| {
+                    ax_err_type!(
+                        InvalidData,
+                        std::format!("FDT node {path} has truncated interrupts-extended")
+                    )
+                })?;
+            if find_node_by_phandle(guest.inner(), phandle).is_some() {
+                filtered.extend_from_slice(&cells[cursor..end]);
+            }
+            cursor = end;
+        }
+
+        if filtered.len() != cells.len() {
+            let mut property = Property::new("interrupts-extended", std::vec![]);
+            property.set_u32_ls(&filtered);
+            guest.set_property(node_id, property)?;
+        }
+    }
+    Ok(())
+}
+
+fn find_node_by_phandle(fdt: &Fdt, phandle: u32) -> Option<NodeId> {
+    fdt.iter_node_ids().find(|node_id| {
+        fdt.node(*node_id).is_some_and(|node| {
+            node.get_property("phandle")
+                .or_else(|| node.get_property("linux,phandle"))
+                .and_then(Property::get_u32)
+                == Some(phandle)
+        })
+    })
 }
 
 fn is_descendant_of_passthrough_device(
@@ -149,7 +261,7 @@ pub(crate) fn need_cpu_node(
 
 fn guest_memory_specs(
     new_memory: &[VMMemoryRegion],
-    crate_config: &AxVMCrateConfig,
+    crate_config: &GuestConfig,
 ) -> Vec<GuestMemorySpec> {
     let configured_region_count = if crate_config.kernel.configured_memory_region_count == 0 {
         crate_config.kernel.memory_regions.len()
@@ -197,48 +309,483 @@ pub fn update_fdt(
     fdt_src: NonNull<u8>,
     dtb_size: usize,
     vm: AxVMRef,
-    crate_config: &AxVMCrateConfig,
+    crate_config: &GuestConfig,
 ) -> AxVmResult {
     let patch_runtime = super::selected_guest_fdt_policy().patch_runtime;
     // SAFETY: `fdt_src` originates from `GuestDtbImage::as_bytes`, and the
     // caller supplies the exact slice length while the image remains borrowed.
-    let fdt_bytes = unsafe { core::slice::from_raw_parts(fdt_src.as_ptr(), dtb_size) };
+    let fdt_bytes = unsafe { std::slice::from_raw_parts(fdt_src.as_ptr(), dtb_size) };
     let new_fdt_bytes = patch_runtime(fdt_bytes, &vm, crate_config)?;
 
     load_patched_fdt(vm, new_fdt_bytes)
 }
 
 fn load_patched_fdt(vm: AxVMRef, new_fdt_bytes: Vec<u8>) -> AxVmResult {
-    let dtb_size = new_fdt_bytes.len();
-    let dest_addr = calculate_dtb_load_addr(vm.clone(), dtb_size)?;
+    let dest_addr = calculate_dtb_load_addr(vm.clone(), new_fdt_bytes.len())?;
     debug!(
         "New FDT will be loaded at {:x}, size: 0x{:x}",
-        dest_addr, dtb_size
+        dest_addr,
+        new_fdt_bytes.len()
     );
     load_vm_image_from_memory(&new_fdt_bytes, dest_addr, vm.clone())?;
-    vm.set_guest_device_tree(dest_addr, new_fdt_bytes)?;
-    #[cfg(feature = "guest-fdt-evidence")]
-    crate::boot::fdt::evidence::emit_ready_marker(&vm, dest_addr, dtb_size)?;
-    Ok(())
+    vm.set_guest_device_tree(dest_addr, new_fdt_bytes)
 }
 
-pub fn patch_guest_fdt_for_runtime(
-    fdt_bytes: &[u8],
-    memory_regions: &[VMMemoryRegion],
-    crate_config: &AxVMCrateConfig,
-    initrd_start_size: Option<(u64, u64)>,
-    create_chosen: bool,
-) -> AxVmResult<Vec<u8>> {
+pub(crate) struct GuestFdtRuntimePatch<'a> {
+    pub(crate) fdt_bytes: &'a [u8],
+    pub(crate) memory_regions: &'a [VMMemoryRegion],
+    pub(crate) ivc_channels: &'a [GuestIvcChannel],
+    pub(crate) crate_config: &'a GuestConfig,
+    pub(crate) virtio_net: &'a [ResolvedVirtioDevice],
+    pub(crate) virtio_blk: &'a [ResolvedVirtioDevice],
+    pub(crate) serial_profile: crate::machine::GuestSerialProfile,
+    pub(crate) serial_identity: Option<&'a crate::machine::GuestSerialFdtIdentity>,
+    pub(crate) additional_serials: &'a [crate::machine::GuestSerialProfile],
+    pub(crate) gic_profile: Option<&'a crate::machine::GuestGicProfile>,
+    pub(crate) plic_profile: Option<&'a crate::machine::GuestPlicProfile>,
+    pub(crate) timer_profile: Option<&'a crate::machine::GuestTimerProfile>,
+    pub(crate) initrd_start_size: Option<(u64, u64)>,
+    pub(crate) create_chosen: bool,
+}
+
+pub(crate) fn patch_guest_fdt_for_runtime(patch: GuestFdtRuntimePatch<'_>) -> AxVmResult<Vec<u8>> {
+    let GuestFdtRuntimePatch {
+        fdt_bytes,
+        memory_regions,
+        ivc_channels,
+        crate_config,
+        virtio_net,
+        virtio_blk,
+        serial_profile,
+        serial_identity,
+        additional_serials,
+        gic_profile,
+        plic_profile,
+        timer_profile,
+        initrd_start_size,
+        create_chosen,
+    } = patch;
     let mut tree = FdtTree::from_bytes(fdt_bytes)?;
     let memory_specs = guest_memory_specs(memory_regions, crate_config);
     tree.rebuild_memory_nodes(&memory_specs)?;
     if create_chosen
         || initrd_start_size.is_some()
+        || crate_config.kernel.cmdline.is_some()
         || tree.inner().get_by_path_id("/chosen").is_some()
     {
-        tree.patch_chosen(initrd_start_size)?;
+        tree.patch_chosen(initrd_start_size, crate_config.kernel.cmdline.as_deref())?;
     }
-    Ok(tree.finish())
+    super::interrupt::install_machine_interrupt_controller(
+        &mut tree,
+        crate_config.base.cpu_num,
+        gic_profile,
+        plic_profile,
+    )?;
+    tree.add_ivc_channel_nodes(ivc_channels, gic_profile, plic_profile)?;
+    install_configured_virtio_net(
+        &mut tree,
+        crate_config,
+        gic_profile,
+        plic_profile,
+        virtio_net,
+    )?;
+    install_configured_virtio_blk(
+        &mut tree,
+        crate_config,
+        gic_profile,
+        plic_profile,
+        virtio_blk,
+    )?;
+    super::timer::install_machine_timer(&mut tree, timer_profile)?;
+    super::serial::install_machine_serial(&mut tree, serial_profile, serial_identity)?;
+    for serial in additional_serials {
+        super::serial::install_additional_serial(&mut tree, *serial)?;
+    }
+    let bytes = tree.finish();
+    Fdt::from_bytes(&bytes).map_err(|error| {
+        ax_err_type!(InvalidData, std::format!("invalid patched FDT: {error:?}"))
+    })?;
+    Ok(bytes)
+}
+
+/// Resolves firmware placements for configured VirtIO devices from the
+/// VM's immutable device graph, so the guest FDT and the runtime device
+/// registration consume identical MMIO/IRQ values.
+#[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
+pub(crate) fn resolved_virtio_devices(
+    vm: &AxVMRef,
+    config: &GuestConfig,
+) -> AxVmResult<(Vec<ResolvedVirtioDevice>, Vec<ResolvedVirtioDevice>)> {
+    vm.with_planned_device_graph(|graph| {
+        let mut virtio_net = Vec::new();
+        let mut virtio_blk = Vec::new();
+        for device in &config.devices.virtual_devices {
+            let target = match device.model.as_str() {
+                "virtio-net" => Some(&mut virtio_net),
+                "virtio-blk" => Some(&mut virtio_blk),
+                _ => None,
+            };
+            let Some(list) = target else { continue };
+            let id = axdevice::DeviceNodeId::new(device.id.clone())?;
+            let resources = graph.resources_for(&id)?;
+            let (mmio_base, mmio_size) = resources
+                .mmio(&axdevice::ResourceSlot::new("mmio").expect("static virtio slot"))?;
+            let controller_input = resources
+                .wired_irq(&axdevice::ResourceSlot::new("irq").expect("static virtio slot"))?
+                .input()
+                .value() as u32;
+            list.push(ResolvedVirtioDevice {
+                id: device.id.clone(),
+                mmio_base,
+                mmio_size,
+                controller_input,
+            });
+        }
+        Ok((virtio_net, virtio_blk))
+    })
+}
+
+/// Resolved firmware placement for one configured VirtIO device.
+///
+/// Produced from the resolved device graph so that the guest FDT and the
+/// runtime MMIO/IRQ registration consume the same resource values.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedVirtioDevice {
+    pub(crate) id: String,
+    pub(crate) mmio_base: u64,
+    pub(crate) mmio_size: u64,
+    pub(crate) controller_input: u32,
+}
+
+fn install_configured_virtio_net(
+    tree: &mut FdtTree,
+    config: &GuestConfig,
+    gic_profile: Option<&crate::machine::GuestGicProfile>,
+    plic_profile: Option<&crate::machine::GuestPlicProfile>,
+    resolved: &[ResolvedVirtioDevice],
+) -> AxVmResult {
+    for device in config
+        .devices
+        .virtual_devices
+        .iter()
+        .filter(|device| device.model == "virtio-net")
+    {
+        let placement = resolved
+            .iter()
+            .find(|placement| placement.id == device.id)
+            .ok_or_else(|| {
+                ax_err_type!(
+                    InvalidData,
+                    std::format!(
+                        "virtio-net device `{}` has no resolved firmware resources",
+                        device.id
+                    )
+                )
+            })?;
+        let interrupt =
+            virtio_interrupt_binding(gic_profile, plic_profile, placement.controller_input)?;
+        let node_path = std::format!("/virtio_mmio@{:x}", placement.mmio_base);
+        let node_id = tree.ensure_path(&node_path)?;
+        tree.set_property(
+            node_id,
+            super::tree::prop_string("compatible", "virtio,mmio"),
+        )?;
+        tree.inner_mut()
+            .view_typed_mut(node_id)
+            .ok_or_else(|| ax_err_type!(InvalidData, "new virtio-net node is missing"))?
+            .set_regs(&[RegInfo::new(placement.mmio_base, Some(placement.mmio_size))]);
+        tree.set_property(node_id, u32_list_property("interrupts", &interrupt.cells()))?;
+        tree.set_property(
+            node_id,
+            u32_list_property("interrupt-parent", &[interrupt.parent()]),
+        )?;
+        tree.set_property(node_id, Property::new("dma-coherent", std::vec![]))?;
+    }
+    Ok(())
+}
+
+fn install_configured_virtio_blk(
+    tree: &mut FdtTree,
+    config: &GuestConfig,
+    gic_profile: Option<&crate::machine::GuestGicProfile>,
+    plic_profile: Option<&crate::machine::GuestPlicProfile>,
+    resolved: &[ResolvedVirtioDevice],
+) -> AxVmResult {
+    for device in config
+        .devices
+        .virtual_devices
+        .iter()
+        .filter(|device| device.model == "virtio-blk")
+    {
+        let placement = resolved
+            .iter()
+            .find(|placement| placement.id == device.id)
+            .ok_or_else(|| {
+                ax_err_type!(
+                    InvalidData,
+                    std::format!(
+                        "virtio-blk device `{}` has no resolved firmware resources",
+                        device.id
+                    )
+                )
+            })?;
+        let interrupt =
+            virtio_interrupt_binding(gic_profile, plic_profile, placement.controller_input)?;
+        let node_path = std::format!("/virtio_mmio@{:x}", placement.mmio_base);
+        let node_id = tree.ensure_path(&node_path)?;
+        tree.set_property(
+            node_id,
+            super::tree::prop_string("compatible", "virtio,mmio"),
+        )?;
+        tree.inner_mut()
+            .view_typed_mut(node_id)
+            .ok_or_else(|| ax_err_type!(InvalidData, "new virtio-blk node is missing"))?
+            .set_regs(&[RegInfo::new(placement.mmio_base, Some(placement.mmio_size))]);
+        tree.set_property(node_id, u32_list_property("interrupts", &interrupt.cells()))?;
+        tree.set_property(
+            node_id,
+            u32_list_property("interrupt-parent", &[interrupt.parent()]),
+        )?;
+        tree.set_property(node_id, Property::new("dma-coherent", std::vec![]))?;
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum VirtioInterruptBinding {
+    Gic { parent: u32, spi: u32 },
+    Plic { parent: u32, source: u32 },
+}
+
+impl VirtioInterruptBinding {
+    const fn parent(self) -> u32 {
+        match self {
+            Self::Gic { parent, .. } | Self::Plic { parent, .. } => parent,
+        }
+    }
+
+    fn cells(self) -> Vec<u32> {
+        // GIC firmware describes controller inputs as SPIs relative to 32,
+        // while a PLIC binding uses the controller input directly.
+        match self {
+            Self::Gic { spi, .. } => std::vec![0, spi, 1],
+            Self::Plic { source, .. } => std::vec![source],
+        }
+    }
+}
+
+fn virtio_interrupt_binding(
+    gic_profile: Option<&crate::machine::GuestGicProfile>,
+    plic_profile: Option<&crate::machine::GuestPlicProfile>,
+    controller_input: u32,
+) -> AxVmResult<VirtioInterruptBinding> {
+    let spi = controller_input
+        .checked_sub(32)
+        .ok_or_else(|| ax_err_type!(InvalidData, "virtio interrupt input is not a GIC SPI"))?;
+    match (gic_profile, plic_profile) {
+        (Some(gic), None) => gic
+            .node_phandle
+            .map(|parent| VirtioInterruptBinding::Gic { parent, spi })
+            .ok_or_else(|| ax_err_type!(InvalidData, "guest GIC has no phandle for virtio device")),
+        (None, Some(plic)) => plic
+            .node_phandle
+            .map(|parent| VirtioInterruptBinding::Plic {
+                parent,
+                source: controller_input,
+            })
+            .ok_or_else(|| {
+                ax_err_type!(InvalidData, "guest PLIC has no phandle for virtio device")
+            }),
+        (Some(_), Some(_)) => Err(ax_err_type!(
+            InvalidData,
+            "virtio device cannot select between guest GIC and PLIC"
+        )),
+        (None, None) => Err(ax_err_type!(
+            InvalidData,
+            "virtio device requires a guest GIC or PLIC interrupt controller"
+        )),
+    }
+}
+
+fn u32_list_property(name: &str, values: &[u32]) -> Property {
+    let mut property = Property::new(name, std::vec![]);
+    property.set_u32_ls(values);
+    property
+}
+
+fn u32_property(name: &str, value: u32) -> Property {
+    u32_list_property(name, &[value])
+}
+
+impl FdtTree {
+    fn add_ivc_channel_nodes(
+        &mut self,
+        channels: &[GuestIvcChannel],
+        gic_profile: Option<&crate::machine::GuestGicProfile>,
+        plic_profile: Option<&crate::machine::GuestPlicProfile>,
+    ) -> AxVmResult {
+        for channel in channels {
+            self.add_ivc_channel_node(channel, gic_profile, plic_profile)?;
+        }
+        Ok(())
+    }
+
+    fn add_ivc_channel_node(
+        &mut self,
+        channel: &GuestIvcChannel,
+        gic_profile: Option<&crate::machine::GuestGicProfile>,
+        plic_profile: Option<&crate::machine::GuestPlicProfile>,
+    ) -> AxVmResult {
+        let node_id = self.ensure_path(&format!("/ivc-channel@{:x}", channel.base_gpa))?;
+        info!(
+            "Adding guest IVC channel FDT node /ivc-channel@{:x}",
+            channel.base_gpa
+        );
+        self.set_property(node_id, prop_string("compatible", "axvisor,ivc-channel"))?;
+        self.set_property(node_id, prop_string("status", "okay"))?;
+        self.set_property(node_id, prop_u32_list("axvisor,ivc-version", &[1]))?;
+
+        let interrupt = ivc_interrupt_binding(self, channel.notify_irq, gic_profile, plic_profile)?;
+        self.set_property(
+            node_id,
+            prop_u32_list("interrupt-parent", &[interrupt.parent()]),
+        )?;
+        self.set_property(node_id, prop_u32_list("interrupts", interrupt.cells()))?;
+        self.set_property(
+            node_id,
+            prop_u32_list("axvisor,notify-irq", &[channel.notify_irq]),
+        )?;
+
+        self.inner_mut()
+            .view_typed_mut(node_id)
+            .ok_or_else(|| ax_err_type!(InvalidData, "new IVC channel node is missing"))?
+            .set_regs(&[RegInfo::new(
+                channel.base_gpa as u64,
+                Some(channel.length as u64),
+            )]);
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum IvcInterruptBinding {
+    GicSpi { parent: u32, cells: [u32; 3] },
+    PlicSource { parent: u32, cells: [u32; 1] },
+}
+
+impl IvcInterruptBinding {
+    const fn parent(self) -> u32 {
+        match self {
+            Self::GicSpi { parent, .. } | Self::PlicSource { parent, .. } => parent,
+        }
+    }
+
+    const fn cells(&self) -> &[u32] {
+        match self {
+            Self::GicSpi { cells, .. } => cells,
+            Self::PlicSource { cells, .. } => cells,
+        }
+    }
+}
+
+fn ivc_interrupt_binding(
+    tree: &mut FdtTree,
+    input: u32,
+    gic_profile: Option<&crate::machine::GuestGicProfile>,
+    plic_profile: Option<&crate::machine::GuestPlicProfile>,
+) -> AxVmResult<IvcInterruptBinding> {
+    match (gic_profile, plic_profile) {
+        (Some(_), None) => {
+            let parent = ivc_interrupt_controller_phandle(tree, GuestSerialFdtInterrupt::GicSpi)?;
+            let spi = input.checked_sub(32).ok_or_else(|| {
+                ax_err_type!(InvalidData, "IVC notify interrupt is not a GIC SPI")
+            })?;
+            Ok(IvcInterruptBinding::GicSpi {
+                parent,
+                cells: [0, spi, 1],
+            })
+        }
+        (None, Some(_)) => {
+            let parent =
+                ivc_interrupt_controller_phandle(tree, GuestSerialFdtInterrupt::PlicSource)?;
+            if input == 0 {
+                return Err(ax_err_type!(
+                    InvalidData,
+                    "IVC notify interrupt is not a valid PLIC source"
+                ));
+            }
+            Ok(IvcInterruptBinding::PlicSource {
+                parent,
+                cells: [input],
+            })
+        }
+        (Some(_), Some(_)) => Err(ax_err_type!(
+            InvalidData,
+            "IVC notify cannot select between guest GIC and PLIC"
+        )),
+        (None, None) => Err(ax_err_type!(
+            InvalidData,
+            "IVC notify requires a guest interrupt controller profile"
+        )),
+    }
+}
+
+fn ivc_interrupt_controller_phandle(
+    tree: &mut FdtTree,
+    encoding: GuestSerialFdtInterrupt,
+) -> AxVmResult<u32> {
+    let controller = tree
+        .inner()
+        .iter_node_ids()
+        .find(|node_id| {
+            let Some(node) = tree.inner().node(*node_id) else {
+                return false;
+            };
+            if node.get_property("interrupt-controller").is_none() {
+                return false;
+            }
+            node.compatibles().any(|compatible| match encoding {
+                GuestSerialFdtInterrupt::GicSpi => compatible.contains("gic"),
+                GuestSerialFdtInterrupt::PlicSource => compatible.contains("plic"),
+            })
+        })
+        .ok_or_else(|| {
+            ax_err_type!(
+                InvalidData,
+                "guest FDT has no interrupt controller for IVC notify"
+            )
+        })?;
+
+    if let Some(phandle) = tree
+        .inner()
+        .node(controller)
+        .and_then(|node| {
+            node.get_property("phandle")
+                .or_else(|| node.get_property("linux,phandle"))
+        })
+        .and_then(Property::get_u32)
+    {
+        return Ok(phandle);
+    }
+
+    let phandle = next_phandle(tree.inner());
+    tree.set_property(controller, u32_property("phandle", phandle))?;
+    tree.set_property(controller, u32_property("linux,phandle", phandle))?;
+    Ok(phandle)
+}
+
+fn next_phandle(fdt: &Fdt) -> u32 {
+    fdt.iter_node_ids()
+        .filter_map(|node_id| {
+            fdt.node(node_id).and_then(|node| {
+                node.get_property("phandle")
+                    .or_else(|| node.get_property("linux,phandle"))
+            })
+        })
+        .filter_map(Property::get_u32)
+        .max()
+        .unwrap_or(0)
+        .saturating_add(1)
 }
 
 pub(crate) fn calculate_dtb_load_addr(vm: AxVMRef, fdt_size: usize) -> AxVmResult<GuestPhysAddr> {
@@ -249,7 +796,7 @@ pub(crate) fn calculate_dtb_load_addr(vm: AxVMRef, fdt_size: usize) -> AxVmResul
             ax_err_type!(InvalidInput, "VM has no memory region for DTB placement")
         })?;
 
-    let dtb_addr = vm.with_config_mut(|config| {
+    let dtb_addr = vm.with_config(|config| {
         let use_configured_dtb_addr =
             config.image_config.dtb_load_gpa.is_some() && !main_memory.is_identical();
 
@@ -276,34 +823,27 @@ pub(crate) fn calculate_dtb_load_addr(vm: AxVMRef, fdt_size: usize) -> AxVmResul
 
 #[cfg(test)]
 mod tests {
-    use alloc::format;
-    use core::alloc::Layout;
-
-    use axvm_types::HostVirtAddr;
-    use axvmconfig::{AxVMCrateConfig, VMDevicesConfig};
+    use axvmconfig::{GuestConfig, VirtualDeviceRequest};
     use fdt_edit::{Fdt, Node, Property};
     use fdt_raw::RegInfo;
 
     use super::{
-        super::tree::sanitize_bootargs, cpu_node_id, initrd_range_from_image_config, need_cpu_node,
+        super::{
+            device::find_all_passthrough_devices,
+            tree::{FdtTree, prop_string, sanitize_bootargs},
+        },
+        ResolvedVirtioDevice, cpu_node_id, find_node_by_phandle, initrd_range_from_image_config,
+        need_cpu_node, u32_property,
     };
-    use crate::{GuestPhysAddr, VMMemoryRegion, config::RamdiskInfo};
+    use crate::{
+        GuestPhysAddr,
+        config::{AxVMConfig, AxVMConfigParams, HostDeviceAssignment, PhysCpuList, RamdiskInfo},
+        machine::{GuestGicCpuRegion, GuestGicProfile, GuestMmioRegion, GuestPlicProfile},
+    };
 
     fn prop_u32(name: &str, value: u32) -> Property {
-        let mut prop = Property::new(name, alloc::vec![]);
+        let mut prop = Property::new(name, std::vec![]);
         prop.set_u32_ls(&[value]);
-        prop
-    }
-
-    fn prop_u32s(name: &str, values: &[u32]) -> Property {
-        let mut prop = Property::new(name, alloc::vec![]);
-        prop.set_u32_ls(values);
-        prop
-    }
-
-    fn prop_str(name: &str, value: &str) -> Property {
-        let mut prop = Property::new(name, alloc::vec![]);
-        prop.set_string(value);
         prop
     }
 
@@ -330,89 +870,226 @@ mod tests {
         fdt
     }
 
-    fn add_two_cpu_map(fdt: &mut Fdt) {
-        let cpu0 = fdt.get_by_path_id("/cpus/cpu@0").unwrap();
-        let cpu1 = fdt.get_by_path_id("/cpus/cpu@1").unwrap();
-        fdt.node_mut(cpu0)
-            .unwrap()
-            .set_property(prop_u32("phandle", 1));
-        fdt.node_mut(cpu1)
-            .unwrap()
-            .set_property(prop_u32("phandle", 2));
-
-        let cpus = fdt.get_by_path_id("/cpus").unwrap();
-        let cpu_map = fdt.add_node(cpus, Node::new("cpu-map"));
-        let cluster = fdt.add_node(cpu_map, Node::new("cluster0"));
-        let core0 = fdt.add_node(cluster, Node::new("core0"));
-        let core1 = fdt.add_node(cluster, Node::new("core1"));
-        fdt.node_mut(core0)
-            .unwrap()
-            .set_property(prop_u32("cpu", 1));
-        fdt.node_mut(core1)
-            .unwrap()
-            .set_property(prop_u32("cpu", 2));
+    fn virtio_net_config() -> GuestConfig {
+        let mut config = GuestConfig::default();
+        config.devices.virtual_devices.push(VirtualDeviceRequest {
+            id: "virtnet0".into(),
+            model: "virtio-net".into(),
+            options: Default::default(),
+        });
+        config
     }
 
-    fn add_interrupt_controller(fdt: &mut Fdt, phandle: u32) {
-        let controller = fdt.add_node(fdt.root_id(), Node::new("intc@8000000"));
-        fdt.node_mut(controller)
-            .unwrap()
-            .set_property(prop_u32("phandle", phandle));
-        fdt.node_mut(controller)
-            .unwrap()
-            .set_property(Property::new("interrupt-controller", alloc::vec![]));
-        fdt.node_mut(controller)
-            .unwrap()
-            .set_property(prop_u32("#interrupt-cells", 3));
+    fn virtio_blk_config() -> GuestConfig {
+        let mut config = GuestConfig::default();
+        config.devices.virtual_devices.push(VirtualDeviceRequest {
+            id: "virtblk0".into(),
+            model: "virtio-blk".into(),
+            options: Default::default(),
+        });
+        config
     }
 
-    fn add_interrupt_device(fdt: &mut Fdt) {
-        let device = fdt.add_node(fdt.root_id(), Node::new("device@1000"));
-        fdt.node_mut(device)
-            .unwrap()
-            .set_property(prop_u32s("interrupts", &[0, 16, 4]));
+    fn gic_profile(phandle: u32) -> GuestGicProfile {
+        GuestGicProfile {
+            compatible: "arm,gic-400".into(),
+            node_path: "/interrupt-controller@8000000".into(),
+            node_phandle: Some(phandle),
+            distributor: GuestMmioRegion {
+                base: 0x0800_0000,
+                length: 0x1000,
+            },
+            cpu_region: GuestGicCpuRegion::CpuInterface(GuestMmioRegion {
+                base: 0x0801_0000,
+                length: 0x2000,
+            }),
+            its: std::vec![],
+        }
     }
 
-    fn add_vm_carveout(fdt: &mut Fdt, base: u64, size: u64) {
-        let root = fdt.root_id();
-        fdt.node_mut(root)
-            .unwrap()
-            .set_property(prop_u32("#address-cells", 2));
-        fdt.node_mut(root)
-            .unwrap()
-            .set_property(prop_u32("#size-cells", 2));
-        let reserved = fdt.add_node(root, Node::new("reserved-memory"));
-        fdt.node_mut(reserved)
-            .unwrap()
-            .set_property(prop_u32("#address-cells", 2));
-        fdt.node_mut(reserved)
-            .unwrap()
-            .set_property(prop_u32("#size-cells", 2));
-        let carveout = fdt.add_node(reserved, Node::new(&format!("vm-carveout@{base:x}")));
-        fdt.node_mut(carveout)
-            .unwrap()
-            .set_property(prop_str("compatible", "axvisor,vm-carveout-v1"));
-        fdt.node_mut(carveout)
-            .unwrap()
-            .set_property(prop_u32("axvisor,vm-id", 1));
-        fdt.view_typed_mut(carveout)
-            .unwrap()
-            .set_regs(&[RegInfo::new(base, Some(size))]);
+    fn plic_profile(phandle: u32) -> GuestPlicProfile {
+        GuestPlicProfile {
+            node_path: "/soc/interrupt-controller@c000000".into(),
+            node_phandle: Some(phandle),
+            base: 0x0c00_0000,
+            length: 0x60_0000,
+        }
     }
 
-    fn assert_no_reserved_memory(fdt: &Fdt) {
-        assert!(fdt.get_by_path_id("/reserved-memory").is_none());
-        assert!(
-            !fdt.iter_node_ids()
-                .map(|id| fdt.path_of(id))
-                .any(|path| path.starts_with("/reserved-memory/"))
+    fn virtio_net_placement() -> ResolvedVirtioDevice {
+        ResolvedVirtioDevice {
+            id: "virtnet0".into(),
+            mmio_base: 0x0a00_0000,
+            mmio_size: 0x200,
+            controller_input: 48,
+        }
+    }
+
+    fn virtio_blk_placement() -> ResolvedVirtioDevice {
+        ResolvedVirtioDevice {
+            id: "virtblk0".into(),
+            mmio_base: 0x0a00_0200,
+            mmio_size: 0x200,
+            controller_input: 49,
+        }
+    }
+
+    #[test]
+    fn riscv_virtio_net_uses_one_cell_plic_interrupt_binding() {
+        let mut tree = FdtTree::new();
+        super::install_configured_virtio_net(
+            &mut tree,
+            &virtio_net_config(),
+            None,
+            Some(&plic_profile(9)),
+            &[virtio_net_placement()],
+        )
+        .unwrap();
+        let node = tree.inner().get_by_path("/virtio_mmio@a000000").unwrap();
+
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupt-parent")
+                .unwrap()
+                .get_u32(),
+            Some(9)
         );
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupts")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [48]
+        );
+    }
+
+    #[test]
+    fn aarch64_virtio_net_uses_three_cell_gic_interrupt_binding() {
+        let mut tree = FdtTree::new();
+        super::install_configured_virtio_net(
+            &mut tree,
+            &virtio_net_config(),
+            Some(&gic_profile(7)),
+            None,
+            &[virtio_net_placement()],
+        )
+        .unwrap();
+        let node = tree.inner().get_by_path("/virtio_mmio@a000000").unwrap();
+
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupt-parent")
+                .unwrap()
+                .get_u32(),
+            Some(7)
+        );
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupts")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [0, 16, 1]
+        );
+    }
+
+    #[test]
+    fn riscv_virtio_blk_uses_one_cell_plic_interrupt_binding() {
+        let mut tree = FdtTree::new();
+        super::install_configured_virtio_blk(
+            &mut tree,
+            &virtio_blk_config(),
+            None,
+            Some(&plic_profile(9)),
+            &[virtio_blk_placement()],
+        )
+        .unwrap();
+        let node = tree.inner().get_by_path("/virtio_mmio@a000200").unwrap();
+
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupt-parent")
+                .unwrap()
+                .get_u32(),
+            Some(9)
+        );
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupts")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [49]
+        );
+    }
+
+    #[test]
+    fn aarch64_virtio_blk_uses_three_cell_gic_interrupt_binding() {
+        let mut tree = FdtTree::new();
+        super::install_configured_virtio_blk(
+            &mut tree,
+            &virtio_blk_config(),
+            Some(&gic_profile(7)),
+            None,
+            &[virtio_blk_placement()],
+        )
+        .unwrap();
+        let node = tree.inner().get_by_path("/virtio_mmio@a000200").unwrap();
+
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupt-parent")
+                .unwrap()
+                .get_u32(),
+            Some(7)
+        );
+        assert_eq!(
+            node.as_node()
+                .get_property("interrupts")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [0, 17, 1]
+        );
+    }
+
+    #[test]
+    fn configured_virtio_without_resolved_placement_fails_closed() {
+        let mut tree = FdtTree::new();
+        let error = super::install_configured_virtio_net(
+            &mut tree,
+            &virtio_net_config(),
+            Some(&gic_profile(7)),
+            None,
+            &[],
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("no resolved firmware resources"));
+        assert!(tree.inner().get_by_path("/virtio_mmio@a000000").is_none());
+    }
+
+    #[test]
+    fn virtio_node_path_follows_resolved_mmio_base() {
+        let mut tree = FdtTree::new();
+        let mut placement = virtio_net_placement();
+        placement.mmio_base = 0x0b00_0000;
+        super::install_configured_virtio_net(
+            &mut tree,
+            &virtio_net_config(),
+            Some(&gic_profile(7)),
+            None,
+            &[placement],
+        )
+        .unwrap();
+        let node = tree.inner().get_by_path("/virtio_mmio@b000000").unwrap();
+        assert!(node.as_node().get_property("compatible").is_some());
     }
 
     #[test]
     fn cpu_node_selection_uses_node_id_when_reg_differs() {
         let fdt = test_fdt("cpu@0=200\ncpu@100=0\ncpu@101=100");
-        let selected: alloc::vec::Vec<_> = fdt
+        let selected: std::vec::Vec<_> = fdt
             .iter_node_ids()
             .map(|id| (id, fdt.path_of(id)))
             .filter(|(_, path)| path.starts_with("/cpus/cpu@"))
@@ -470,25 +1147,124 @@ mod tests {
     fn runtime_patch_can_leave_missing_chosen_for_host_copy() {
         let fdt = Fdt::new();
         let dtb = fdt.encode().as_ref().to_vec();
-        let cfg = AxVMCrateConfig::default();
+        let cfg = GuestConfig::default();
 
-        let patched = super::patch_guest_fdt_for_runtime(&dtb, &[], &cfg, None, false).unwrap();
+        let serial = crate::machine::current_machine_profile(1).serial;
+        let patched = super::patch_guest_fdt_for_runtime(super::GuestFdtRuntimePatch {
+            fdt_bytes: &dtb,
+            memory_regions: &[],
+            ivc_channels: &[],
+            crate_config: &cfg,
+            virtio_net: &[],
+            virtio_blk: &[],
+            serial_profile: serial,
+            serial_identity: None,
+            additional_serials: &[],
+            gic_profile: None,
+            plic_profile: None,
+            timer_profile: None,
+            initrd_start_size: None,
+            create_chosen: false,
+        })
+        .unwrap();
         let reparsed = Fdt::from_bytes(&patched).unwrap();
 
         assert!(reparsed.get_by_path_id("/chosen").is_none());
 
-        let patched = super::patch_guest_fdt_for_runtime(&dtb, &[], &cfg, None, true).unwrap();
+        let serial = crate::machine::current_machine_profile(1).serial;
+        let patched = super::patch_guest_fdt_for_runtime(super::GuestFdtRuntimePatch {
+            fdt_bytes: &dtb,
+            memory_regions: &[],
+            ivc_channels: &[],
+            crate_config: &cfg,
+            virtio_net: &[],
+            virtio_blk: &[],
+            serial_profile: serial,
+            serial_identity: None,
+            additional_serials: &[],
+            gic_profile: None,
+            plic_profile: None,
+            timer_profile: None,
+            initrd_start_size: None,
+            create_chosen: true,
+        })
+        .unwrap();
         let reparsed = Fdt::from_bytes(&patched).unwrap();
 
         assert!(reparsed.get_by_path_id("/chosen").is_some());
     }
 
     #[test]
+    fn runtime_patch_adds_ivc_channel_node() {
+        let mut tree = FdtTree::new();
+        let intc = tree.ensure_path("/intc@8000000").unwrap();
+        tree.set_property(intc, prop_string("compatible", "arm,gic-v3"))
+            .unwrap();
+        tree.set_property(intc, Property::new("interrupt-controller", std::vec![]))
+            .unwrap();
+        tree.set_property(intc, u32_property("#interrupt-cells", 3))
+            .unwrap();
+        let dtb = tree.finish();
+        let cfg = GuestConfig::default();
+        let ivc_channels = std::vec![crate::machine::GuestIvcChannel {
+            base_gpa: 0xbff0_0000,
+            length: 0x1_0000,
+            notify_irq: 60,
+        }];
+        let serial = crate::machine::current_machine_profile(1).serial;
+        let gic = gic_profile(7);
+
+        let patched = super::patch_guest_fdt_for_runtime(super::GuestFdtRuntimePatch {
+            fdt_bytes: &dtb,
+            memory_regions: &[],
+            ivc_channels: &ivc_channels,
+            crate_config: &cfg,
+            virtio_net: &[],
+            virtio_blk: &[],
+            serial_profile: serial,
+            serial_identity: None,
+            additional_serials: &[],
+            gic_profile: Some(&gic),
+            plic_profile: None,
+            timer_profile: None,
+            initrd_start_size: None,
+            create_chosen: false,
+        })
+        .unwrap();
+        let reparsed = Fdt::from_bytes(&patched).unwrap();
+        let node_id = reparsed.get_by_path_id("/ivc-channel@bff00000").unwrap();
+        let node = reparsed.node(node_id).unwrap();
+        let typed_node = reparsed.view_typed(node_id).unwrap();
+
+        assert_eq!(
+            node.get_property("compatible").unwrap().as_str(),
+            Some("axvisor,ivc-channel")
+        );
+        assert_eq!(typed_node.regs()[0].address, 0xbff0_0000);
+        assert_eq!(typed_node.regs()[0].size, Some(0x1_0000));
+        assert_eq!(
+            node.get_property("axvisor,notify-irq").unwrap().get_u32(),
+            Some(60)
+        );
+        assert_eq!(
+            node.get_property("interrupt-parent").unwrap().get_u32(),
+            Some(7)
+        );
+        assert_eq!(
+            node.get_property("interrupts")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [0, 28, 1]
+        );
+    }
+
+    #[test]
     fn generated_fdt_filters_cpu_nodes_by_unit_address() {
         let fdt = test_fdt("cpu@0=200\ncpu@100=0\ncpu@101=100");
-        let cfg = AxVMCrateConfig {
+        let cfg = GuestConfig {
             base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0x100]),
+                phys_cpu_ids: Some(std::vec![0x100]),
                 ..Default::default()
             },
             ..Default::default()
@@ -502,76 +1278,16 @@ mod tests {
     }
 
     #[test]
-    fn generated_fdt_drops_host_vm_carveout_before_root_passthrough() {
+    fn generated_fdt_keeps_psci_firmware_node() {
         let mut fdt = test_fdt("cpu@0=0");
-        add_vm_carveout(&mut fdt, 0x8000_0000, 0x1000_0000);
-        let cfg = AxVMCrateConfig {
+        let psci = fdt.add_node(fdt.root_id(), Node::new("psci"));
+        let mut compatible = Property::new("compatible", std::vec![]);
+        compatible.set_string("arm,psci-0.2");
+        fdt.node_mut(psci).unwrap().set_property(compatible);
+
+        let cfg = GuestConfig {
             base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            kernel: axvmconfig::VMKernelConfig {
-                memory_regions: alloc::vec![axvmconfig::VmMemConfig {
-                    gpa: 0x8000_0000,
-                    size: 0x1000_0000,
-                    flags: 0x7,
-                    map_type: axvmconfig::VmMemMappingType::MapReserved,
-                }],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let passthrough = alloc::vec!["/".into()];
-
-        let generated = super::create_guest_fdt(&fdt, &passthrough, &cfg).unwrap();
-        let generated_fdt = Fdt::from_bytes(&generated).unwrap();
-        assert_no_reserved_memory(&generated_fdt);
-
-        let memory = VMMemoryRegion {
-            gpa: GuestPhysAddr::from(0x8000_0000usize),
-            hva: HostVirtAddr::from(0x8000_0000usize),
-            layout: Layout::from_size_align(0x1000_0000, 0x20_0000).unwrap(),
-            needs_dealloc: false,
-        };
-        let patched =
-            super::patch_guest_fdt_for_runtime(&generated, &[memory], &cfg, None, false).unwrap();
-        let patched_fdt = Fdt::from_bytes(&patched).unwrap();
-        assert_no_reserved_memory(&patched_fdt);
-        let memory_id = patched_fdt.get_by_path_id("/memory@80000000").unwrap();
-        let memory_node = patched_fdt.view_typed(memory_id).unwrap();
-        let regs = memory_node.regs();
-        let reg = regs.first().unwrap();
-        assert_eq!(reg.address, 0x8000_0000);
-        assert_eq!(reg.size, Some(0x1000_0000));
-    }
-
-    #[test]
-    fn generated_fdt_keeps_similarly_named_selected_device() {
-        let mut fdt = test_fdt("cpu@0=0");
-        fdt.add_node(fdt.root_id(), Node::new("reserved-memory-device"));
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let selected = alloc::vec!["/reserved-memory-device".into()];
-
-        let dtb = super::create_guest_fdt(&fdt, &selected, &cfg).unwrap();
-        let reparsed = Fdt::from_bytes(&dtb).unwrap();
-
-        assert!(reparsed.get_by_path_id("/reserved-memory-device").is_some());
-    }
-
-    #[test]
-    fn generated_fdt_prunes_cpu_map_entries_for_removed_cpus() {
-        let mut fdt = test_fdt("cpu@0=0\ncpu@1=1");
-        add_two_cpu_map(&mut fdt);
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
+                phys_cpu_ids: Some(std::vec![0]),
                 ..Default::default()
             },
             ..Default::default()
@@ -579,297 +1295,113 @@ mod tests {
         let dtb = super::create_guest_fdt(&fdt, &[], &cfg).unwrap();
         let reparsed = Fdt::from_bytes(&dtb).unwrap();
 
-        assert!(reparsed.get_by_path_id("/cpus/cpu@0").is_some());
-        assert!(reparsed.get_by_path_id("/cpus/cpu@1").is_none());
-        assert!(
-            reparsed
-                .get_by_path_id("/cpus/cpu-map/cluster0/core0")
-                .is_some()
-        );
-        assert!(
-            reparsed
-                .get_by_path_id("/cpus/cpu-map/cluster0/core1")
-                .is_none()
-        );
+        assert!(reparsed.get_by_path_id("/psci").is_some());
     }
 
     #[test]
-    fn generated_fdt_drops_cpu_map_for_duplicate_cpu_phandles() {
+    fn generated_fdt_keeps_the_host_interrupt_controller_for_a_virtual_machine() {
         let mut fdt = test_fdt("cpu@0=0\ncpu@1=1");
-        add_two_cpu_map(&mut fdt);
-        let cpu1 = fdt.get_by_path_id("/cpus/cpu@1").unwrap();
-        fdt.node_mut(cpu1)
-            .unwrap()
-            .set_property(prop_u32("phandle", 1));
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0, 1]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let dtb = super::create_guest_fdt(&fdt, &[], &cfg).unwrap();
-        let reparsed = Fdt::from_bytes(&dtb).unwrap();
-
-        assert!(reparsed.get_by_path_id("/cpus/cpu-map").is_none());
-    }
-
-    #[test]
-    fn generated_fdt_drops_cpu_map_for_malformed_cpu_phandle() {
-        let mut fdt = test_fdt("cpu@0=0\ncpu@1=1");
-        add_two_cpu_map(&mut fdt);
-        let cpu1 = fdt.get_by_path_id("/cpus/cpu@1").unwrap();
-        fdt.node_mut(cpu1).unwrap().set_property(Property::new(
-            "phandle",
-            alloc::vec![0, 0, 0, 2, 0, 0, 0, 3],
-        ));
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0, 1]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let dtb = super::create_guest_fdt(&fdt, &[], &cfg).unwrap();
-        let reparsed = Fdt::from_bytes(&dtb).unwrap();
-
-        assert!(reparsed.get_by_path_id("/cpus/cpu-map").is_none());
-    }
-
-    #[test]
-    fn generated_fdt_rejects_missing_inherited_interrupt_parent() {
-        let mut fdt = test_fdt("cpu@0=0");
+        for (cpu_path, phandle) in [("/cpus/cpu@0", 8), ("/cpus/cpu@1", 6)] {
+            let cpu = fdt.get_by_path_id(cpu_path).unwrap();
+            let intc = fdt.add_node(cpu, Node::new("interrupt-controller"));
+            fdt.node_mut(intc)
+                .unwrap()
+                .set_property(prop_u32("#interrupt-cells", 1));
+            fdt.node_mut(intc)
+                .unwrap()
+                .set_property(Property::new("interrupt-controller", std::vec![]));
+            fdt.node_mut(intc)
+                .unwrap()
+                .set_property(prop_u32("phandle", phandle));
+        }
         let root = fdt.root_id();
-        fdt.node_mut(root)
+        let soc = fdt.add_node(root, Node::new("soc"));
+        let plic = fdt.add_node(soc, Node::new("plic@c000000"));
+        let mut compatible = Property::new("compatible", std::vec![]);
+        compatible.set_string("riscv,plic0");
+        fdt.node_mut(plic).unwrap().set_property(compatible);
+        fdt.node_mut(plic)
             .unwrap()
-            .set_property(prop_u32("interrupt-parent", 0x42));
-        add_interrupt_device(&mut fdt);
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let selected = alloc::vec!["/device@1000".into()];
-
-        assert!(super::create_guest_fdt(&fdt, &selected, &cfg).is_err());
-    }
-
-    #[test]
-    fn generated_fdt_accepts_retained_interrupt_parent() {
-        let mut fdt = test_fdt("cpu@0=0");
-        let root = fdt.root_id();
-        fdt.node_mut(root)
+            .set_property(Property::new("interrupt-controller", std::vec![]));
+        fdt.node_mut(plic)
             .unwrap()
-            .set_property(prop_u32("interrupt-parent", 0x42));
-        add_interrupt_device(&mut fdt);
-        add_interrupt_controller(&mut fdt, 0x42);
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let selected = alloc::vec!["/device@1000".into(), "/intc@8000000".into()];
-
-        assert!(super::create_guest_fdt(&fdt, &selected, &cfg).is_ok());
-    }
-
-    #[test]
-    fn generated_fdt_exclusion_overrides_retained_parent_subtree() {
-        let mut fdt = test_fdt("cpu@0=0");
-        add_interrupt_controller(&mut fdt, 0x42);
-        let controller = fdt.get_by_path_id("/intc@8000000").unwrap();
-        let its = fdt.add_node(controller, Node::new("its@8080000"));
+            .set_property(prop_u32("phandle", 9));
+        let mut contexts = Property::new("interrupts-extended", std::vec![]);
+        contexts.set_u32_ls(&[8, 11, 8, 9, 6, 11, 6, 9]);
+        fdt.node_mut(plic).unwrap().set_property(contexts);
+        let its = fdt.add_node(root, Node::new("its@8080000"));
+        let mut compatible = Property::new("compatible", std::vec![]);
+        compatible.set_string("arm,gic-v3-its");
+        fdt.node_mut(its).unwrap().set_property(compatible);
         fdt.node_mut(its)
             .unwrap()
-            .set_property(prop_str("compatible", "arm,gic-v3-its"));
+            .set_property(Property::new("msi-controller", std::vec![]));
 
-        let cfg = AxVMCrateConfig {
+        let cfg = GuestConfig {
             base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            devices: VMDevicesConfig {
-                excluded_devices: alloc::vec![alloc::vec!["/intc@8000000/its@8080000".into(),]],
+                phys_cpu_ids: Some(std::vec![0]),
                 ..Default::default()
             },
             ..Default::default()
         };
-        let selected = alloc::vec!["/intc@8000000".into()];
-        let dtb = super::create_guest_fdt(&fdt, &selected, &cfg).unwrap();
+        let dtb = super::create_guest_fdt(&fdt, &[], &cfg).unwrap();
         let reparsed = Fdt::from_bytes(&dtb).unwrap();
+        let plic = reparsed.get_by_path("/soc/plic@c000000").unwrap();
+        assert!(reparsed.get_by_path_id("/its@8080000").is_some());
 
-        assert!(reparsed.get_by_path_id("/intc@8000000").is_some());
-        assert!(
-            reparsed
-                .get_by_path_id("/intc@8000000/its@8080000")
-                .is_none()
+        assert_eq!(
+            plic.as_node().get_property("phandle").unwrap().get_u32(),
+            Some(9)
+        );
+        assert_eq!(
+            plic.as_node()
+                .get_property("interrupts-extended")
+                .unwrap()
+                .get_u32_iter()
+                .collect::<std::vec::Vec<_>>(),
+            [8, 11, 8, 9]
         );
     }
 
     #[test]
-    fn generated_fdt_rejects_conflicting_controller_phandles() {
-        let mut fdt = test_fdt("cpu@0=0");
-        let root = fdt.root_id();
-        fdt.node_mut(root)
-            .unwrap()
-            .set_property(prop_u32("interrupt-parent", 0x42));
-        add_interrupt_device(&mut fdt);
-        add_interrupt_controller(&mut fdt, 0x42);
-        let controller = fdt.get_by_path_id("/intc@8000000").unwrap();
-        fdt.node_mut(controller)
-            .unwrap()
-            .set_property(prop_u32("linux,phandle", 0x43));
-
-        let cfg = AxVMCrateConfig {
+    fn orangepi_5_plus_guest_fdt_keeps_cpu_power_dependencies_resolvable() {
+        let host = Fdt::from_bytes(include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../os/axvisor/configs/board/orangepi-5-plus.dtb"
+        )))
+        .unwrap();
+        let vm_cfg = AxVMConfig::new(AxVMConfigParams {
+            phys_cpu_ls: PhysCpuList::new(1, Some(std::vec![0]), None),
+            pass_through_devices: std::vec![HostDeviceAssignment {
+                name: "/".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+        let passthrough_devices = find_all_passthrough_devices(&vm_cfg, &host);
+        let cfg = GuestConfig {
             base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
+                phys_cpu_ids: Some(std::vec![0]),
                 ..Default::default()
             },
             ..Default::default()
         };
-        let selected = alloc::vec!["/device@1000".into(), "/intc@8000000".into()];
 
-        assert!(super::create_guest_fdt(&fdt, &selected, &cfg).is_err());
-    }
+        let dtb = super::create_guest_fdt(&host, &passthrough_devices, &cfg).unwrap();
+        let guest = Fdt::from_bytes(&dtb).unwrap();
+        let cpu = guest.get_by_path("/cpus/cpu@0").unwrap().as_node();
 
-    #[test]
-    fn provided_fdt_cpu_replacement_prunes_cpu_map_and_missing_console() {
-        let mut host_fdt = test_fdt("cpu@0=0\ncpu@1=1");
-        add_two_cpu_map(&mut host_fdt);
-
-        let mut provided_fdt = Fdt::new();
-        let root = provided_fdt.root_id();
-        let chosen = provided_fdt.add_node(root, Node::new("chosen"));
-        provided_fdt
-            .node_mut(chosen)
-            .unwrap()
-            .set_property(prop_str("bootargs", "root=/dev/vda rw"));
-        provided_fdt
-            .node_mut(chosen)
-            .unwrap()
-            .set_property(prop_str("stdout-path", "/pl011@9000000:115200n8"));
-
-        let dtb =
-            super::super::sanitize::replace_cpu_nodes_from_host(&provided_fdt, &host_fdt, &[0])
+        assert!(cpu.get_property("#cooling-cells").is_some());
+        assert!(cpu.get_property("dynamic-power-coefficient").is_some());
+        for property_name in ["operating-points-v2", "cpu-supply"] {
+            let phandle = cpu
+                .get_property(property_name)
+                .and_then(Property::get_u32)
                 .unwrap();
-        let reparsed = Fdt::from_bytes(&dtb).unwrap();
-        let chosen = reparsed.get_by_path("/chosen").unwrap().as_node();
-
-        assert!(reparsed.get_by_path_id("/cpus/cpu@0").is_some());
-        assert!(reparsed.get_by_path_id("/cpus/cpu@1").is_none());
-        assert!(
-            reparsed
-                .get_by_path_id("/cpus/cpu-map/cluster0/core0")
-                .is_some()
-        );
-        assert!(
-            reparsed
-                .get_by_path_id("/cpus/cpu-map/cluster0/core1")
-                .is_none()
-        );
-        assert_eq!(
-            chosen.get_property("bootargs").unwrap().as_str(),
-            Some("root=/dev/vda rw")
-        );
-        assert!(chosen.get_property("stdout-path").is_none());
-    }
-
-    #[test]
-    fn provided_fdt_rejects_missing_interrupt_references() {
-        let host_fdt = test_fdt("cpu@0=0");
-        let mut provided_fdt = Fdt::new();
-        let root = provided_fdt.root_id();
-        provided_fdt
-            .node_mut(root)
-            .unwrap()
-            .set_property(prop_u32("interrupt-parent", 0x42));
-        add_interrupt_device(&mut provided_fdt);
-
-        assert!(
-            super::super::sanitize::replace_cpu_nodes_from_host(&provided_fdt, &host_fdt, &[0])
-                .is_err()
-        );
-        add_interrupt_controller(&mut provided_fdt, 0x42);
-        assert!(
-            super::super::sanitize::replace_cpu_nodes_from_host(&provided_fdt, &host_fdt, &[0])
-                .is_ok()
-        );
-
-        let mut extended_fdt = Fdt::new();
-        let device = extended_fdt.add_node(extended_fdt.root_id(), Node::new("device@2000"));
-        extended_fdt
-            .node_mut(device)
-            .unwrap()
-            .set_property(prop_u32s("interrupts-extended", &[0x43, 0, 17, 4]));
-        assert!(
-            super::super::sanitize::replace_cpu_nodes_from_host(&extended_fdt, &host_fdt, &[0])
-                .is_err()
-        );
-        add_interrupt_controller(&mut extended_fdt, 0x43);
-        assert!(
-            super::super::sanitize::replace_cpu_nodes_from_host(&extended_fdt, &host_fdt, &[0])
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn provided_fdt_rejects_empty_interrupts_extended() {
-        let host_fdt = test_fdt("cpu@0=0");
-        let mut provided_fdt = Fdt::new();
-        let device = provided_fdt.add_node(provided_fdt.root_id(), Node::new("device@2000"));
-        provided_fdt
-            .node_mut(device)
-            .unwrap()
-            .set_property(Property::new("interrupts-extended", alloc::vec![]));
-
-        assert!(
-            super::super::sanitize::replace_cpu_nodes_from_host(&provided_fdt, &host_fdt, &[0])
-                .is_err()
-        );
-    }
-
-    #[test]
-    fn generated_fdt_drops_missing_chosen_console_but_keeps_bootargs() {
-        let mut fdt = test_fdt("cpu@0=0");
-        let root = fdt.root_id();
-        let chosen = fdt.add_node(root, Node::new("chosen"));
-        fdt.node_mut(chosen)
-            .unwrap()
-            .set_property(prop_str("bootargs", "root=/dev/vda rw"));
-        fdt.node_mut(chosen)
-            .unwrap()
-            .set_property(prop_str("stdout-path", "/pl011@9000000:115200n8"));
-        fdt.node_mut(chosen)
-            .unwrap()
-            .set_property(prop_str("linux,stdout-path", "/pl011@9000000:115200n8"));
-        fdt.add_node(root, Node::new("pl011@9000000"));
-
-        let cfg = AxVMCrateConfig {
-            base: axvmconfig::VMBaseConfig {
-                phys_cpu_ids: Some(alloc::vec![0]),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let selected = alloc::vec!["/chosen".into()];
-        let dtb = super::create_guest_fdt(&fdt, &selected, &cfg).unwrap();
-        let reparsed = Fdt::from_bytes(&dtb).unwrap();
-        let chosen = reparsed.get_by_path("/chosen").unwrap().as_node();
-
-        assert_eq!(
-            chosen.get_property("bootargs").unwrap().as_str(),
-            Some("root=/dev/vda rw")
-        );
-        assert!(chosen.get_property("stdout-path").is_none());
-        assert!(chosen.get_property("linux,stdout-path").is_none());
-        assert!(reparsed.get_by_path_id("/pl011@9000000").is_none());
+            assert!(
+                find_node_by_phandle(&guest, phandle).is_some(),
+                "{property_name} references missing guest phandle {phandle:#x}"
+            );
+        }
     }
 }

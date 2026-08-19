@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "run-complete",
+  "status": "guest_network_completed",
+  "proofScope": "one-identity-bound-dual-guest-mediated-network-session",
+  "doesNotProve": [
+    "DMA isolation",
+    "hardware DMA",
+    "AI closed loop",
+    "real-time improvement",
+    "outer-QEMU networking"
+  ],
+  "inputs": {
+    "buildConfig": {
+      "path": "os/axvisor/configs/board/qemu-aarch64-contest-network.toml",
+      "sha256": "02538af38175c03cc79b179dc9e0833f86cd79caf66c25a88f675bc0e1e0849a"
+    },
+    "qemuConfig": {
+      "path": "configs/contest/qemu-aarch64-linux-zephyr-dual.toml",
+      "sha256": "ba106d1b41b4de92fd093087b536425993e6a134836d0c450cade68627e11739"
+    },
+    "linuxVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test015-20260819T153636Z-icpc-bidir4/configs/linux.resolved.toml",
+      "sha256": "2f421956f639b12ce2f5dc8569bc9e24b39098f18d7aec6431c5c02a4356935e"
+    },
+    "zephyrVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test015-20260819T153636Z-icpc-bidir4/configs/zephyr.resolved.toml",
+      "sha256": "00414ea777519d9f812c02d2782b479f024ec088ba41816f6f34644c17ec6e84"
+    },
+    "linuxRootfs": {
+      "path": "tmp/contest/p4/linux-network-icpc.ext4",
+      "sha256": "29e7831a400487a3cd0317287addf481774f362c2d900ca9025c7ef85d2cef95"
+    },
+    "zephyrImage": {
+      "path": "tmp/contest/p4/zephyr-network/zephyr.bin",
+      "sha256": "7e183d005d370b9e02e1f0f7d005a7400b7028a8f01b6524bfa45934ce9f2ac0"
+    },
+    "profile": {
+      "path": "tmp/contest/p4/test-015-icpc-v1.json",
+      "sha256": "9f67533e42a05744ef5ed9cfca638e542aa854de14cd9a68d2ae011a25126aee"
+    }
+  },
+  "session": {
+    "schemaVersion": 1,
+    "runId": "phase4-net-test015-20260819T153636Z-icpc-bidir4",
+    "scenario": "test-015",
+    "sessionNonce": "37874d17d9ed923a8c58d526b6d4fcc5",
+    "bootId": "p4net-20260819T153642Z-37874d17",
+    "qemuName": "axvisor-dual-smoke-37874d17d9ed923a8c58d526b6d4fcc5",
+    "startedAtUtc": "2026-08-19T15:36:42Z"
+  }
+}

@@ -5,18 +5,277 @@ use std::{
     process::Command,
 };
 
+use regex::Regex;
 use tempfile::tempdir;
+use walkdir::WalkDir;
 
 use super::{
-    app_qemu_test_case, load_qemu_app_case_fields, prepare_qemu_app_case, resolve_qemu_config,
+    app_qemu_test_case, load_qemu_app_case_fields, prepare_qemu_app_case,
+    qemu_app_managed_rootfs_paths, read_qemu_app_config, resolve_qemu_config,
 };
 use crate::{
+    rootfs::qemu::RootfsWritePolicy,
     starry::app::{
         StarryAppQemuCase, discover_apps,
         test_support::{write_case_file, write_test_image_config},
     },
     test::case::HostHttpServerConfig,
 };
+
+#[tokio::test]
+async fn app_owned_rootfs_runs_declared_builder_without_default_rootfs() {
+    let root = tempdir().unwrap();
+    write_test_image_config(root.path());
+    write_case_file(
+        root.path(),
+        "nixos",
+        "qemu-x86_64.toml",
+        r#"args = [
+  "-drive",
+  "id=disk0,if=none,format=raw,file=${workspace}/.tgos-images/rootfs-x86_64-nixos.img/rootfs-x86_64-nixos.img",
+]
+uefi = true
+to_bin = true
+success_regex = []
+fail_regex = []
+
+[rootfs_preparation]
+mode = "app-owned"
+builder = "build-rootfs.sh"
+target_arch = "x86_64"
+"#,
+    );
+    write_case_file(
+        root.path(),
+        "nixos",
+        "build-rootfs.sh",
+        "#!/bin/sh\nset -eu\nprintf 'nixos-image' >\"$STARRY_ROOTFS\"\n",
+    );
+    let app = discover_apps(root.path())
+        .unwrap()
+        .into_iter()
+        .find(|app| app.name == "nixos")
+        .unwrap();
+
+    let case = prepare_qemu_app_case(root.path(), &app, Some("x86_64"), None)
+        .await
+        .unwrap();
+
+    assert_eq!(fs::read(&case.rootfs_path).unwrap(), b"nixos-image");
+    assert!(!root.path().join("tmp/axbuild/rootfs").exists());
+}
+
+#[tokio::test]
+async fn app_owned_rootfs_rejects_builder_that_does_not_publish_artifact() {
+    let root = tempdir().unwrap();
+    write_test_image_config(root.path());
+    write_case_file(
+        root.path(),
+        "nixos",
+        "qemu-x86_64.toml",
+        r#"args = [
+  "-drive",
+  "id=disk0,if=none,format=raw,file=${workspace}/.tgos-images/rootfs-x86_64-nixos.img/rootfs-x86_64-nixos.img",
+]
+uefi = true
+to_bin = true
+success_regex = []
+fail_regex = []
+
+[rootfs_preparation]
+mode = "app-owned"
+builder = "build-rootfs.sh"
+target_arch = "x86_64"
+"#,
+    );
+    write_case_file(
+        root.path(),
+        "nixos",
+        "build-rootfs.sh",
+        "#!/bin/sh\nexit 0\n",
+    );
+    let app = discover_apps(root.path())
+        .unwrap()
+        .into_iter()
+        .find(|app| app.name == "nixos")
+        .unwrap();
+
+    let error = prepare_qemu_app_case(root.path(), &app, Some("x86_64"), None)
+        .await
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        error.contains("did not publish"),
+        "unexpected error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn app_owned_rootfs_rejects_target_arch_mismatch_before_builder_runs() {
+    let root = tempdir().unwrap();
+    write_test_image_config(root.path());
+    let builder_marker = root.path().join("builder-ran");
+    write_case_file(
+        root.path(),
+        "nixos",
+        "qemu-x86_64.toml",
+        r#"args = [
+  "-drive",
+  "id=disk0,if=none,format=raw,file=${workspace}/.tgos-images/rootfs-x86_64-nixos.img/rootfs-x86_64-nixos.img",
+]
+uefi = true
+to_bin = true
+success_regex = []
+fail_regex = []
+
+[rootfs_preparation]
+mode = "app-owned"
+builder = "build-rootfs.sh"
+target_arch = "aarch64"
+"#,
+    );
+    write_case_file(
+        root.path(),
+        "nixos",
+        "build-rootfs.sh",
+        &format!("#!/bin/sh\ntouch '{}'\n", builder_marker.display()),
+    );
+    let app = discover_apps(root.path())
+        .unwrap()
+        .into_iter()
+        .find(|app| app.name == "nixos")
+        .unwrap();
+
+    let error = prepare_qemu_app_case(root.path(), &app, Some("x86_64"), None)
+        .await
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        error.contains("targets `aarch64`"),
+        "unexpected error: {error}"
+    );
+    assert!(!builder_marker.exists());
+}
+
+#[test]
+fn starrynixos_qemu_config_enforces_app_owned_boot_contract() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let config_path = repo.join("apps/starry/nixos/qemu-x86_64.toml");
+    let config: toml::Value = toml::from_str(&fs::read_to_string(&config_path).unwrap()).unwrap();
+
+    assert_eq!(
+        config.get("uefi").and_then(toml::Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        config.get("to_bin").and_then(toml::Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        config.get("timeout").and_then(toml::Value::as_integer),
+        Some(600)
+    );
+    let qemu_args = config
+        .get("args")
+        .and_then(toml::Value::as_array)
+        .expect("StarryNixOS QEMU args must be an array");
+    let qemu_args = qemu_args
+        .iter()
+        .map(|arg| arg.as_str().expect("QEMU arguments must be strings"))
+        .collect::<Vec<_>>();
+    assert!(qemu_args.iter().any(|arg| {
+        arg.contains("rootfs-x86_64-nixos.img")
+            && arg.contains("format=raw")
+            && !arg.contains("alpine")
+    }));
+    assert!(
+        qemu_args.windows(2).any(|args| args == ["-smp", "8"]),
+        "StarryNixOS QEMU acceptance must use eight vCPUs"
+    );
+
+    let preparation = config
+        .get("rootfs_preparation")
+        .and_then(toml::Value::as_table)
+        .expect("StarryNixOS must declare rootfs preparation");
+    assert_eq!(
+        preparation.get("mode").and_then(toml::Value::as_str),
+        Some("app-owned")
+    );
+    assert_eq!(
+        preparation.get("target_arch").and_then(toml::Value::as_str),
+        Some("x86_64")
+    );
+    assert_eq!(
+        preparation.get("builder").and_then(toml::Value::as_str),
+        Some("build-rootfs.sh")
+    );
+}
+
+#[test]
+fn starrynixos_qemu_matcher_requires_ordered_evidence_and_rejects_failures() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let config_path = repo.join("apps/starry/nixos/qemu-x86_64.toml");
+    let config: toml::Value = toml::from_str(&fs::read_to_string(&config_path).unwrap()).unwrap();
+    let timeout = config
+        .get("timeout")
+        .and_then(toml::Value::as_integer)
+        .unwrap_or_default();
+    assert!(
+        timeout > 0,
+        "{} must classify a partial boot as a timeout instead of waiting indefinitely",
+        config_path.display()
+    );
+    let success_regex = config
+        .get("success_regex")
+        .and_then(toml::Value::as_array)
+        .and_then(|patterns| patterns.first())
+        .and_then(toml::Value::as_str)
+        .map(Regex::new)
+        .expect("StarryNixOS must have one compound success regex")
+        .unwrap();
+
+    let complete = "STARRY_NIXOS_PHASE=pid1\nSTARRY_NIXOS_PHASE=activation\\
+                    nSTARRY_NIXOS_PHASE=systemd\nSTARRY_NIXOS_PHASE=marker\\
+                    nSTARRY_NIXOS_SYSTEM_PASSED\n";
+    assert!(success_regex.is_match(complete));
+    assert!(!success_regex.is_match(
+        "STARRY_NIXOS_PHASE=pid1\nSTARRY_NIXOS_PHASE=activation\nSTARRY_NIXOS_SYSTEM_PASSED\n"
+    ));
+    assert!(!success_regex.is_match(
+        "STARRY_NIXOS_PHASE=activation\nSTARRY_NIXOS_PHASE=pid1\nSTARRY_NIXOS_PHASE=systemd\\
+         nSTARRY_NIXOS_PHASE=marker\nSTARRY_NIXOS_SYSTEM_PASSED\n"
+    ));
+
+    let fail_regexes = config
+        .get("fail_regex")
+        .and_then(toml::Value::as_array)
+        .expect("StarryNixOS must declare terminal failure patterns")
+        .iter()
+        .map(|pattern| Regex::new(pattern.as_str().unwrap()).unwrap())
+        .collect::<Vec<_>>();
+    for failure in [
+        "kernel panicked at boot",
+        "FATAL: PID 1 exited",
+        "STARRY_NIXOS_SYSTEM_FAILED: phase=activation",
+        "marker.service: Failed with result 'exit-code'",
+        "Failed to start Verify the StarryNixOS stage-2 baseline",
+    ] {
+        assert!(
+            fail_regexes.iter().any(|regex| regex.is_match(failure)),
+            "failure was not rejected: {failure}"
+        );
+    }
+}
 
 #[test]
 fn qemu_config_selection_prefers_exact_arch_config() {
@@ -160,16 +419,14 @@ fn qemu_case_fields_load_grouped_commands_and_subcases() {
 fn qemu_case_fields_load_configured_managed_rootfs() {
     let root = tempdir().unwrap();
     write_test_image_config(root.path());
-    let rootfs_path = root
-        .path()
-        .join(".tgos-images/rootfs-aarch64-debian.img/rootfs-aarch64-debian.img");
+    let rootfs_path = root.path().join(".tgos-images/rootfs-aarch64-debian.img");
     write_case_file(
         root.path(),
         "qemu/apt",
         "qemu-aarch64.toml",
         r#"args = [
   "-drive",
-  "id=disk0,if=none,format=raw,file=${workspace}/.tgos-images/rootfs-aarch64-debian.img/rootfs-aarch64-debian.img",
+  "id=disk0,if=none,format=raw,file=${workspace}/.tgos-images/rootfs-aarch64-debian.img",
 ]
 uefi = false
 to_bin = true
@@ -188,11 +445,47 @@ fail_regex = []
         load_qemu_app_case_fields(root.path(), &app, qemu_config.as_deref().unwrap()).unwrap();
 
     assert_eq!(fields.rootfs_path, Some(rootfs_path));
-    assert!(fields.snapshot);
+    assert_eq!(fields.write_policy, RootfsWritePolicy::Discard);
 }
 
 #[test]
-fn qemu_case_fields_load_snapshot_disable() {
+fn apk_equivalence_qemu_configs_resolve_with_default_image_config() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let workspace = tempdir().unwrap();
+
+    for (case, arch) in [
+        ("apk-add-fs-equivalence", "riscv64"),
+        ("apk-add-fs-equivalence", "x86_64"),
+        ("apk-net-equivalence", "riscv64"),
+        ("apk-net-equivalence", "x86_64"),
+    ] {
+        let config_path = repo
+            .join("apps/starry/qemu")
+            .join(case)
+            .join(format!("qemu-{arch}.toml"));
+        let qemu = read_qemu_app_config(&config_path).unwrap();
+
+        let rootfs_paths = qemu_app_managed_rootfs_paths(workspace.path(), &qemu).unwrap();
+
+        assert_eq!(
+            rootfs_paths,
+            vec![
+                workspace
+                    .path()
+                    .join(format!("tmp/axbuild/rootfs/rootfs-{arch}-alpine.img"))
+            ],
+            "{} must use the default managed rootfs directory",
+            config_path.display()
+        );
+    }
+}
+
+#[test]
+fn qemu_case_fields_load_persistent_rootfs_policy() {
     let root = tempdir().unwrap();
     write_case_file(
         root.path(),
@@ -201,7 +494,7 @@ fn qemu_case_fields_load_snapshot_disable() {
         r#"args = []
 uefi = false
 to_bin = true
-snapshot = false
+rootfs_write_policy = "persist"
 success_regex = []
 fail_regex = []
 "#,
@@ -216,7 +509,7 @@ fail_regex = []
     let fields =
         load_qemu_app_case_fields(root.path(), &app, qemu_config.as_deref().unwrap()).unwrap();
 
-    assert!(!fields.snapshot);
+    assert_eq!(fields.write_policy, RootfsWritePolicy::Persist);
 }
 
 #[test]
@@ -231,8 +524,10 @@ fn selfhost_x86_app_preserves_the_persistent_build_contract() {
     let config: toml::Value = toml::from_str(&fs::read_to_string(&config_path).unwrap()).unwrap();
 
     assert_eq!(
-        config.get("snapshot").and_then(toml::Value::as_bool),
-        Some(false),
+        config
+            .get("rootfs_write_policy")
+            .and_then(toml::Value::as_str),
+        Some("persist"),
         "{} must persist the guest-built kernel",
         config_path.display()
     );
@@ -380,7 +675,7 @@ fn app_qemu_test_case_preserves_host_symbolize_success_regex() {
         build_config_path: None,
         qemu_config_path: Some(qemu_config_path.clone()),
         rootfs_path: PathBuf::from("/tmp/rootfs.img"),
-        snapshot: true,
+        rootfs_write_policy: RootfsWritePolicy::Discard,
         test_commands: Vec::new(),
         host_symbolize_success_regex: vec!["symbolized".to_string()],
         host_http_server: Some(HostHttpServerConfig {
@@ -507,13 +802,8 @@ fn claw_code_prebuild_replaces_stale_rootfs_directory() {
     let rootfs_dir = workspace.join("tmp/axbuild/rootfs");
     let default_rootfs = rootfs_dir.join("rootfs-x86_64-alpine.img");
     let app_rootfs = rootfs_dir.join("rootfs-x86_64-claw-code.img");
-    fs::create_dir_all(&default_rootfs).unwrap();
-    fs::write(
-        default_rootfs.join("rootfs-x86_64-alpine.img"),
-        b"base rootfs",
-    )
-    .unwrap();
-    fs::create_dir_all(&app_rootfs).unwrap();
+    fs::create_dir_all(&rootfs_dir).unwrap();
+    fs::write(&default_rootfs, b"base rootfs").unwrap();
 
     let path = format!("{}:{}", tools.display(), std::env::var("PATH").unwrap());
     let status = Command::new("bash")
@@ -530,10 +820,7 @@ fn claw_code_prebuild_replaces_stale_rootfs_directory() {
     assert!(status.success());
     assert!(app_rootfs.is_file());
     assert_eq!(fs::read(&app_rootfs).unwrap(), b"base rootfs");
-    assert_eq!(
-        fs::read(default_rootfs.join("rootfs-x86_64-alpine.img")).unwrap(),
-        b"base rootfs"
-    );
+    assert_eq!(fs::read(default_rootfs).unwrap(), b"base rootfs");
 }
 
 #[test]
@@ -562,6 +849,82 @@ fn syscall_count_qemu_configs_stop_after_pass_marker() {
             config_path.display()
         );
     }
+}
+
+#[test]
+fn loongarch64_nvme_rootfs_build_keeps_serial_console() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let config_path =
+        repo.join("apps/starry/qemu/nvme/build-loongarch64-unknown-none-softfloat.toml");
+    let content = fs::read_to_string(&config_path).unwrap();
+    let config: toml::Value = toml::from_str(&content).unwrap();
+    let features = config
+        .get("features")
+        .and_then(toml::Value::as_array)
+        .expect("NVMe build config must declare features");
+
+    assert!(
+        features
+            .iter()
+            .filter_map(toml::Value::as_str)
+            .any(|feature| feature == "ax-driver/serial"),
+        "{} must keep the LoongArch serial console enabled so NVMe test markers are observable",
+        config_path.display()
+    );
+}
+
+#[test]
+fn loongarch64_nvme_rootfs_uses_dynamic_uefi_handoff() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let config_path = repo.join("apps/starry/qemu/nvme/nvme-rootfs-rw-20m/qemu-loongarch64.toml");
+    let content = fs::read_to_string(&config_path).unwrap();
+    let config: toml::Value = toml::from_str(&content).unwrap();
+
+    assert_eq!(
+        config.get("uefi").and_then(toml::Value::as_bool),
+        Some(true),
+        "{} must boot the PIC kernel through the supported LoongArch dynamic UEFI handoff",
+        config_path.display()
+    );
+    assert_eq!(
+        config.get("to_bin").and_then(toml::Value::as_bool),
+        Some(true),
+        "{} must retain the UEFI runner's explicit BIN artifact contract",
+        config_path.display()
+    );
+}
+
+#[test]
+fn x86_64_nvme_rootfs_uses_dynamic_uefi_handoff() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let config_path = repo.join("apps/starry/qemu/nvme/nvme-rootfs-rw-20m/qemu-x86_64.toml");
+    let content = fs::read_to_string(&config_path).unwrap();
+    let config: toml::Value = toml::from_str(&content).unwrap();
+
+    assert_eq!(
+        config.get("uefi").and_then(toml::Value::as_bool),
+        Some(true),
+        "{} must boot the PIC kernel through the supported x86_64 dynamic UEFI handoff",
+        config_path.display()
+    );
+    assert_eq!(
+        config.get("to_bin").and_then(toml::Value::as_bool),
+        Some(true),
+        "{} must retain the UEFI runner's explicit BIN artifact contract",
+        config_path.display()
+    );
 }
 
 #[test]
@@ -682,6 +1045,116 @@ fn apk_package_prebuilds_use_guest_apk_from_staging_root() {
 }
 
 #[test]
+fn nix_qemu_configs_use_dedicated_nvme_rootfs() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let app_dir = repo.join("apps/starry/nix");
+
+    for (config_name, arch) in [
+        ("qemu-x86_64.toml", "x86_64"),
+        ("qemu-x86_64-shell.toml", "x86_64"),
+        ("qemu-aarch64.toml", "aarch64"),
+    ] {
+        let config_path = app_dir.join(config_name);
+        let config = fs::read_to_string(&config_path).unwrap();
+
+        assert!(
+            config.contains(&format!("rootfs-{arch}-nix.img")),
+            "{} must use a Nix-specific managed rootfs so its 8 GiB resize cannot mutate the \
+             shared Alpine base image",
+            config_path.display()
+        );
+        assert!(
+            !config.contains(&format!("rootfs-{arch}-alpine.img")),
+            "{} must not pass the shared Alpine base image to the Nix prebuild",
+            config_path.display()
+        );
+        assert!(
+            config.contains("\"nvme,") && !config.contains("virtio-blk"),
+            "{} must attach its Starry root disk through the IRQ-driven NVMe path",
+            config_path.display()
+        );
+    }
+}
+
+#[test]
+fn nix_app_installs_nix_before_guest_boot() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+
+    let prebuild_path = repo.join("apps/starry/nix/prebuild.sh");
+    let prebuild = fs::read_to_string(&prebuild_path).unwrap();
+    assert!(
+        prebuild.contains("/sbin/apk")
+            && prebuild.contains("--force-no-chroot")
+            && prebuild.contains("--scripts=no")
+            && prebuild.contains("add nix"),
+        "{} must install Alpine-packaged Nix into the app rootfs before boot",
+        prebuild_path.display()
+    );
+    assert!(
+        prebuild.contains("info --recursive --format json nix"),
+        "{} must copy the full Alpine Nix dependency closure, not only newly installed packages",
+        prebuild_path.display()
+    );
+    assert!(
+        prebuild.contains("relativize_staging_absolute_symlinks")
+            && prebuild.contains("realpath --relative-to="),
+        "{} must make staging-root absolute symlinks qemu-user safe before running guest apk",
+        prebuild_path.display()
+    );
+
+    let guest_script_path = repo.join("apps/starry/nix/test_nix.sh");
+    let guest_script = fs::read_to_string(&guest_script_path).unwrap();
+    assert!(
+        !guest_script.contains("apk add") && !guest_script.contains("apk update"),
+        "{} must not install Nix from the guest at QEMU runtime",
+        guest_script_path.display()
+    );
+    assert!(
+        guest_script.contains("command -v nix"),
+        "{} must still verify that the prebuilt Nix binary is present",
+        guest_script_path.display()
+    );
+
+    for script_name in ["nix-nosandbox.sh", "nix.sh", "nix-nixpkgs.sh"] {
+        let script_path = repo.join("apps/starry/nix").join(script_name);
+        let script = fs::read_to_string(&script_path).unwrap();
+        assert!(
+            script.contains("NIX_REMOTE=local"),
+            "{} must use the injected single-user store instead of the daemon socket",
+            script_path.display()
+        );
+    }
+}
+
+#[test]
+fn app_qemu_applies_shared_timeout_scale() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let source_path = repo.join("scripts/axbuild/src/starry/mod.rs");
+    let source = fs::read_to_string(&source_path).unwrap();
+
+    assert!(
+        source
+            .matches("qemu::apply_timeout_scale(&mut qemu);")
+            .count()
+            >= 2,
+        "{} must apply shared QEMU timeout scaling on both app qemu paths",
+        source_path.display()
+    );
+}
+
+#[test]
 fn apk_prebuilds_do_not_poison_qemu_with_guest_library_path() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -791,5 +1264,46 @@ fn claw_code_qemu_config_exits_after_smoke_check() {
             && !shell_init_cmd.contains("STARRY_CLAW_MISSING"),
         "{} must not echo full claw smoke markers as shell input",
         config_path.display()
+    );
+}
+
+#[test]
+fn debugfs_copy_commands_in_prebuild_scripts_suppress_stdout() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("axbuild manifest should live under scripts/axbuild")
+        .to_path_buf();
+    let mut copy_commands = 0;
+
+    for entry in WalkDir::new(repo.join("apps/starry")) {
+        let entry = entry.unwrap();
+        if entry.file_name() != "prebuild.sh" {
+            continue;
+        }
+
+        let content = fs::read_to_string(entry.path()).unwrap();
+        for (line_index, line) in content.lines().enumerate() {
+            let line = line.trim();
+            if line.starts_with('#')
+                || !line.contains("debugfs")
+                || !(line.contains("rdump ") || line.contains("-R \"write "))
+            {
+                continue;
+            }
+
+            copy_commands += 1;
+            assert!(
+                line.contains(">/dev/null") || line.contains("1>/dev/null"),
+                "{}:{} must suppress normal debugfs copy output",
+                entry.path().display(),
+                line_index + 1
+            );
+        }
+    }
+
+    assert!(
+        copy_commands > 0,
+        "expected to inspect debugfs copy commands"
     );
 }

@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "run-complete",
+  "status": "dual_guest_short_smoke_completed",
+  "success": true,
+  "error": null,
+  "startedAtUtc": "2026-08-14T07:26:32Z",
+  "finishedAtUtc": "2026-08-14T08:04:58Z",
+  "proofScope": "one-identity-bound-qemu-linux-zephyr-dual-guest-short-smoke-session",
+  "doesNotProve": [
+    "thirty-minute or longer stability",
+    "Guest IP connectivity",
+    "DMA isolation",
+    "AI closed loop",
+    "real-time improvement"
+  ],
+  "state": {
+    "schemaVersion": 1,
+    "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4",
+    "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+    "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+    "paths": {
+      "axvisorDirectory": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor",
+      "buildConfig": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml",
+      "qemuConfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml",
+      "linuxVmconfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml",
+      "zephyrVmconfig": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml",
+      "linuxRootfs": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4",
+      "zephyrImage": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.bin",
+      "liveLog": "axvisor-live.log",
+      "nestedCaptureDirectory": "live-capture",
+      "qmpSocket": "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qmp.sock",
+      "qemuPidfile": "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qemu.pid"
+    },
+    "command": [
+      "cargo",
+      "xtask",
+      "qemu",
+      "--config",
+      "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml",
+      "--qemu-config",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml",
+      "--vmconfigs",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml",
+      "--vmconfigs",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml",
+      "--qmp-socket",
+      "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qmp.sock",
+      "--qemu-pidfile",
+      "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qemu.pid",
+      "--qemu-name",
+      "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+      "--rootfs",
+      "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4"
+    ],
+    "inputArtifacts": {
+      "buildConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml",
+        "size": 363,
+        "sha256": "5f2a295983def966fad7ec0d6a72455c3cded80992ca4126cb00d2823fd10a7c"
+      },
+      "qemuConfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml",
+        "size": 857,
+        "sha256": "2009e39aef313bdf9c1497215a02a152ad19868d6e7c6288735d674d25c2a15b"
+      },
+      "linuxVmconfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml",
+        "size": 852,
+        "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21"
+      },
+      "zephyrVmconfig": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml",
+        "size": 1520,
+        "sha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb"
+      },
+      "linuxRootfs": {
+        "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4",
+        "size": 33554432,
+        "sha256": "da0baf4570c04addc4338804e7bca2ca01b51868bf4a60ed8e8d1c566b1581df"
+      },
+      "zephyrImage": {
+        "path": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.bin",
+        "size": 37008,
+        "sha256": "e4a3ece0263f37cc0d22331184530fe6f23e742985538dad7f8f45268b81e3c0"
+      }
+    },
+    "resolvedVmConfigs": {
+      "linux": {
+        "vmId": 1,
+        "cpuNum": 2,
+        "physCpuIds": [
+          0,
+          1
+        ]
+      },
+      "zephyr": {
+        "vmId": 2,
+        "cpuNum": 1,
+        "physCpuIds": [
+          2
+        ]
+      }
+    },
+    "qemuStartMonotonicNs": 8277858911590,
+    "launcherPid": 1170,
+    "launcherProcessGroup": 1170,
+    "ready": {
+      "readyPrefixBytes": 21344,
+      "readyPrefixSha256": "79eefb9f1cd5972b57c43a2c33a571d27a61a69da4d2dd469a03879a1ffd406b",
+      "capturePlanGuestIds": [
+        1,
+        2
+      ]
+    },
+    "readyIdentity": {
+      "pid": 1390,
+      "startTimeTicks": 844180
+    },
+    "nestedCaptureChain": {
+      "path": "live-capture/capture-chain.json",
+      "sha256": "0d8ea591c9db639beadbab86b0fcb1a4e3a30b216310ebd45750eabcb9bb487f",
+      "status": "identity_bound_live_qmp_capture_completed"
+    },
+    "postResumeIdentity": {
+      "pid": 1390,
+      "startTimeTicks": 844180,
+      "pidfdBound": true
+    },
+    "dualGuestReady": {
+      "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+      "guests": {
+        "1": {
+          "vmId": 1,
+          "name": "linux",
+          "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+          "markers": [
+            {
+              "name": "AXVISOR_DUAL_GUEST_LINUX_READY",
+              "line": 8750,
+              "lineText": "[    4.532656] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea\r"
+            }
+          ],
+          "frames": 3304,
+          "payloadBytes": 14887,
+          "dropped": 0,
+          "dma": 0
+        },
+        "2": {
+          "vmId": 2,
+          "name": "zephyr",
+          "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+          "markers": [
+            {
+              "name": "AXVISOR_DUAL_GUEST_ZEPHYR_READY",
+              "line": 5,
+              "lineText": "AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea\r"
+            }
+          ],
+          "frames": 1057,
+          "payloadBytes": 3057,
+          "dropped": 0,
+          "dma": 0
+        }
+      }
+    },
+    "stabilityWindow": {
+      "startMonotonicNs": 8590525563298,
+      "endMonotonicNs": 10391045408450,
+      "durationSeconds": 1800.0,
+      "unsafePatternMatches": 0
+    },
+    "qemuExit": "SIGINT sent through pidfd after stability window",
+    "groupCleanup": {
+      "pgid": 1170,
+      "groupExited": false,
+      "escalated": true
+    },
+    "launcherEscalated": true,
+    "launcherExitCode": -2,
+    "runtimeCleanup": {
+      "removed": [],
+      "directoryRemoved": false,
+      "error": "group did not exit"
+    },
+    "dualConsoleDemux": {
+      "manifest": {
+        "path": "console-manifest.json",
+        "sha256": "27534754f205e616e5c8dc5a212c04d8ea896deda17e97a2101c5a959f303e0f"
+      },
+      "frameCount": 59250,
+      "guestVmIds": [
+        1,
+        2
+      ]
+    },
+    "liveLog": {
+      "path": "axvisor-live.log",
+      "sha256": "eaa84e9e068690cdca48a6ad66c6aeca378bde234d4523adcc7213a54fc49c5b"
+    }
+  }
+}

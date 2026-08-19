@@ -1,49 +1,13 @@
 //! VM memory region planning.
 
-use alloc::vec::Vec;
-use core::alloc::Layout;
+use std::{alloc::Layout, vec::Vec};
 
-use axvm_types::{GuestPhysAddr, HostPhysAddr, HostVirtAddr, VmMemConfig, VmMemMappingType};
+use axvm_types::{GuestPhysAddr, VmMemConfig, VmMemMappingType};
 
 use super::{AxVM, VMMemoryRegion};
-use crate::{AxVmError, AxVmResult, ax_err_type};
+use crate::{AxVmResult, ax_err_type};
 
 const VM_MEMORY_ALIGN: usize = 2 * 1024 * 1024;
-
-/// Resolves the host addresses for an identity-HPA reserved guest mapping.
-///
-/// `MapReserved` fixes GPA equal to HPA, but the corresponding host virtual
-/// address must still follow the host's direct-map policy.
-pub(crate) fn reserved_host_addresses(
-    gpa: GuestPhysAddr,
-    translate: impl FnOnce(HostPhysAddr) -> HostVirtAddr,
-) -> (HostPhysAddr, HostVirtAddr) {
-    let hpa = HostPhysAddr::from(gpa.as_usize());
-    let hva = translate(hpa);
-    (hpa, hva)
-}
-
-/// Authorizes a reserved mapping before exposing its host direct-map address.
-pub(crate) fn authorized_reserved_host_addresses(
-    vm_id: usize,
-    gpa: GuestPhysAddr,
-    size: usize,
-    authorize: impl FnOnce(usize, HostPhysAddr, usize) -> bool,
-    translate: impl FnOnce(HostPhysAddr) -> HostVirtAddr,
-) -> AxVmResult<(HostPhysAddr, HostVirtAddr)> {
-    let hpa = HostPhysAddr::from(gpa.as_usize());
-    if !authorize(vm_id, hpa, size) {
-        return Err(AxVmError::resource_unavailable(
-            "VM host-memory carveout",
-            alloc::format!(
-                "VM {vm_id} has no exact carveout at HPA {:#x} with size {size:#x}",
-                hpa.as_usize()
-            ),
-        ));
-    }
-
-    Ok(reserved_host_addresses(gpa, translate))
-}
 
 /// Prepared memory regions for one VM.
 #[derive(Debug, Clone)]
@@ -139,7 +103,7 @@ impl MemoryRegionPlan {
         let layout = Layout::from_size_align(config.size, VM_MEMORY_ALIGN).map_err(|err| {
             ax_err_type!(
                 InvalidInput,
-                alloc::format!("invalid VM memory region {config:?}: {err:?}")
+                std::format!("invalid VM memory region {config:?}: {err:?}")
             )
         })?;
         let configured_gpa = match config.map_type {
@@ -170,8 +134,10 @@ impl MemoryRegionPlan {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
-    use core::cell::{Cell, RefCell};
+    use std::{
+        cell::{Cell, RefCell},
+        vec,
+    };
 
     use super::*;
 
@@ -282,64 +248,5 @@ mod tests {
         assert_eq!(layout.regions().len(), 1);
         assert_eq!(again.regions().len(), 1);
         assert_eq!(mapper.map_reserved_calls.get(), 1);
-    }
-
-    #[test]
-    fn reserved_mapping_translates_hpa_through_host_direct_map() {
-        let gpa = GuestPhysAddr::from(0x4000_0000);
-        let (hpa, hva) =
-            reserved_host_addresses(gpa, |hpa| HostVirtAddr::from(hpa.as_usize() + 0x1000_0000));
-
-        assert_eq!(hpa.as_usize(), gpa.as_usize());
-        assert_ne!(hva.as_usize(), gpa.as_usize());
-        assert_eq!(hva.as_usize(), 0x5000_0000);
-    }
-
-    #[test]
-    fn reserved_mapping_denial_precedes_host_address_translation() {
-        let translation_calls = Cell::new(0);
-        let result = authorized_reserved_host_addresses(
-            2,
-            GuestPhysAddr::from(0x1_0000_0000),
-            0x0800_0000,
-            |_vm_id, _hpa, _size| false,
-            |hpa| {
-                translation_calls.set(translation_calls.get() + 1);
-                HostVirtAddr::from(hpa.as_usize() + 0x1000_0000)
-            },
-        );
-
-        assert!(matches!(
-            result,
-            Err(crate::AxVmError::ResourceUnavailable {
-                resource: "VM host-memory carveout",
-                ..
-            })
-        ));
-        assert_eq!(translation_calls.get(), 0);
-    }
-
-    #[test]
-    fn reserved_mapping_authorization_precedes_host_address_translation() {
-        let events = RefCell::new(Vec::new());
-        let gpa = GuestPhysAddr::from(0x1_0000_0000);
-        let (hpa, hva) = authorized_reserved_host_addresses(
-            2,
-            gpa,
-            0x0800_0000,
-            |vm_id, hpa, size| {
-                events.borrow_mut().push("authorize");
-                vm_id == 2 && hpa.as_usize() == gpa.as_usize() && size == 0x0800_0000
-            },
-            |hpa| {
-                events.borrow_mut().push("translate");
-                HostVirtAddr::from(hpa.as_usize() + 0x1000_0000)
-            },
-        )
-        .unwrap();
-
-        assert_eq!(hpa.as_usize(), gpa.as_usize());
-        assert_eq!(hva.as_usize(), 0x1_1000_0000);
-        assert_eq!(&*events.borrow(), &["authorize", "translate"]);
     }
 }

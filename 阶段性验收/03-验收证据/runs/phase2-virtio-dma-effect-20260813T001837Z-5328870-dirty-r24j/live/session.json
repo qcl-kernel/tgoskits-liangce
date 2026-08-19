@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "identity_bound_single_virtio_blk_dma_effect_session_completed",
+  "proofScope": "same-session-one-virtio-blk-read-paused-qmp-pmemsave-measurements",
+  "sessionNonce": "567630cdd99a14c067186bd7539295af",
+  "qemuName": "axvisor-dma-effect-567630cdd99a14c067186bd7539295af",
+  "device": {
+    "kind": "virtio-blk-device",
+    "id": "dma-probe",
+    "bus": "virtio-mmio-bus.1",
+    "driveId": "dma-probe-disk",
+    "guestPath": "/dev/vdb"
+  },
+  "request": {
+    "path": "request.json",
+    "size": 3783,
+    "sha256": "d17f92b94623e00423ac9bd179d4d0de8420a798f114d2968918687c6e4db61e"
+  },
+  "rawLog": {
+    "path": "observed-log-prefix.bin",
+    "size": 40692,
+    "sha256": "fc1053bd4f7320c1968756c4da6d6ac6570941efc91e0bbd42813bd973e09ea9"
+  },
+  "markerObservations": {
+    "ready": {
+      "line": 568,
+      "byteOffset": 40448,
+      "marker": "AXVISOR_VIRTIO_BLK_ODIRECT_READY nonce=567630cdd99a14c067186bd7539295af gpa=0x82785000 size=512 sector=0 device=/dev/vdb control_device=/dev/hvc0"
+    },
+    "done": {
+      "line": 569,
+      "byteOffset": 40595,
+      "marker": "AXVISOR_VIRTIO_BLK_ODIRECT_DONE nonce=567630cdd99a14c067186bd7539295af bytes=512 gpa=0x82785000"
+    }
+  },
+  "guestControl": {
+    "channel": "virtio-console-unix-socket",
+    "control": {
+      "kind": "virtio-console",
+      "chardevId": "dma-go-chardev",
+      "serialDeviceId": "dma-go-serial",
+      "serialBus": "virtio-mmio-bus.2",
+      "portId": "dma-go-port",
+      "portName": "dma-go",
+      "guestPath": "/dev/hvc0",
+      "socketPath": "/tmp/axdma-567630cdd99a14c067186bd7539295af/control.sock"
+    },
+    "command": "GO 567630cdd99a14c067186bd7539295af\n",
+    "bytes": 36,
+    "sha256": "45ee89248b9120cde61fb1cd60670c7e93f27ff5aa894a257b9f81519c6010d1",
+    "peer": {
+      "pid": 682,
+      "uid": 0
+    }
+  },
+  "mapping": {
+    "payloadGpa": 2188922880,
+    "payloadHpa": 2188922880,
+    "payloadSize": 512,
+    "mapType": 2,
+    "identity": true,
+    "boundMapReservedRegion": {
+      "gpa": 2147483648,
+      "hpa": 2147483648,
+      "size": 268435456,
+      "flags": 7,
+      "mapType": 2,
+      "identity": true
+    }
+  },
+  "qmp": {
+    "capabilitiesNegotiated": true,
+    "operations": [
+      "query-name",
+      "query-status",
+      "stop",
+      "cont",
+      "pmemsave"
+    ],
+    "queryName": "axvisor-dma-effect-567630cdd99a14c067186bd7539295af",
+    "states": [
+      "running",
+      "paused",
+      "running",
+      "paused",
+      "running"
+    ],
+    "peerPid": 682,
+    "peerUid": 0
+  },
+  "timeline": [
+    {
+      "event": "qmp-state",
+      "state": "running"
+    },
+    {
+      "event": "guest-ready-marker",
+      "marker": "ready"
+    },
+    {
+      "event": "qmp-state",
+      "state": "paused"
+    },
+    {
+      "event": "capture-window",
+      "phase": "before",
+      "measurementIndexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event": "qmp-state",
+      "state": "running"
+    },
+    {
+      "event": "guest-control",
+      "channel": "virtio-console-unix-socket",
+      "commandSha256": "45ee89248b9120cde61fb1cd60670c7e93f27ff5aa894a257b9f81519c6010d1"
+    },
+    {
+      "event": "guest-done-marker",
+      "marker": "done"
+    },
+    {
+      "event": "qmp-state",
+      "state": "paused"
+    },
+    {
+      "event": "capture-window",
+      "phase": "after",
+      "measurementIndexes": [
+        2,
+        3
+      ]
+    },
+    {
+      "event": "qmp-state",
+      "state": "running"
+    }
+  ],
+  "measurements": [
+    {
+      "phase": "before",
+      "target": "guard",
+      "operation": "pmemsave",
+      "addressSpace": "host-physical",
+      "hpa": 6442450944,
+      "size": 2097152,
+      "source": {
+        "path": "before-guard.bin",
+        "size": 2097152,
+        "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+      }
+    },
+    {
+      "phase": "before",
+      "target": "payload",
+      "operation": "pmemsave",
+      "addressSpace": "host-physical",
+      "hpa": 2188922880,
+      "size": 512,
+      "source": {
+        "path": "before-payload.bin",
+        "size": 512,
+        "sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827"
+      }
+    },
+    {
+      "phase": "after",
+      "target": "guard",
+      "operation": "pmemsave",
+      "addressSpace": "host-physical",
+      "hpa": 6442450944,
+      "size": 2097152,
+      "source": {
+        "path": "after-guard.bin",
+        "size": 2097152,
+        "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+      }
+    },
+    {
+      "phase": "after",
+      "target": "payload",
+      "operation": "pmemsave",
+      "addressSpace": "host-physical",
+      "hpa": 2188922880,
+      "size": 512,
+      "source": {
+        "path": "after-payload.bin",
+        "size": 512,
+        "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+      }
+    }
+  ]
+}

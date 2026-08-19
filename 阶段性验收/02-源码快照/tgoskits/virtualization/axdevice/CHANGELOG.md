@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.6...axdevice-v0.5.7) - 2026-08-09
+
+### Added
+
+- *(axvisor)* build VMs from a resolved device graph ([#1718](https://github.com/rcore-os/tgoskits/pull/1718))
+
+### Fixed
+
+- *(axdevice)* correct fw_cfg DMA fault handling ([#1918](https://github.com/rcore-os/tgoskits/pull/1918))
+
+### Other
+
+- *(axvm)* unify guest devices and AArch64 timer ownership ([#1717](https://github.com/rcore-os/tgoskits/pull/1717))
+
+## [0.5.6](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.5...axdevice-v0.5.6) - 2026-08-03
+
+### Added
+
+- *(axvm)* add VmInterruptSender and integrate dispatcher into VmRuntimeHandle ([#1679](https://github.com/rcore-os/tgoskits/pull/1679))
+
+### Fixed
+
+- *(virtualization)* avoid privileged IRQ ops in host tests ([#1776](https://github.com/rcore-os/tgoskits/pull/1776))
+
+### Other
+
+- *(axvisor)* implement unified emulated device framework ([#1722](https://github.com/rcore-os/tgoskits/pull/1722))
+
+## [0.5.5](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.4...axdevice-v0.5.5) - 2026-07-23
+
+### Added
+
+- *(axdevice)* register exclusive IRQ line resources ([#1630](https://github.com/rcore-os/tgoskits/pull/1630))
+
+### Other
+
+- *(axdevice)* replace errno contracts ([#1595](https://github.com/rcore-os/tgoskits/pull/1595))
+
 ## [0.5.4](https://github.com/rcore-os/tgoskits/compare/axdevice-v0.5.3...axdevice-v0.5.4) - 2026-07-10
 
 ### Other

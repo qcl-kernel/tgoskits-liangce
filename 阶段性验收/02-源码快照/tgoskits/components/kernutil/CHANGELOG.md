@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4](https://github.com/rcore-os/tgoskits/compare/kernutil-v0.2.3...kernutil-v0.2.4) - 2026-08-09
+
+### Other
+
+- updated the following local packages: axtest
+
+## [0.2.3](https://github.com/rcore-os/tgoskits/compare/kernutil-v0.2.2...kernutil-v0.2.3) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
 ## [0.2.0](https://github.com/drivercraft/sparreal-os/compare/kernutil-v0.1.1...kernutil-v0.2.0) - 2026-02-13
 
 ### Other

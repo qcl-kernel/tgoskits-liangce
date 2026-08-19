@@ -54,6 +54,7 @@ Clippy 的代码按选择、展开、执行和报告划分，避免参数解析�
 | `scripts/axbuild/src/clippy/mod.rs` | CLI 入口、模块级常量（如 `AXSTD_STD_*`、`AX_HAL_PACKAGE`） |
 | `scripts/axbuild/src/clippy/selection.rs` | 参数校验、包选择（全量 / `--package` / `--since` 增量）、不支持的包过滤 |
 | `scripts/axbuild/src/clippy/check.rs` | `ClippyCheck` / `ClippyCheckKind` / `ClippyDepsMode` 数据模型与 `cargo_args` 构造 |
+| `scripts/axbuild/src/clippy/configurations.rs` | 解析并校验 package metadata 中声明的命名 target 配置 |
 | `scripts/axbuild/src/clippy/expand.rs` | 把每个包按 feature × target 展开为 `ClippyCheck` 列表 |
 | `scripts/axbuild/src/clippy/env.rs` | 为特殊 check 计算所需环境变量；普通包当前不额外注入环境变量 |
 | `scripts/axbuild/src/clippy/targets.rs` | 从 docs.rs metadata 提取包支持的 target，以及 feature↔target 兼容性判断 |
@@ -88,13 +89,30 @@ Clippy 的代码按选择、展开、执行和报告划分，避免参数解析�
 1. **target** 来自 `docs_rs_targets(package)`，从 docs.rs metadata 读取包声明支持的 target；为空时取单个 `None`（host target）。
 2. **feature** 取包 `Cargo.toml` 中除 `default` 外的全部 feature；`ax-std` 额外注入一个名为 `default` 的特殊 feature。
 3. 每个 (target, base) 组合产生一个 base check；`NoDeps` 模式下再为每个该 target 支持的 feature 产生一个 feature check。
-4. feature check 使用对应 feature 名执行；普通包不额外注入构建环境变量。
+4. feature check 使用对应 feature 名执行；`host-test` 是 workspace 的宿主测试约定，不参与 docs.rs target 矩阵，而是在 host target 上单独检查一次并加上 `--tests`，让 Clippy 编译单元测试和集成测试目标。普通包不额外注入构建环境变量。
+5. `NoDeps` 模式下，包还可以通过 `[package.metadata.clippy]` 声明命名配置；每条配置按一个明确 target、完整 feature 集和环境变量额外生成 check。`WithDeps` 仍只运行 base check，避免增量反向依赖扫描膨胀成完整配置矩阵。
+
+命名配置用于 docs.rs target × 单 feature 矩阵无法表达的正式构建组合。它保留包的默认 feature，再额外启用配置中的完整 feature 集：
+
+```toml
+[[package.metadata.clippy.configurations]]
+name = "aarch64-system"
+target = "aarch64-unknown-none-softfloat"
+features = ["ax-runtime/display", "input", "smp"]
+
+[package.metadata.clippy.configurations.env]
+AX_ARCH = "aarch64"
+AX_TARGET = "aarch64-unknown-none-softfloat"
+SMP = "4"
+```
+
+配置名必须在包内唯一，名称、target 和 feature 必须非空且不能带首尾空白。配置与 feature 会排序去重，环境变量按键排序，因此 check 顺序、命令参数和日志在不同运行间保持一致。命名配置不会把包的所有单 feature 机械展开到目标架构；平台专属组合应显式声明，从而避免把 SG2002、K230 等 feature 编译到错误 target。
 
 `ax-std` 的 `default` feature 被特殊重写为 `std-compat,fs,multitask,irq,net`（常量 `AXSTD_STD_CLIPPY_FEATURES`），target 固定为 `x86_64-unknown-none`，以便在没有真实平台的情况下覆盖 std 兼容层。
 
 ### 4.1 目标归一化
 
-`docs_rs_targets(package)` 从包 `Cargo.toml` 的 `[package.metadata.docs.rs]` 或 `[package.metadata.docs]` 节读取 `targets` 数组。两个节都支持，`docs.rs` 优先于 `docs.rs`：
+`docs_rs_targets(package)` 从包 `Cargo.toml` 的 `[package.metadata.docs.rs]` 或 `[package.metadata.docs]` 节读取 `targets` 数组。两个节都支持，`docs.rs` 优先于嵌套的 `docs.rs`：
 
 ```toml
 [package.metadata.docs.rs]
@@ -126,7 +144,8 @@ targets = ["aarch64-unknown-linux-gnu", "riscv64gc-unknown-none-elf"]
 `ClippyCheck::cargo_args()` 构造命令行：
 
 - Base check：`clippy -p <pkg>`
-- Feature check：`clippy -p <pkg> --no-default-features --features <feature>`
+- Feature check：`clippy -p <pkg> --no-default-features --features <feature>`；当 feature 为 `host-test` 时额外传入 `--tests`
+- Named configuration check：`clippy -p <pkg> --features <feature-a>,<feature-b> --target <target>`，并注入配置声明的环境变量
 - `ax-std` default 特判：替换为 `--features std-compat,fs,multitask,irq,net`
 - `NoDeps`：在 `clippy` 后插入 `--no-deps`，避免依赖 crate 的告警污染结果
 - 有 target：追加 `--target <target>`
@@ -180,7 +199,7 @@ cargo xtask clippy
 cargo xtask clippy --all
 
 # 只检查指定包
-cargo xtask clippy --package axcpu --package page_table_multiarch
+cargo xtask clippy --package ax-cpu --package page-table-generic
 
 # 增量：只检查自某个 git ref 以来变更及受影响的包
 cargo xtask clippy --since origin/main

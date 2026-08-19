@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "run-complete",
+  "status": "guest_network_completed",
+  "proofScope": "one-identity-bound-dual-guest-mediated-network-session",
+  "doesNotProve": [
+    "DMA isolation",
+    "hardware DMA",
+    "AI closed loop",
+    "real-time improvement",
+    "outer-QEMU networking"
+  ],
+  "inputs": {
+    "buildConfig": {
+      "path": "os/axvisor/configs/board/qemu-aarch64-contest-network.toml",
+      "sha256": "02538af38175c03cc79b179dc9e0833f86cd79caf66c25a88f675bc0e1e0849a"
+    },
+    "qemuConfig": {
+      "path": "configs/contest/qemu-aarch64-linux-zephyr-dual.toml",
+      "sha256": "ba106d1b41b4de92fd093087b536425993e6a134836d0c450cade68627e11739"
+    },
+    "linuxVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test013-20260819T102102Z-tcp1/configs/linux.resolved.toml",
+      "sha256": "ad4164530183b962bf466fe66ecab07c917c962e66c343dc5bdc858a738c5ff9"
+    },
+    "zephyrVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test013-20260819T102102Z-tcp1/configs/zephyr.resolved.toml",
+      "sha256": "00414ea777519d9f812c02d2782b479f024ec088ba41816f6f34644c17ec6e84"
+    },
+    "linuxRootfs": {
+      "path": "tmp/contest/p4/linux-network-tcp.ext4",
+      "sha256": "2ac35cbaba7a4825e944f4f3f9fab69884e17e8be29c03f5c4d7d4441b9721db"
+    },
+    "zephyrImage": {
+      "path": "tmp/contest/p4/zephyr-network/zephyr.bin",
+      "sha256": "19c239c0297911c9689519bf8a49a795b3b9bedda061f33b7c8375d0952c25d0"
+    },
+    "profile": {
+      "path": "configs/contest/network/test-013-v1.json",
+      "sha256": "0a82e9e3e786936b0da895df67561500c8b344059259bc21c45b9c5b0b69d9e7"
+    }
+  },
+  "session": {
+    "schemaVersion": 1,
+    "runId": "phase4-net-test013-20260819T102102Z-tcp1",
+    "scenario": "test-013",
+    "sessionNonce": "fe4bcbc57373482d9f68d54a2a880918",
+    "bootId": "p4net-20260819T102109Z-fe4bcbc5",
+    "qemuName": "axvisor-dual-smoke-fe4bcbc57373482d9f68d54a2a880918",
+    "startedAtUtc": "2026-08-19T10:21:09Z"
+  }
+}

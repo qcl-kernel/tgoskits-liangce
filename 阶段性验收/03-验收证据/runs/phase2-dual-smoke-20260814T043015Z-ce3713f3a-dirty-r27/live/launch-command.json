@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "command": [
+    "cargo",
+    "xtask",
+    "qemu",
+    "--config",
+    "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml",
+    "--qemu-config",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/qemu.no-dataplane.toml",
+    "--vmconfigs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux.resolved.toml",
+    "--vmconfigs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/zephyr.resolved.toml",
+    "--qmp-socket",
+    "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock",
+    "--qemu-pidfile",
+    "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+    "--qemu-name",
+    "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+    "--rootfs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4"
+  ]
+}

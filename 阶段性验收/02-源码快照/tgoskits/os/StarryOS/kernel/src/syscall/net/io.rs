@@ -1,17 +1,18 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{net::Ipv4Addr, time::Duration};
 
-use ax_errno::{AxError, AxResult};
 use ax_io::prelude::*;
 use ax_net::{
-    CMsgData, IpCmsg, RecvFlags, RecvOptions, SendFlags, SendOptions, SocketAddrEx, SocketOps,
+    CMsgData, IpCmsg, RecvFlags, RecvOptions, SendFlags, SendOptions, SocketAddrEx, SocketCmsg,
+    SocketOps,
 };
 use ax_runtime::hal::time::wall_time;
 use linux_raw_sys::{
-    general::timespec,
+    general::{timespec, timeval},
     net::{
-        IP_TOS, IPPROTO_IPV6, IPV6_TCLASS, MSG_DONTWAIT, MSG_PEEK, MSG_TRUNC, SCM_RIGHTS,
-        SOL_SOCKET, cmsghdr, mmsghdr, msghdr, sockaddr, socklen_t,
+        IP_TOS, IP_TTL, IPPROTO_IPV6, IPV6_TCLASS, MSG_CMSG_CLOEXEC, MSG_CTRUNC, MSG_DONTWAIT,
+        MSG_OOB, MSG_PEEK, MSG_TRUNC, SCM_CREDENTIALS, SCM_RIGHTS, SCM_TIMESTAMP, SOL_SOCKET,
+        cmsghdr, mmsghdr, msghdr, sockaddr, socklen_t, ucred,
     },
 };
 
@@ -19,6 +20,7 @@ use super::addr::{
     SocketAddrExt, normalize_socket_addr_ex_for_ip_stack, socket_addr_ex_for_user_name,
 };
 use crate::{
+    StarryError, StarryResult,
     file::{FileLike, PacketSocket, Socket, add_file_like, get_file_like, netlink::NetlinkSocket},
     mm::{IoVec, IoVectorBuf, UserConstPtr, UserPtr, VmBytes, VmBytesMut},
     syscall::net::{CMsg, CMsgBuilder, cmsg_space},
@@ -27,9 +29,12 @@ use crate::{
 
 // Linux ABI for sendmmsg/recvmmsg limits vlen to UIO_MAXIOV (1024).
 const MMSG_MAX_VLEN: u32 = 1024;
+// recvmmsg-only flag (uapi/linux/socket.h): after the first datagram is
+// received, the remaining recvs behave as if MSG_DONTWAIT were set.
+const MSG_WAITFORONE: u32 = 0x10000;
 const PROTO_IP: u32 = linux_raw_sys::net::IPPROTO_IP as u32;
 
-fn parse_recvmmsg_timeout(timeout: UserConstPtr<timespec>) -> AxResult<Option<Duration>> {
+fn parse_recvmmsg_timeout(timeout: UserConstPtr<timespec>) -> StarryResult<Option<Duration>> {
     if timeout.is_null() {
         return Ok(None);
     }
@@ -38,14 +43,16 @@ fn parse_recvmmsg_timeout(timeout: UserConstPtr<timespec>) -> AxResult<Option<Du
     Ok(Some(Duration::new(tv.as_secs(), tv.subsec_nanos())))
 }
 
-fn parse_send_cmsgs(control_ptr: usize, control_len: usize) -> AxResult<Vec<CMsgData>> {
+fn parse_send_cmsgs(control_ptr: usize, control_len: usize) -> StarryResult<Vec<CMsgData>> {
     let mut cmsg = Vec::new();
     if control_ptr == 0 || control_len == 0 {
         return Ok(cmsg);
     }
 
     let mut ptr = control_ptr;
-    let ptr_end = ptr.checked_add(control_len).ok_or(AxError::InvalidInput)?;
+    let ptr_end = ptr
+        .checked_add(control_len)
+        .ok_or(StarryError::InvalidInput)?;
 
     while let Some(next) = ptr.checked_add(size_of::<cmsghdr>()) {
         if next > ptr_end {
@@ -54,13 +61,13 @@ fn parse_send_cmsgs(control_ptr: usize, control_len: usize) -> AxResult<Vec<CMsg
 
         let hdr = UserConstPtr::<cmsghdr>::from(ptr).get_as_ref()?;
         if hdr.cmsg_len < size_of::<cmsghdr>() || ptr_end - ptr < hdr.cmsg_len {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         }
 
         let Some(next_ptr) = cmsg_space(hdr.cmsg_len - size_of::<cmsghdr>())
             .and_then(|space| ptr.checked_add(space))
         else {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         };
 
         cmsg.push(Box::new(CMsg::parse(hdr)?) as CMsgData);
@@ -77,7 +84,7 @@ fn send_impl(
     addr: UserConstPtr<sockaddr>,
     addrlen: socklen_t,
     cmsg: Vec<CMsgData>,
-) -> AxResult<isize> {
+) -> StarryResult<isize> {
     if let Ok(packet) = PacketSocket::from_fd(fd) {
         return Ok(packet.send_packet(&mut src)? as isize);
     }
@@ -89,7 +96,7 @@ fn send_impl(
             // returns EDESTADDRREQ on unconnected socket, never EINVAL.
             None
         } else if addrlen == 0 {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         } else {
             let mut addr = SocketAddrEx::read_from_user(addr, addrlen)?;
             if socket.ip_domain() == linux_raw_sys::net::AF_INET6 {
@@ -104,11 +111,12 @@ fn send_impl(
 
         let sent = socket.send(
             &mut src,
-            SendOptions {
+            Socket::with_current_sender_credentials(SendOptions {
                 to: addr,
                 flags: send_flags,
                 cmsg,
-            },
+                ..Default::default()
+            }),
         )?;
 
         return Ok(sent as isize);
@@ -120,7 +128,7 @@ fn send_impl(
     }
 
     get_file_like(fd)?;
-    Err(AxError::NotASocket)
+    Err(StarryError::NotASocket)
 }
 
 pub fn sys_sendto(
@@ -130,11 +138,11 @@ pub fn sys_sendto(
     flags: u32,
     addr: UserConstPtr<sockaddr>,
     addrlen: socklen_t,
-) -> AxResult<isize> {
+) -> StarryResult<isize> {
     send_impl(fd, VmBytes::new(buf, len), flags, addr, addrlen, Vec::new())
 }
 
-pub fn sys_sendmsg(fd: i32, msg: UserConstPtr<msghdr>, flags: u32) -> AxResult<isize> {
+pub fn sys_sendmsg(fd: i32, msg: UserConstPtr<msghdr>, flags: u32) -> StarryResult<isize> {
     let msg = msg.get_as_ref()?;
     let cmsg = parse_send_cmsgs(msg.msg_control as usize, msg.msg_controllen)?;
     send_impl(
@@ -147,6 +155,10 @@ pub fn sys_sendmsg(fd: i32, msg: UserConstPtr<msghdr>, flags: u32) -> AxResult<i
     )
 }
 
+// Data-truncation and control-truncation are reported through separate out
+// flags because they feed different sinks (one into RecvOptions, one set
+// directly), so they stay as distinct parameters rather than a bundled struct.
+#[allow(clippy::too_many_arguments)]
 fn recv_impl(
     fd: i32,
     mut dst: impl Write + IoBufMut,
@@ -155,7 +167,8 @@ fn recv_impl(
     addrlen: UserPtr<socklen_t>,
     mut cmsg_builder: Option<CMsgBuilder>,
     truncated_out: &mut bool,
-) -> AxResult<isize> {
+    control_truncated_out: &mut bool,
+) -> StarryResult<isize> {
     debug!("sys_recv <= fd: {fd}, flags: {flags}");
 
     if let Ok(packet) = PacketSocket::from_fd(fd) {
@@ -202,7 +215,7 @@ fn recv_impl(
         }
 
         get_file_like(fd)?;
-        return Err(AxError::NotASocket);
+        return Err(StarryError::NotASocket);
     };
     let mut recv_flags = RecvFlags::empty();
     if flags & MSG_PEEK != 0 {
@@ -214,6 +227,12 @@ fn recv_impl(
     if flags & MSG_DONTWAIT != 0 {
         recv_flags |= RecvFlags::DONTWAIT;
     }
+    if flags & MSG_OOB != 0 {
+        recv_flags |= RecvFlags::OOB;
+    }
+    // Received SCM_RIGHTS fds get O_CLOEXEC when the caller passes
+    // MSG_CMSG_CLOEXEC (recvmsg(2)); Linux net/core/scm.c scm_detach_fds.
+    let cmsg_cloexec = flags & MSG_CMSG_CLOEXEC != 0;
 
     let mut cmsg = Vec::new();
 
@@ -234,28 +253,49 @@ fn recv_impl(
             .write_to_user(addr, addrlen.get_as_mut()?)?;
     }
 
+    if cmsg_builder.is_none() && !cmsg.is_empty() {
+        *control_truncated_out = true;
+    }
     if let Some(mut builder) = cmsg_builder {
         for cmsg in cmsg {
-            let pushed = match cmsg.downcast::<CMsg>() {
+            let pushed = match cmsg.into_any().downcast::<CMsg>() {
                 Ok(cmsg) => match *cmsg {
                     CMsg::Rights { fds } => {
-                        let body_len = fds.len() * size_of::<i32>();
-                        builder.push_sized(SOL_SOCKET, SCM_RIGHTS, body_len, |data| {
-                            let mut written = 0;
-                            for (f, chunk) in fds
-                                .into_iter()
-                                .zip(data.as_chunks_mut::<{ size_of::<i32>() }>().0)
-                            {
-                                let fd = add_file_like(f, false)?;
-                                chunk.copy_from_slice(&fd.to_ne_bytes());
-                                written += size_of::<i32>();
-                            }
-                            Ok(written)
-                        })?
+                        // Deliver as many fds as fit; excess are dropped (closed)
+                        // and MSG_CTRUNC is flagged, matching Linux scm_detach_fds.
+                        let total = fds.len();
+                        let install = total.min(builder.rights_capacity());
+                        if install < total {
+                            *control_truncated_out = true;
+                        }
+                        if install == 0 {
+                            false
+                        } else {
+                            let body_len = install * size_of::<i32>();
+                            builder.push_sized(SOL_SOCKET, SCM_RIGHTS, body_len, |data| {
+                                let mut written = 0;
+                                for (f, chunk) in fds
+                                    .into_iter()
+                                    .take(install)
+                                    .zip(data.as_chunks_mut::<{ size_of::<i32>() }>().0)
+                                {
+                                    let fd = add_file_like(f, cmsg_cloexec)?;
+                                    chunk.copy_from_slice(&fd.to_ne_bytes());
+                                    written += size_of::<i32>();
+                                }
+                                Ok(written)
+                            })?
+                        }
                     }
                 },
                 Err(cmsg) => match cmsg.downcast::<IpCmsg>() {
                     Ok(cmsg) => match *cmsg {
+                        IpCmsg::Ipv4Ttl(ttl) => {
+                            builder.push_sized(PROTO_IP, IP_TTL, size_of::<i32>(), |data| {
+                                data.copy_from_slice(&i32::from(ttl).to_ne_bytes());
+                                Ok(size_of::<i32>())
+                            })?
+                        }
                         IpCmsg::Ipv4Tos(tos) => {
                             builder.push_sized(PROTO_IP, IP_TOS, 1, |data| {
                                 data[0] = tos;
@@ -272,13 +312,61 @@ fn recv_impl(
                             },
                         )?,
                     },
-                    Err(_) => {
-                        warn!("received unexpected cmsg");
-                        continue;
-                    }
+                    Err(cmsg) => match cmsg.downcast::<SocketCmsg>() {
+                        Ok(cmsg) => match *cmsg {
+                            SocketCmsg::Credentials(credentials) => {
+                                let credentials = Socket::project_unix_credentials(&credentials);
+                                builder.push_sized(
+                                    SOL_SOCKET,
+                                    SCM_CREDENTIALS,
+                                    size_of::<ucred>(),
+                                    |data| {
+                                        let credentials = ucred {
+                                            pid: credentials.pid as _,
+                                            uid: credentials.uid,
+                                            gid: credentials.gid,
+                                        };
+                                        // SAFETY: `credentials` lives through the
+                                        // copy, and `ucred` is a plain C ABI record.
+                                        data.copy_from_slice(unsafe {
+                                            core::slice::from_raw_parts(
+                                                (&credentials as *const ucred).cast::<u8>(),
+                                                size_of::<ucred>(),
+                                            )
+                                        });
+                                        Ok(size_of::<ucred>())
+                                    },
+                                )?
+                            }
+                            SocketCmsg::Timestamp(timestamp) => builder.push_sized(
+                                SOL_SOCKET,
+                                SCM_TIMESTAMP,
+                                size_of::<timeval>(),
+                                |data| {
+                                    let timestamp = timeval::from_time_value(timestamp);
+                                    // SAFETY: `timestamp` lives through the
+                                    // copy, and `timeval` is a plain C ABI
+                                    // record with no padding requirements for
+                                    // reading its initialized byte layout.
+                                    data.copy_from_slice(unsafe {
+                                        core::slice::from_raw_parts(
+                                            (&timestamp as *const timeval).cast::<u8>(),
+                                            size_of::<timeval>(),
+                                        )
+                                    });
+                                    Ok(size_of::<timeval>())
+                                },
+                            )?,
+                        },
+                        Err(_) => {
+                            warn!("received unexpected cmsg");
+                            continue;
+                        }
+                    },
                 },
             };
             if !pushed {
+                *control_truncated_out = true;
                 break;
             }
         }
@@ -296,7 +384,7 @@ pub fn sys_recvfrom(
     flags: u32,
     addr: UserPtr<sockaddr>,
     addrlen: UserPtr<socklen_t>,
-) -> AxResult<isize> {
+) -> StarryResult<isize> {
     recv_impl(
         fd,
         VmBytesMut::new(buf, len),
@@ -305,12 +393,14 @@ pub fn sys_recvfrom(
         addrlen,
         None,
         &mut false,
+        &mut false,
     )
 }
 
-pub fn sys_recvmsg(fd: i32, msg: UserPtr<msghdr>, flags: u32) -> AxResult<isize> {
+pub fn sys_recvmsg(fd: i32, msg: UserPtr<msghdr>, flags: u32) -> StarryResult<isize> {
     let msg = msg.get_as_mut()?;
     let mut truncated = false;
+    let mut control_truncated = false;
     let recv = recv_impl(
         fd,
         IoVectorBuf::new(msg.msg_iov as *mut IoVec, msg.msg_iovlen)?.into_io(),
@@ -324,22 +414,35 @@ pub fn sys_recvmsg(fd: i32, msg: UserPtr<msghdr>, flags: u32) -> AxResult<isize>
             )
         }),
         &mut truncated,
+        &mut control_truncated,
     );
     // Linux: on success, set msg.msg_flags to indicate truncation etc.
     if recv.is_ok() {
-        msg.msg_flags = if truncated { MSG_TRUNC } else { 0 };
+        let mut mf = 0;
+        if truncated {
+            mf |= MSG_TRUNC;
+        }
+        if control_truncated {
+            mf |= MSG_CTRUNC;
+        }
+        msg.msg_flags = mf;
     }
     recv
 }
 
 /// Send multiple datagrams in one syscall.
-pub fn sys_sendmmsg(fd: i32, msgvec: UserPtr<mmsghdr>, vlen: u32, flags: u32) -> AxResult<isize> {
+pub fn sys_sendmmsg(
+    fd: i32,
+    msgvec: UserPtr<mmsghdr>,
+    vlen: u32,
+    flags: u32,
+) -> StarryResult<isize> {
     if vlen == 0 {
         return Ok(0);
     }
-    if vlen > MMSG_MAX_VLEN {
-        return Err(AxError::InvalidInput);
-    }
+    // Linux clamps vlen to UIO_MAXIOV and proceeds (net/socket.c:2796); it
+    // never rejects an over-cap batch with EINVAL.
+    let vlen = vlen.min(MMSG_MAX_VLEN);
 
     let msgvec = msgvec.get_as_mut_slice(vlen as usize)?;
     let mut sent = 0;
@@ -376,13 +479,15 @@ pub fn sys_recvmmsg(
     vlen: u32,
     flags: u32,
     timeout: UserConstPtr<timespec>,
-) -> AxResult<isize> {
+) -> StarryResult<isize> {
     if vlen == 0 {
         return Ok(0);
     }
-    if vlen > MMSG_MAX_VLEN {
-        return Err(AxError::InvalidInput);
-    }
+    // Linux do_recvmmsg does not cap vlen; StarryOS bounds the batch to
+    // UIO_MAXIOV so `get_as_mut_slice` copies a bounded user array. Clamp
+    // rather than reject with EINVAL so an over-cap batch still makes
+    // progress, matching sendmmsg's UIO_MAXIOV clamp (net/socket.c:2796).
+    let vlen = vlen.min(MMSG_MAX_VLEN);
 
     let timeout = parse_recvmmsg_timeout(timeout)?;
     // TODO: deadline is only checked between recv_impl calls. If a single
@@ -393,12 +498,13 @@ pub fn sys_recvmmsg(
     let _socket = Socket::from_fd(fd)?;
     let msgvec = msgvec.get_as_mut_slice(vlen as usize)?;
     let mut received = 0;
+    let mut flags = flags;
     for msg in msgvec.iter_mut() {
         if let Some(deadline) = deadline
             && wall_time() >= deadline
         {
             if received == 0 {
-                return Err(AxError::WouldBlock);
+                return Err(StarryError::WouldBlock);
             }
             break;
         }
@@ -416,12 +522,21 @@ pub fn sys_recvmmsg(
                 )
             }),
             &mut false,
+            &mut false,
         );
 
         match recv {
             Ok(n) => {
                 msg.msg_len = n as u32;
                 received += 1;
+                // MSG_WAITFORONE: once a datagram is received, remaining
+                // recvs must not block (Linux do_recvmmsg net/socket.c:3055
+                // sets MSG_DONTWAIT after the first packet). Without this a
+                // vlen>1 recvmmsg on a socket with fewer datagrams blocks
+                // forever on the next recv.
+                if flags & MSG_WAITFORONE != 0 {
+                    flags |= MSG_DONTWAIT;
+                }
             }
             Err(e) => {
                 if received == 0 {
@@ -433,4 +548,15 @@ pub fn sys_recvmmsg(
     }
 
     Ok(received)
+}
+
+#[cfg(axtest)]
+pub(crate) fn net_io_constants_hold_for_test() -> bool {
+    // MMSG_MAX_VLEN constant
+    assert!(MMSG_MAX_VLEN == 1024);
+
+    // PROTO_IP constant
+    assert!(PROTO_IP == 0);
+
+    true
 }

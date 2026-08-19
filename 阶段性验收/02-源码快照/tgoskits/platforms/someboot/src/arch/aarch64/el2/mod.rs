@@ -8,7 +8,7 @@ use page_table_generic::VirtAddr;
 use crate::{
     arch::entry::{el_entry, eret_with_timer_mode_arg},
     mem::PageTableInfo,
-    timer::ArchTimerMode,
+    timer::{self, ArchTimerMode},
 };
 
 pub fn switch_to_elx() -> ! {
@@ -81,7 +81,7 @@ pub fn flush_tlb(vaddr: Option<VirtAddr>) {
     match vaddr {
         Some(addr) => {
             // VAE2IS requires (asid, va), TTBR0_EL2 doesn't have ASID field, so use 0
-            tlbi(VAE2IS::new(0, addr.raw()));
+            tlbi(VAE2IS::new(0, addr.as_usize()));
         }
         None => {
             tlbi(ALLE2);
@@ -184,8 +184,24 @@ pub fn systick_irq_is_enabled() -> bool {
     !CNTHP_CTL_EL2.is_set(CNTHP_CTL_EL2::IMASK)
 }
 
-pub fn systick_set_interval(ticks: usize) {
-    unsafe {
-        core::arch::asm!("msr CNTHP_TVAL_EL2, {0:x}", in(reg) ticks);
+struct El2TimerRegisters;
+
+impl timer::aarch64_deadline::el2::TimerRegisters for El2TimerRegisters {
+    fn read_physical_counter(&self) -> u64 {
+        CNTPCT_EL0.get()
     }
+
+    fn write_hyp_physical_compare(&self, deadline: u64) {
+        // CNTHP_CVAL_EL2 is not exposed by aarch64-cpu's register bindings.
+        // SAFETY: This adapter is compiled only for the `hv` EL2 path, where
+        // CNTHP_CVAL_EL2 is accessible. `program` derives `deadline` from the
+        // paired CNTPCT_EL0 physical counter before calling this method.
+        unsafe {
+            core::arch::asm!("msr CNTHP_CVAL_EL2, {0:x}", in(reg) deadline);
+        }
+    }
+}
+
+pub fn systick_set_interval(ticks: usize) {
+    timer::aarch64_deadline::el2::program(&El2TimerRegisters, ticks as u64);
 }

@@ -55,6 +55,7 @@ __pycache__/
 .board*
 
 # Tooling artifacts
+.direnv/
 .codex
 .agents
 .image.toml
@@ -72,15 +73,3 @@ loongarch64-axvisor-guest-tests.md
 /logs/offline-monitor/
 /images/linux-qemu/
 offline-monitor-analysis*.html
-
-# Contest baseline raw evidence (machine-specific and potentially large)
-/results/baseline/runs/
-/results/runs/
-/results/.disposable-*/
-/results/state-*/
-/results/tmp*/
-
-# Contest contract-test and local orchestration scratch directories
-/.codex-temp/
-/.host-*-contract-*/
-/scripts/test/.axvisor-*-contract-*/

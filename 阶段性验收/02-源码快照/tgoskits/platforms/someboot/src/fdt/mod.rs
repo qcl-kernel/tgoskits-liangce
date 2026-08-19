@@ -1,7 +1,5 @@
-pub mod dma_guard;
 mod earlycon;
 mod memory;
-pub mod vm_carveout;
 
 pub use earlycon::setup_earlycon;
 use kernutil::StaticCell;
@@ -31,6 +29,7 @@ pub fn fdt_addr_phys() -> Option<usize> {
     Some(fdt_addr)
 }
 
+#[cfg(any(efi, target_arch = "loongarch64", test))]
 pub(crate) fn set_fdt_addr_phys_if_valid(fdt_addr: usize) -> bool {
     if fdt_addr == 0 {
         return false;
@@ -56,6 +55,15 @@ fn fdt_base() -> Option<fdt_raw::Fdt<'static>> {
     let slice = unsafe { validated_fdt_slice(fdt_addr)? };
     let fdt = fdt_raw::Fdt::from_bytes(slice).ok()?;
     Some(fdt)
+}
+
+pub(crate) fn boot_entropy() -> Option<[u8; 32]> {
+    boot_entropy_from_fdt(fdt_base()?)
+}
+
+fn boot_entropy_from_fdt(fdt: fdt_raw::Fdt<'_>) -> Option<[u8; 32]> {
+    let property = fdt.chosen()?.find_property("rng-seed")?;
+    property.as_slice().try_into().ok()
 }
 
 pub(crate) fn init_with_alloc() -> Option<()> {
@@ -290,6 +298,37 @@ mod tests {
         let raw = fdt_raw::Fdt::from_bytes(fdt_data.as_ref()).expect("parse test fdt");
 
         assert_eq!(platform_name_from_fdt(raw), Some("qemu,virt"));
+    }
+
+    #[test]
+    fn boot_entropy_accepts_exactly_one_32_byte_rng_seed() {
+        let expected = *b"0123456789abcdef0123456789abcdef";
+        let mut fdt = minimal_cpu_fdt();
+        let chosen = fdt.add_node(fdt.root_id(), Node::new("chosen"));
+        fdt.node_mut(chosen)
+            .unwrap()
+            .set_property(Property::new("rng-seed", expected.to_vec()));
+        let fdt_data = fdt.encode();
+        let raw = fdt_raw::Fdt::from_bytes(fdt_data.as_ref()).expect("parse test fdt");
+
+        assert_eq!(boot_entropy_from_fdt(raw), Some(expected));
+    }
+
+    #[test]
+    fn boot_entropy_rejects_missing_or_malformed_rng_seed() {
+        let fdt = minimal_cpu_fdt();
+        let fdt_data = fdt.encode();
+        let raw = fdt_raw::Fdt::from_bytes(fdt_data.as_ref()).expect("parse test fdt");
+        assert_eq!(boot_entropy_from_fdt(raw), None);
+
+        let mut fdt = minimal_cpu_fdt();
+        let chosen = fdt.add_node(fdt.root_id(), Node::new("chosen"));
+        fdt.node_mut(chosen)
+            .unwrap()
+            .set_property(Property::new("rng-seed", vec![0x5a; 31]));
+        let fdt_data = fdt.encode();
+        let raw = fdt_raw::Fdt::from_bytes(fdt_data.as_ref()).expect("parse test fdt");
+        assert_eq!(boot_entropy_from_fdt(raw), None);
     }
 
     fn minimal_cpu_fdt() -> Fdt {

@@ -1,2 +1,0 @@
-qemu-system-aarch64: warning: hub 0 is not connected to host network
-qemu-system-aarch64: info: dtb dumped to /tmp/tgos-dual-topology.xEl9Rw/host.dtb. Exiting.

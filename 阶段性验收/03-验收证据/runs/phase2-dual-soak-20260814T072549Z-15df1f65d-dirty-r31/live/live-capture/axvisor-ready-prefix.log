@@ -1,0 +1,285 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.69s
+     Running `/mnt/f/project/泉城实验室/tgoskits/target/debug/xtask qemu --config '/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml' --qemu-config '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml' --vmconfigs '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml' --vmconfigs '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml' --qmp-socket /tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qmp.sock --qemu-pidfile /tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qemu.pid --qemu-name axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4 --rootfs '/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4'`
+[2026-08-14T07:26:52Z INFO  axbuild::context] Workspace root: /mnt/f/project/泉城实验室/tgoskits
+[2026-08-14T07:27:03Z INFO  axbuild::context] Workspace member dir for axvisor: /mnt/f/project/泉城实验室/tgoskits/os/axvisor
+Using build config: /mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml
+[2026-08-14T07:27:21Z INFO  ostool::run::qemu] Using QEMU config file: /mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml ...
+sh -c /mnt/f/project/泉城实验室/tgoskits/tmp/axbuild/std/prebuild/prebuild-aarch64-unknown-linux-musl-73e159b1006c783f.sh
+AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar
+AXVISOR_VM_CONFIGS=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml:/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml
+AX_ARCH=aarch64
+AX_LOG=info
+AX_TARGET=aarch64-unknown-none-softfloat
+CARGO_UNSTABLE_JSON_TARGET_SPEC=true
+CC_aarch64_unknown_linux_musl=aarch64-linux-musl-cc
+CFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+CXXFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+cargo build --config /mnt/f/project/泉城实验室/tgoskits/tmp/axbuild/std/config-aarch64-unknown-linux-musl-dynamic.toml -p axvisor --target scripts/targets/std/pie/aarch64-unknown-linux-musl.json -Z unstable-options --target-dir /mnt/f/project/泉城实验室/tgoskits/target --features ax-std/fs,ax-std/virtio-blk,fs,guest-fdt-evidence,stage2-hpa-evidence,log/release_max_level_info -Z json-target-spec --bin axvisor --release --message-format json-render-diagnostics
+warning: function `set_fdt_addr_phys_if_valid` is never used
+  --> platforms/someboot/src/fdt/mod.rs:34:15
+   |
+34 | pub(crate) fn set_fdt_addr_phys_if_valid(fdt_addr: usize) -> bool {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `someboot` (lib) generated 1 warning
+   Compiling axvisor v0.5.21 (/mnt/f/project/泉城实验室/tgoskits/os/axvisor)
+warning: function `shutdown_host_filesystems` is never used
+   --> virtualization/axvm/src/host/arceos.rs:179:8
+    |
+179 | pub fn shutdown_host_filesystems() -> AxVmResult {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `with_vm` is never used
+  --> virtualization/axvm/src/manager.rs:58:15
+   |
+58 | pub(crate) fn with_vm<F, R>(vm_id: VMId, f: F) -> Option<R>
+   |               ^^^^^^^
+
+warning: function `active_vcpu_mask` is never used
+  --> virtualization/axvm/src/manager.rs:67:15
+   |
+67 | pub(crate) fn active_vcpu_mask(vm_id: VMId) -> Option<usize> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `inject_interrupt` is never used
+  --> virtualization/axvm/src/manager.rs:79:15
+   |
+79 | pub(crate) fn inject_interrupt(vm_id: VMId, vcpu_id: usize, vector: usize) -> AxVmResult {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: field `token` is never read
+  --> virtualization/axvm/src/timer.rs:21:5
+   |
+20 | struct VmTimerEvent {
+   |        ------------ field in this struct
+21 |     token: usize,
+   |     ^^^^^
+
+warning: function `cancel_timer` is never used
+  --> virtualization/axvm/src/timer.rs:63:15
+   |
+63 | pub(crate) fn cancel_timer(token: usize) {
+   |               ^^^^^^^^^^^^
+
+warning: associated items `handle_nested_page_fault` and `debug_nested_page_fault` are never used
+   --> virtualization/axvm/src/vm/mod.rs:911:19
+    |
+420 | impl AxVM {
+    | --------- associated items in this implementation
+...
+911 |     pub(crate) fn handle_nested_page_fault(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+926 |     fn debug_nested_page_fault(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/runtime/vcpus.rs:223:5
+    |
+223 |     dead_code,
+    |     ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware boots secondary vCPUs
+    = note: `#[warn(unfulfilled_lint_expectations)]` on by default
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/runtime/vcpus.rs:256:5
+    |
+256 |     dead_code,
+    |     ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware boots secondary vCPUs
+
+warning: this lint expectation is unfulfilled
+   --> virtualization/axvm/src/vcpu.rs:288:9
+    |
+288 |         dead_code,
+    |         ^^^^^^^^^
+    |
+    = note: only non-x86 guest firmware updates secondary vCPU entries
+
+warning: `axvm` (lib) generated 10 warnings
+    Finished `release` profile [optimized] target(s) in 1m 02s
+warning: the following packages contain code that will be rejected by a future version of Rust: core v0.0.0 (/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core), memchr v2.8.2
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+Converting ELF to BIN format...
+  elf: /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor
+  bin: /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-objcopy --strip-all -O binary /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+qemu-system-aarch64 -nographic -cpu cortex-a72 -machine virt,virtualization=on,gic-version=3 -smp 4 -m 8g -drive id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4 -device virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0 -append root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon -qmp unix:/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qmp.sock,server=on,wait=off -pidfile /tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qemu.pid -name axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4 -kernel /mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin
+root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon
+VM Load @0x40200000
+VM Load Offset: 0xffff0000c0200000
+Memory Map:
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000043600000 (52 MiB)
+  Free   0x00000043600000 - 0x00000240000000 (7.95 GiB)
+Initialize RAM allocator: 0x43600000..0x240000000
+Reserving CPU-local areas
+CPU-local area stride: 0x44000 bytes
+Total CPU-local allocation: 0x110000 bytes (4 CPUs)
+Flushed RAM used range to memory map: 0x43600000..0x43700000, current: 0x43700000
+Flushed RAM used range to memory map: 0x43700000..0x43810000, current: 0x43810000
+CPU-local areas allocated at 0x43700000 - 0x43810000
+EL: 2
+Mapping early memory regions...
+Ram                 : [0x0000000040000000, 0x0000000240000000) -> [0x0000000040000000, 0x0000000240000000) (8 GiB)
+KImage              : [0x0000ffff80000000, 0x0000ffff83400000) -> [0x0000000040200000, 0x0000000043600000) (52 MiB)
+PerCpu              : [0x0000ff0043700000, 0x0000ff0043810000) -> [0x0000000043700000, 0x0000000043810000) (1.06 MiB)
+Debug serial        : [0x0000000009000000, 0x0000000009001000) -> [0x0000000009000000, 0x0000000009001000) (4 KiB)
+Boot page table at physical address: 0x43810000
+Setting up table registers...
+MMU Entry point at physical address: 0x4038edc0
+Trap vector at 0xffff8018b000
+Memory Map:
+  MMIO   0x00000009000000 - 0x00000009001000 (4 KiB)
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000043600000 (52 MiB)
+  Rsv    0x00000043600000 - 0x00000043700000 (1 MiB)
+  PerCPU 0x00000043700000 - 0x00000043810000 (1.06 MiB)
+  Rsv    0x00000043810000 - 0x0000004381a000 (40 KiB)
+  Free   0x0000004381a000 - 0x00000240000000 (7.95 GiB)
+Jumping to main entry point at 0xffff80177e14 with SP 0x0000ff0043744000
+
+       d8888                            .d88888b.   .d8888b.
+      d88888                           d88P" "Y88b d88P  Y88b
+     d88P888                           888     888 Y88b.
+    d88P 888 888d888  .d8888b  .d88b.  888     888  "Y888b.
+   d88P  888 888P"   d88P"    d8P  Y8b 888     888     "Y88b.
+  d88P   888 888     888      88888888 888     888       "888
+ d8888888888 888     Y88b.    Y8b.     Y88b. .d88P Y88b  d88P
+d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
+
+arch = aarch64
+platform = linux,dummy-virt
+target = aarch64-unknown-none-softfloat
+build_mode = 
+log_level = info
+backtrace = false
+smp = 4
+
+[37m[  0.087966 ax_runtime:217] [32mLogging is enabled.[m
+[m[37m[  0.088583 ax_runtime:218] [32mPrimary CPU 0 started, arg = 0x43600000.[m
+[m[37m[  0.088731 ax_runtime:220] [32mFound physcial memory regions:[m
+[m[37m[  0.090133 ax_runtime:222] [32m  [PA:0x9000000, PA:0x9001000) mmio (READ | WRITE | DEVICE | RESERVED)[m
+[m[37m[  0.090472 ax_runtime:222] [32m  [PA:0x40000000, PA:0x40200000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.090663 ax_runtime:222] [32m  [PA:0x40200000, PA:0x43600000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.090812 ax_runtime:222] [32m  [PA:0x43600000, PA:0x43700000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.090950 ax_runtime:222] [32m  [PA:0x43700000, PA:0x43810000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091104 ax_runtime:222] [32m  [PA:0x43810000, PA:0x4381a000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.091277 ax_runtime:222] [32m  [PA:0x4381a000, PA:0x240000000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.091468 ax_runtime:367] [32mInitialize global memory allocator...[m
+[m[37m[  0.091617 ax_runtime:368] [32m  use buddy-slab-allocator allocator.[m
+[m[37m[  0.091902 ax_alloc::buddy_slab:158] [32mInitialize global memory allocator, start_vaddr: 0x4381a000, size: 0x1fc7e6000[m
+[m[37m[  0.111349 ax_alloc::buddy_slab:410] [32mglobal allocator initialized[m
+[m[37m[  0.111676 ax_alloc::buddy_slab:168] [32mAdd memory region, start_vaddr: 0x40000000, size: 0x200000[m
+[m[37m[  0.111968 buddy_slab_allocator::global:143] [32mGlobalAllocator: skip region 0x40000000+0x200000, no allocator-visible memory after 2097152 alignment[m
+[m[37m[  0.112454 ax_runtime:257] [32mkernel aspace: [VA:0x0, VA:0xffffffffffffffff)[m
+[m[37m[  0.112666 ax_mm:92] [32mInitialize virtual memory management...[m
+[m[37m[  0.742649 ax_runtime:269] [32mInitialize platform devices...[m
+[m[37m[  0.751743 someboot::arch::power:23] [32mPower management method : SMC[m
+[m[37m[  0.752010 somehal::driver:5] [32mInitializing rdrive with FDT at 0x43600000[m
+[m[37m[  0.780037 ax_task::api:146] [32mInitialize scheduling...[m
+[m[37m[  0.781752 ax_task::api:154] [32m  use FIFO scheduler.[m
+[m[37m[  0.781897 ax_runtime:295] [32mInitialize interrupt handlers...[m
+[m[37m[  0.787255 ax_runtime::devices:2] [32mProbe platform devices...[m
+[m[37m[  0.789916 virtio_drivers::device::blk:63] [32mfound a block device of size 32768KB[m
+[m[37m[  0.791108 ax_driver::virtio::block:91] [32mregistered virtio block device[m
+[m[37m[  0.826512 ax_runtime::irq:120] [32mregistered virtio-blk/0 irq IrqId { domain: IrqDomainId(7), hwirq: HwIrq(48) }[m
+[m[37m[  0.827474 ax_fs_ng::block::runtime::device:1359] [33mrdif filesystem block device virtio-blk registered with IRQ-driven completion[m
+[m[37m[  0.827721 ax_fs_ng::block::runtime::device:1361] [32mregistered rdif filesystem block device virtio-blk[m
+[m[37m[  0.839143 ax_fs_ng::root:250] [32m    raw device fs=Some(Ext4)[m
+[m[37m[  0.839473 ax_fs_ng::root:281] [32m  block device 0 (virtio-blk) has no usable partition table; treating the whole disk as a candidate[m
+[m[37m[  0.840098 ax_fs_ng::root:390] [32m  matched root by raw device path on disk0 raw device[m
+[m[37m[  0.840605 ax_fs_ng:77] [32mInitialize filesystem subsystem...[m
+[m[37m[  0.840759 ax_fs_ng:78] [32m  selected root device: disk0 raw device[m
+[m[37m[  0.848143 rsext4::crc32c::arm64:54] [33mID_AA64ISAR0_EL1[19:16]: 0x1[m
+[m[37m[  0.848330 rsext4::crc32c::arm64:57] [33mHardware CRC32C support detected.[m
+[m[37m[  0.863694 rsext4::ext4::mount:327] [32m/lost+found exists (superblock hint inode=11)[m
+[m[37m[  0.867683 rsext4::ext4::mount:462] [32mExt4 filesystem mounted[m
+[m[37m[  0.867850 rsext4::ext4::mount:463] [32m  - block size: 4096 bytes[m
+[m[37m[  0.868006 rsext4::ext4::mount:464] [32m  - total blocks: 8192[m
+[m[37m[  0.868148 rsext4::ext4::mount:465] [32m  - free blocks: 1559[m
+[m[37m[  0.868288 rsext4::ext4::mount:466] [32m  - total inodes: 8192[m
+[m[37m[  0.868427 rsext4::ext4::mount:467] [32m  - free inodes: 8154[m
+[m[37m[  0.868602 rsext4::ext4::sync:13] [32mSyncing filesystem...[m
+[m[37m[  0.894799 rsext4::ext4::mount:546] [32mExt4 filesystem mounted[m
+[m[37m[  0.895735 ax_fs_ng:90] [32m  filesystem type: "ext4"[m
+[m[37m[  0.910552 ax_runtime::mp:79] [32mSecondary CPU 1 started.[m
+[m[37m[  0.912777 ax_runtime::mp:107] [32mSecondary CPU 1 init OK.[m
+[m[37m[  0.923733 ax_runtime::mp:79] [32mSecondary CPU 2 started.[m
+[m[37m[  0.925926 ax_runtime::mp:107] [32mSecondary CPU 2 init OK.[m
+[m[37m[  0.936728 ax_runtime::mp:79] [32mSecondary CPU 3 started.[m
+[m[37m[  0.936866 ax_runtime:343] [32mPrimary CPU 0 init OK.[m
+[m[37m[  0.940051 ax_runtime::mp:107] [32mSecondary CPU 3 init OK.[m
+[m
+
+       d8888            888     888  d8b
+      d88888            888     888  Y8P
+     d88P888            888     888
+    d88P 888  888  888  Y88b   d88P  888  .d8888b    .d88b.   888d888
+   d88P  888  `Y8bd8P'   Y88b d88P   888  88K       d88""88b  888P"
+  d88P   888    X88K      Y88o88P    888  "Y8888b.  888  888  888
+ d8888888888  .d8""8b.     Y888P     888       X88  Y88..88P  888
+d88P     888  888  888      Y8P      888   88888P'   "Y88P"   888
+
+
+by AxVisor Team
+
+[37m[  0.943818 0:2 axvisor:52] [32mStarting virtualization...[m
+[m[37m[  0.944085 0:2 axvm::host::arceos:205] [32mEnabling hardware virtualization support on all cores...[m
+[m[37m[  0.944315 0:2 axvm::host::arceos:211] [32mCore 0 is initializing hardware virtualization support...[m
+[m[37m[  0.944502 0:2 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.945322 0:2 axvm::host::arceos:213] [32mHardware virtualization support enabled on core 0[m
+[m[37m[  0.947753 1:11 axvm::host::arceos:223] [32mCore 1 is initializing hardware virtualization support...[m
+[m[37m[  0.947950 1:11 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.948120 1:11 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 1[m
+[m[37m[  0.949018 2:12 axvm::host::arceos:223] [32mCore 2 is initializing hardware virtualization support...[m
+[m[37m[  0.949207 2:12 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.949338 2:12 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 2[m
+[m[37m[  0.950300 3:13 axvm::host::arceos:223] [32mCore 3 is initializing hardware virtualization support...[m
+[m[37m[  0.950474 3:13 axvm::timer:95] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.950576 0:2 axvm::host::arceos:239] [32mWaiting for all cores to enable hardware virtualization...[m
+[m[37m[  0.950780 3:13 axvm::host::arceos:226] [32mHardware virtualization support enabled on core 3[m
+[m[37m[  0.951873 0:2 axvm::host::arceos:255] [32mAll cores have enabled hardware virtualization support.[m
+[m[37m[  0.964171 0:2 axvisor::manager:134] [32mNOT find dir: /guest/vm_default in filesystem[m
+[m[37m[  0.964489 0:2 axvisor::config:94] [32mUsing static VM configs.[m
+[m[37m[  0.982040 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@0, node_id: 0x0, guest_cpu_id: 0x0[m
+[m[37m[  0.982394 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@1, node_id: 0x1, guest_cpu_id: 0x1[m
+[m[37m[  0.982634 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@2, node_id: 0x2, guest_cpu_id: 0x2[m
+[m[37m[  0.982826 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@3, node_id: 0x3, guest_cpu_id: 0x3[m
+[m[37m[  0.983308 0:2 axvm::arch::aarch64::fdt::core::parser:393] [32mFound 4 host CPU nodes[m
+[m[37m[  0.983699 0:2 axvm::arch::aarch64::fdt::core:80] [32mVM[1] DTB not found, generating from the VM configuration[m
+[m[37m[  0.997178 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000/its@8080000", "/pl011@9000000", "/virtio_mmio@a000200", "/virtio_mmio@a000400"][m
+[m[37m[  0.997954 0:2 axvm::arch::aarch64::fdt::core::device:107] [32mExcluding device: /intc@8000000/its@8080000[m
+[m[37m[  1.016991 0:2 axvisor::config:137] [32mCreating VM[1] "linux-qemu-smp2-dual"[m
+[m[37m[  1.019482 0:2 axvm::vm:446] [32mVM created: id=1[m
+[m[37m[  1.527674 0:2 axvisor::config:149] [32mVM[1] created success, loading images...[m
+[m
+AXVISOR_GUEST_DTB_READY vm=1 gpa=0x234e00000 size=2060 hpa_segments=0x234e00000:2060
+[37m[  1.707958 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=0[m
+[m[37m[  1.708204 0:2 axdevice::device:268] [32mGPPT Distributor initialized with base GPA 0x8000000 and length 0x10000[m
+[m[37m[  1.709165 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=1[m
+[m[37m[  1.709422 0:2 axdevice::device:243] [32mGPPT Redistributor initialized for vCPU 0 with base GPA 0x80a0000 and length 0x20000[m
+[m[37m[  1.709690 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=2[m
+[m[37m[  1.709832 0:2 axdevice::device:243] [32mGPPT Redistributor initialized for vCPU 1 with base GPA 0x80c0000 and length 0x20000[m
+[m[37m[  1.710606 0:2 axdevice::device:1208] [32mAxVmDevices: registered device id=3[m
+[m[37m[  1.716914 0:2 axvm::vm::prepare:102] [32mVM setup: id=1[m
+[m[37m[  1.721448 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@0, node_id: 0x0, guest_cpu_id: 0x0[m
+[m[37m[  1.721667 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@1, node_id: 0x1, guest_cpu_id: 0x1[m
+[m[37m[  1.721891 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@2, node_id: 0x2, guest_cpu_id: 0x2[m
+[m[37m[  1.722093 0:2 axvm::arch::aarch64::fdt::core::parser:386] [32mCPU node: /cpus/cpu@3, node_id: 0x3, guest_cpu_id: 0x3[m
+[m[37m[  1.722297 0:2 axvm::arch::aarch64::fdt::core::parser:393] [32mFound 4 host CPU nodes[m
+[m[37m[  1.722441 0:2 axvm::arch::aarch64::fdt::core:80] [32mVM[2] DTB not found, generating from the VM configuration[m
+[m[37m[  1.729862 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000/its@8080000", "/pl011@9000000", "/virtio_mmio@a000000", "/virtio_mmio@a000200", "/virtio_mmio@a000400"][m
+[m[37m[  1.730495 0:2 axvm::arch::aarch64::fdt::core::device:107] [32mExcluding device: /intc@8000000/its@8080000[m
+[m[37m[  1.737700 0:2 axvisor::config:137] [32mCreating VM[2] "zephyr-qemu-dual"[m
+[m[37m[  1.738384 0:2 axvm::vm:446] [32mVM created: id=2[m
+[m[37m[  1.984169 0:2 axvisor::config:149] [32mVM[2] created success, loading images...[m
+[m
+AXVISOR_GUEST_DTB_READY vm=2 gpa=0x47e00000 size=1620 hpa_segments=0x23ce00000:1620

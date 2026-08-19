@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase4-net-test013-20260819T102102Z-tcp1",
+  "success": true,
+  "status": "guest_network_completed",
+  "primaryError": null,
+  "cleanupError": null,
+  "completedChecks": [
+    "runtime-markers",
+    "cleanup"
+  ],
+  "manifestSha256": "6215a57f563854abc63d03564603a4f86bef30f4004291a651bc347fe233152d"
+}

@@ -4,12 +4,12 @@ use core::{
     sync::atomic::{AtomicU8, AtomicUsize, Ordering},
 };
 
-use ax_ipi::run_on_cpu;
-use ax_kernel_guard::NoPreemptIrqSave;
-use ax_kspin::SpinNoIrq;
+use ax_ipi::legacy::run_on_cpu;
 use ax_runtime::hal::{cpu_num, percpu::this_cpu_id, time::monotonic_time_nanos};
 
-static STOP_MACHINE_LOCK: SpinNoIrq<()> = SpinNoIrq::new(());
+use crate::sync::{IrqMutex, PreemptIrqSaveGuard};
+
+static STOP_MACHINE_LOCK: IrqMutex<()> = IrqMutex::new(());
 
 const STAGE_PARKED: u8 = 0;
 const STAGE_SYNC: u8 = 1;
@@ -36,7 +36,7 @@ impl StopMachineState {
 }
 
 fn park_remote_cpu(state: Arc<StopMachineState>) {
-    let _guard = NoPreemptIrqSave::new();
+    let _guard = PreemptIrqSaveGuard::new();
 
     state.parked.fetch_add(1, Ordering::SeqCst);
     while state.stage.load(Ordering::SeqCst) == STAGE_PARKED {
@@ -75,7 +75,8 @@ where
         }
 
         let state = state.clone();
-        run_on_cpu(cpu_id, move || park_remote_cpu(state));
+        run_on_cpu(cpu_id, move || park_remote_cpu(state))
+            .unwrap_or_else(|err| panic!("stop_machine: failed to park CPU {cpu_id}: {err:?}"));
     }
 
     const MAX_WAIT_NS: u64 = 5_000_000_000; // 5 seconds
@@ -97,4 +98,22 @@ where
     }
 
     result
+}
+
+#[cfg(axtest)]
+pub(crate) fn stop_machine_runs_action_and_sync_on_each_cpu_for_test() -> bool {
+    let action_count = AtomicUsize::new(0);
+    let sync_count = Arc::new(AtomicUsize::new(0));
+    let remote_sync_count = sync_count.clone();
+
+    stop_machine(
+        || {
+            action_count.fetch_add(1, Ordering::Relaxed);
+        },
+        move || {
+            remote_sync_count.fetch_add(1, Ordering::Relaxed);
+        },
+    );
+
+    action_count.load(Ordering::Relaxed) == 1 && sync_count.load(Ordering::Relaxed) == cpu_num()
 }

@@ -1,23 +1,24 @@
 //! POSIX per-process interval timers (timer_create, timer_settime, etc.)
 
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, sync::Arc};
 use core::{
     sync::atomic::{AtomicI32, Ordering},
     time::Duration,
 };
 
-use ax_errno::{AxError, AxResult};
-use ax_kspin::SpinNoIrq as Mutex;
 use ax_runtime::hal::time::{NANOS_PER_SEC, monotonic_time_nanos, wall_time};
 use linux_raw_sys::general::{
     CLOCK_BOOTTIME, CLOCK_MONOTONIC, CLOCK_MONOTONIC_COARSE, CLOCK_MONOTONIC_RAW,
     CLOCK_PROCESS_CPUTIME_ID, CLOCK_REALTIME, CLOCK_REALTIME_COARSE, CLOCK_THREAD_CPUTIME_ID,
     SIGEV_NONE, SIGEV_SIGNAL,
 };
-use starry_process::Pid;
 use starry_signal::{SignalInfo, Signo};
 
-use super::timer::{AlarmTarget, register_alarm_for};
+use super::{
+    PidIdentity,
+    timer::{AlarmTarget, register_alarm_for},
+};
+use crate::{StarryError, StarryResult, sync::IrqMutex as Mutex};
 
 /// Kernel-side representation of a POSIX timer.
 struct PosixTimer {
@@ -96,12 +97,12 @@ impl PosixTimerTable {
         sigev_notify: u32,
         sigev_signo: i32,
         sigev_value: i64,
-    ) -> AxResult<i32> {
+    ) -> StarryResult<i32> {
         if !is_supported_timer_clock(clock_id) {
             if is_valid_clock(clock_id) {
-                return Err(AxError::OperationNotSupported);
+                return Err(StarryError::OperationNotSupported);
             } else {
-                return Err(AxError::InvalidInput);
+                return Err(StarryError::InvalidInput);
             }
         }
 
@@ -109,11 +110,11 @@ impl PosixTimerTable {
             SIGEV_NONE => None,
             SIGEV_SIGNAL => {
                 if sigev_signo <= 0 || sigev_signo > 64 {
-                    return Err(AxError::InvalidInput);
+                    return Err(StarryError::InvalidInput);
                 }
                 Signo::from_repr(sigev_signo as u8)
             }
-            _ => return Err(AxError::InvalidInput),
+            _ => return Err(StarryError::InvalidInput),
         };
 
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
@@ -141,7 +142,7 @@ impl PosixTimerTable {
     /// Set (arm/disarm) a timer. Returns the old (interval, remaining) in nanos.
     pub fn settime(
         &self,
-        pid: Pid,
+        owner: &Arc<PidIdentity>,
         id: i32,
         flags: i32,
         spec: TimerSpec,
@@ -208,7 +209,7 @@ impl PosixTimerTable {
                 // so that poll_expired runs on the next tick.
                 register_alarm_for(
                     wall_time() + Duration::from_nanos(remaining),
-                    AlarmTarget::Process(pid),
+                    AlarmTarget::Process(Arc::downgrade(owner)),
                 );
             }
         }
@@ -235,7 +236,7 @@ impl PosixTimerTable {
     /// Called from the alarm_task via poll_timer.
     /// `task` is the user task that owns these timers (needed to
     /// re-register alarms for periodic timers).
-    pub fn poll_expired(&self, pid: Pid, mut emitter: impl FnMut(SignalInfo)) {
+    pub fn poll_expired(&self, owner: &Arc<PidIdentity>, mut emitter: impl FnMut(SignalInfo)) {
         let mut timers = self.timers.lock();
         for timer in timers.values_mut() {
             if timer.deadline_ns == 0 {
@@ -257,7 +258,7 @@ impl PosixTimerTable {
                         .saturating_sub(clock_now_ns(timer.clock_id));
                     register_alarm_for(
                         wall_time() + Duration::from_nanos(remaining),
-                        AlarmTarget::Process(pid),
+                        AlarmTarget::Process(Arc::downgrade(owner)),
                     );
                 } else {
                     // One-shot: disarm
@@ -266,4 +267,40 @@ impl PosixTimerTable {
             }
         }
     }
+}
+
+#[cfg(axtest)]
+pub(crate) fn posix_timer_clock_validation_rules_hold_for_test() -> bool {
+    use linux_raw_sys::general::{
+        CLOCK_BOOTTIME, CLOCK_MONOTONIC, CLOCK_MONOTONIC_COARSE, CLOCK_MONOTONIC_RAW,
+        CLOCK_PROCESS_CPUTIME_ID, CLOCK_REALTIME, CLOCK_REALTIME_COARSE, CLOCK_THREAD_CPUTIME_ID,
+    };
+
+    // is_supported_timer_clock: only REALTIME, MONOTONIC, BOOTTIME are supported for timer_create.
+    let supported = is_supported_timer_clock(CLOCK_REALTIME)
+        && is_supported_timer_clock(CLOCK_MONOTONIC)
+        && is_supported_timer_clock(CLOCK_BOOTTIME);
+    let unsupported_raw = !is_supported_timer_clock(CLOCK_MONOTONIC_RAW);
+    let unsupported_coarse = !is_supported_timer_clock(CLOCK_MONOTONIC_COARSE);
+    let unsupported_coarse_rt = !is_supported_timer_clock(CLOCK_REALTIME_COARSE);
+    let unknown = !is_supported_timer_clock(999);
+
+    // is_valid_clock: broader set includes RAW/COARSE/CPU-time clocks.
+    let valid_known = is_valid_clock(CLOCK_REALTIME)
+        && is_valid_clock(CLOCK_REALTIME_COARSE)
+        && is_valid_clock(CLOCK_MONOTONIC)
+        && is_valid_clock(CLOCK_MONOTONIC_RAW)
+        && is_valid_clock(CLOCK_MONOTONIC_COARSE)
+        && is_valid_clock(CLOCK_BOOTTIME)
+        && is_valid_clock(CLOCK_PROCESS_CPUTIME_ID)
+        && is_valid_clock(CLOCK_THREAD_CPUTIME_ID);
+    let invalid_unknown = !is_valid_clock(999);
+
+    supported
+        && unsupported_raw
+        && unsupported_coarse
+        && unsupported_coarse_rt
+        && unknown
+        && valid_known
+        && invalid_unknown
 }

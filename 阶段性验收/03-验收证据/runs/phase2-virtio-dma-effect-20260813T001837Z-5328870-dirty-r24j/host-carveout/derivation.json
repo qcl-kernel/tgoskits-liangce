@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "prepared-unlaunched",
+  "status": "host_vm_carveout_dtb_prepared",
+  "proofScope": "qemu-base-dtb-to-static-carveout-dtb-derivation",
+  "doesNotProve": [
+    "the derived DTB was supplied to QEMU",
+    "host allocator exclusion",
+    "AxVM MapReserved stage-2 mapping",
+    "passthrough DMA isolation",
+    "QEMU used a DMA guard reservation",
+    "DMA guard changed host allocation or DMA behavior",
+    "DMA isolation",
+    "dual-Guest execution",
+    "Guest IP connectivity"
+  ],
+  "publication": "published last after all named artifacts",
+  "tool": {
+    "dtcVersion": "Version: DTC 1.7.0"
+  },
+  "sources": {
+    "baseHostDtb": {
+      "path": "host.dtb",
+      "size": 1048576,
+      "sha256": "ce2ff04e241f04d3bc8c29d84f9e7cf1c98839b92ab8af8d520cfa2cab549fad"
+    },
+    "vmConfigs": [
+      {
+        "path": "vmconfig.map-reserved.toml",
+        "size": 653,
+        "sha256": "9d9801a08073f2a14093aca9be01508397c51eee6369e52b6582b80c6ee469da"
+      }
+    ]
+  },
+  "carveouts": [
+    {
+      "vmId": 1,
+      "hpa": "0x80000000",
+      "size": "0x10000000",
+      "end": "0x90000000",
+      "vmConfig": "vmconfig.map-reserved.toml"
+    }
+  ],
+  "dmaGuards": [
+    {
+      "hpa": "0x180000000",
+      "size": "0x200000",
+      "end": "0x180200000"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "base-dtc.stderr.log",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "base-host.dts",
+      "size": 9619,
+      "sha256": "0c0a4f7d5c0e0e12a54b4cf8bec5b6a32bc5aa86b62820fbde9dc59112421639"
+    },
+    {
+      "path": "compile-dtc.stderr.log",
+      "size": 513,
+      "sha256": "ca8b3f03d33b6afeaa24c21ed34008b704a3bb12203df3d7dc67afc4d40c5277"
+    },
+    {
+      "path": "final-decode-dtc.stderr.log",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "host-carveout.dtb",
+      "size": 8351,
+      "sha256": "2f0d95df1f60b621468025a71d7ba03b604043b97bf539ae138f92aaa8e6cc40"
+    },
+    {
+      "path": "host-carveout.dts",
+      "size": 9971,
+      "sha256": "5140c09cee0b9f3dbbb719ed355c35852ca625c088c2455ddc02c343dc440fa2"
+    },
+    {
+      "path": "host-carveout.preflight.json",
+      "size": 1366,
+      "sha256": "9607869ac2c12326ecdab73ed98160f107180f23e7575c4be081230a5181e711"
+    }
+  ]
+}

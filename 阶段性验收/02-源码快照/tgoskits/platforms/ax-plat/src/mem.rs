@@ -32,11 +32,13 @@ pub enum IomapDecision {
 }
 
 /// Platform error for an MMIO mapping request.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum IomapError {
     /// The requested address range or attributes are invalid.
+    #[error("invalid I/O mapping request")]
     InvalidInput,
     /// The requested mapping attributes are not supported.
+    #[error("I/O mapping attributes are not supported")]
     Unsupported,
 }
 
@@ -96,29 +98,6 @@ pub const DEFAULT_MMIO_FLAGS: MemRegionFlags = MemRegionFlags::READ
 
 /// The raw memory range with start and size.
 pub type RawRange = (usize, usize);
-
-/// A boot-validated host-physical carveout owned by exactly one VM.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct VmCarveout {
-    /// Stable VM identifier from the host device tree.
-    pub vm_id: u32,
-    /// Start host-physical address.
-    pub physical_start: usize,
-    /// Carveout size in bytes.
-    pub size: usize,
-}
-
-/// A boot-validated host-physical region reserved from host allocation.
-///
-/// Unlike [`VmCarveout`], a DMA guard is not owned by a VM. The reservation is
-/// an observation substrate, not an IOMMU/SMMU or mediated-device policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DmaGuard {
-    /// Start host-physical address.
-    pub physical_start: usize,
-    /// Guard size in bytes.
-    pub size: usize,
-}
 
 /// A wrapper type for aligning a value to 4K bytes.
 #[repr(align(4096))]
@@ -207,19 +186,6 @@ pub trait MemIf {
     /// Note that the ranges returned should not include the range where the
     /// kernel is loaded.
     fn reserved_phys_ram_ranges() -> &'static [RawRange];
-
-    /// Returns the immutable, VM-owned carveout manifest validated at boot.
-    ///
-    /// This capability is distinct from merged generic reserved ranges and
-    /// must not be reconstructed from [`reserved_phys_ram_ranges`].
-    fn vm_carveouts() -> &'static [VmCarveout];
-
-    /// Returns the immutable, non-VM-owned DMA guard manifest validated at boot.
-    ///
-    /// This capability is distinct from merged generic reserved ranges and
-    /// must not be reconstructed from [`reserved_phys_ram_ranges`]. It records
-    /// guarded physical ranges only; its presence is not proof of DMA isolation.
-    fn dma_guards() -> &'static [DmaGuard];
 
     /// Returns all device memory (MMIO) ranges on the platform.
     fn mmio_ranges() -> &'static [RawRange];

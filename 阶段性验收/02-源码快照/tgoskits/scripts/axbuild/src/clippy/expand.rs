@@ -4,8 +4,9 @@ use anyhow::Context;
 use cargo_metadata::Metadata;
 
 use super::{
-    AXSTD_STD_DEFAULT_FEATURE, AXSTD_STD_PACKAGE, DEFAULT_FEATURE,
+    AXSTD_STD_DEFAULT_FEATURE, AXSTD_STD_PACKAGE, DEFAULT_FEATURE, HOST_TEST_FEATURE,
     check::{ClippyCheck, ClippyCheckKind, ClippyDepsMode},
+    configurations::package_clippy_configurations,
     env::{clippy_env, feature_clippy_env},
     selection::SelectedClippyPackage,
     targets::{docs_rs_targets, feature_supported_on_clippy_target},
@@ -27,6 +28,7 @@ pub(super) fn expand_clippy_checks(
         if package.name == AXSTD_STD_PACKAGE {
             features.insert(AXSTD_STD_DEFAULT_FEATURE.to_string());
         }
+        let has_host_test = features.remove(HOST_TEST_FEATURE);
         let targets = docs_rs_targets(package);
         let target_iter = if targets.is_empty() {
             vec![None]
@@ -65,6 +67,39 @@ pub(super) fn expand_clippy_checks(
                     deps_mode: selected.deps_mode.clone(),
                     target: target.clone(),
                     env: feature_env,
+                });
+            }
+        }
+
+        if matches!(selected.deps_mode, ClippyDepsMode::NoDeps) {
+            if has_host_test {
+                let feature_env =
+                    feature_clippy_env(package, HOST_TEST_FEATURE, env.clone(), metadata)
+                        .with_context(|| {
+                            format!(
+                                "failed to prepare clippy env for `{}` feature \
+                                 `{HOST_TEST_FEATURE}`",
+                                package.name
+                            )
+                        })?;
+                checks.push(ClippyCheck {
+                    package: package.name.to_string(),
+                    kind: ClippyCheckKind::Feature(HOST_TEST_FEATURE.to_string()),
+                    deps_mode: selected.deps_mode.clone(),
+                    target: None,
+                    env: feature_env,
+                });
+            }
+            for configuration in package_clippy_configurations(package)? {
+                checks.push(ClippyCheck {
+                    package: package.name.to_string(),
+                    kind: ClippyCheckKind::Configuration {
+                        name: configuration.name,
+                        features: configuration.features,
+                    },
+                    deps_mode: selected.deps_mode.clone(),
+                    target: Some(configuration.target),
+                    env: configuration.env,
                 });
             }
         }

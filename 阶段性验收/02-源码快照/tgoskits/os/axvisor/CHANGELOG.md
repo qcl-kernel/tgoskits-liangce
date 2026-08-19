@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.24](https://github.com/rcore-os/tgoskits/compare/axvisor-v0.5.23...axvisor-v0.5.24) - 2026-08-09
+
+### Added
+
+- *(axvisor)* build VMs from a resolved device graph ([#1718](https://github.com/rcore-os/tgoskits/pull/1718))
+- *(axvisor)* support ROCK 4D guest boot ([#1880](https://github.com/rcore-os/tgoskits/pull/1880))
+- *(axvisor)* adopt shlex command tokenization ([#1862](https://github.com/rcore-os/tgoskits/pull/1862))
+
+### Fixed
+
+- *(riscv-vcpu)* handle virtual interrupt injection for SMP guests ([#1681](https://github.com/rcore-os/tgoskits/pull/1681))
+- *(axvisor)* correct shell filesystem command handling ([#1616](https://github.com/rcore-os/tgoskits/pull/1616))
+- *(axloader)* tighten HTTP boot kernel URL validation ([#1882](https://github.com/rcore-os/tgoskits/pull/1882))
+- *(axvisor)* correct cargo commands and update image layout in scripts and docs ([#1607](https://github.com/rcore-os/tgoskits/pull/1607))
+
+### Other
+
+- *(axbuild)* reuse ostool OVMF assets and paths ([#1917](https://github.com/rcore-os/tgoskits/pull/1917))
+- *(axvisor)* clean up host dependencies ([#1861](https://github.com/rcore-os/tgoskits/pull/1861))
+- *(axvisor)* remove NimbOS guest, legacy CI, and standalone scripts ([#1866](https://github.com/rcore-os/tgoskits/pull/1866))
+- *(repo)* unify workspace dependencies ([#1860](https://github.com/rcore-os/tgoskits/pull/1860))
+- *(axvm)* unify guest devices and AArch64 timer ownership ([#1717](https://github.com/rcore-os/tgoskits/pull/1717))
+
+## [0.5.23](https://github.com/rcore-os/tgoskits/compare/axvisor-v0.5.22...axvisor-v0.5.23) - 2026-08-03
+
+### Added
+
+- *(ahci-driver)* add portable multi-disk AHCI support ([#1795](https://github.com/rcore-os/tgoskits/pull/1795))
+- *(axvisor)* add optional panic backtrace via axbacktrace + std::panic::set_hook ([#1653](https://github.com/rcore-os/tgoskits/pull/1653))
+- *(axvisor)* support StarryOS guest on Orange Pi 5 Plus ([#1684](https://github.com/rcore-os/tgoskits/pull/1684))
+
+### Fixed
+
+- *(axhvc)* handle PSCI_VERSION hypercall ([#1692](https://github.com/rcore-os/tgoskits/pull/1692))
+- *(axvisor)* standalone xtask CLI compatibility ([#1651](https://github.com/rcore-os/tgoskits/pull/1651))
+
+### Other
+
+- virtualize AArch64 physical timer state ([#1770](https://github.com/rcore-os/tgoskits/pull/1770))
+- *(block)* adopt IRQ-driven multi-queue runtime ([#1768](https://github.com/rcore-os/tgoskits/pull/1768))
+- *(qemu)* migrate block devices to NVMe ([#1784](https://github.com/rcore-os/tgoskits/pull/1784))
+- *(axvisor)* implement unified emulated device framework ([#1722](https://github.com/rcore-os/tgoskits/pull/1722))
+
+## [0.5.22](https://github.com/rcore-os/tgoskits/compare/axvisor-v0.5.21...axvisor-v0.5.22) - 2026-07-23
+
+### Added
+
+- *(axvisor)* Enhance AxLoader and Asus NUC15CRH support with fixes ([#1555](https://github.com/rcore-os/tgoskits/pull/1555))
+
+### Fixed
+
+- *(doc)* correct broken Quick Start hyperlink in axvisor READMEs ([#1605](https://github.com/rcore-os/tgoskits/pull/1605))
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+- *(x86_vcpu)* select VMX/SVM backend at runtime from CPUID, rem… ([#1629](https://github.com/rcore-os/tgoskits/pull/1629))
+- *(axbuild)* 将构建与启动能力收敛到显式配置 ([#1620](https://github.com/rcore-os/tgoskits/pull/1620))
+- *(axvmconfig)* introduce configuration errors ([#1597](https://github.com/rcore-os/tgoskits/pull/1597))
+- *(axvm)* introduce typed domain errors ([#1590](https://github.com/rcore-os/tgoskits/pull/1590))
+- *(axvm)* consolidate architecture-specific code ([#1562](https://github.com/rcore-os/tgoskits/pull/1562))
+
 ## [0.5.21](https://github.com/rcore-os/tgoskits/compare/axvisor-v0.5.20...axvisor-v0.5.21) - 2026-07-10
 
 ### Other

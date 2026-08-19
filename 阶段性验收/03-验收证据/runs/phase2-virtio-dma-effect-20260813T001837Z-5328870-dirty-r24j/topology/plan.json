@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "prepared-qemu-topology-only",
+  "status": "single_guest_virtio_blk_dma_effect_qemu_prepared",
+  "proofScope": "one-configured-single-guest-root-and-read-only-probe-virtio-blk-topology",
+  "doesNotProve": [
+    "the QEMU configuration was launched",
+    "the disposable rootfs booted",
+    "the Guest helper emitted READY, received GO, or emitted DONE",
+    "a virtio-blk request was submitted or completed",
+    "DMA was executed",
+    "the observed bytes were written by a hardware DMA engine",
+    "DMA isolation",
+    "dual-Guest execution",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "sessionNonce": "567630cdd99a14c067186bd7539295af",
+  "inputs": {
+    "hostDtb": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/host-carveout/host-carveout.dtb",
+      "size": 8351,
+      "sha256": "2f0d95df1f60b621468025a71d7ba03b604043b97bf539ae138f92aaa8e6cc40"
+    },
+    "disposableRootfs": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/prepared/linux-dma-effect-rootfs.ext4",
+      "size": 33554432,
+      "sha256": "acf9fcffd78ec85fde7d826af3d8f5df11eab2e09bfe7e074f5f7240b6a1b9ec"
+    }
+  },
+  "outputs": {
+    "qemuConfig": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/topology/qemu.toml",
+      "size": 1523,
+      "sha256": "0240166730a2c4e2e5dc15425e7aa7561cd83047a40f8b083729c741c6683037"
+    },
+    "probeDisk": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/topology/probe.raw",
+      "size": 512,
+      "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+    }
+  },
+  "expectedPayload": {
+    "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/topology/probe.raw",
+    "sector": 0,
+    "size": 512,
+    "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa",
+    "mustDifferFrom": "a5-repeated-512-byte-helper-buffer"
+  },
+  "qemu": {
+    "hostDtbOption": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/host-carveout/host-carveout.dtb",
+    "root": {
+      "driveId": "disk0",
+      "deviceId": "linux-root",
+      "bus": "virtio-mmio-bus.0",
+      "guestDevice": "/dev/vda",
+      "rootfsPatchedBy": "cargo xtask qemu --rootfs replaces only disk0 file="
+    },
+    "probe": {
+      "driveId": "dma-probe-disk",
+      "deviceId": "dma-probe",
+      "bus": "virtio-mmio-bus.1",
+      "guestDevice": "/dev/vdb",
+      "readonly": true,
+      "sector": 0
+    },
+    "control": {
+      "transport": "virtio-console",
+      "chardevId": "dma-go-chardev",
+      "socket": "/tmp/axdma-567630cdd99a14c067186bd7539295af/control.sock",
+      "server": true,
+      "wait": false,
+      "serialDeviceId": "dma-go-serial",
+      "serialDeviceBus": "virtio-mmio-bus.2",
+      "portDeviceId": "dma-go-port",
+      "portName": "dma-go",
+      "guestPath": "/dev/hvc0",
+      "stdioControlForbidden": true
+    },
+    "kernelAppend": "root=/dev/vda rw init=/init",
+    "runnerInjectedOptions": [
+      "-qmp",
+      "-pidfile",
+      "-name"
+    ],
+    "staticNameForbidden": true
+  }
+}

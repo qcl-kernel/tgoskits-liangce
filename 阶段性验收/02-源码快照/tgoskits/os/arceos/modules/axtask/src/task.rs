@@ -3,10 +3,7 @@ use alloc::{boxed::Box, string::String, sync::Arc};
 use core::alloc::Layout;
 #[cfg(feature = "smp")]
 use core::sync::atomic::AtomicPtr;
-#[cfg(any(
-    feature = "preempt",
-    all(feature = "stack-guard-page", feature = "smp", feature = "ipi")
-))]
+#[cfg(feature = "preempt")]
 use core::sync::atomic::AtomicUsize;
 use core::{
     cell::{Cell, UnsafeCell},
@@ -24,7 +21,6 @@ use ax_hal::{
     context::{KernelTlsBase, TaskContext},
     percpu::{CurrentContext, CurrentThreadHeader},
 };
-use ax_kspin::SpinNoIrq;
 use ax_lazyinit::LazyInit;
 #[cfg(feature = "stack-guard-page")]
 use ax_memory_addr::PAGE_SIZE_4K;
@@ -33,7 +29,11 @@ use futures_util::task::AtomicWaker;
 
 #[cfg(feature = "lockdep")]
 use crate::lockdep::HeldLockStack;
-use crate::{AxCpuMask, AxTask, AxTaskRef, WaitQueue};
+use crate::{
+    AxCpuMask, AxTask, AxTaskRef, WaitQueue,
+    interrupt::{InterruptSnapshot, InterruptState},
+    sync::SpinLock,
+};
 
 #[cfg(target_pointer_width = "64")]
 const STACK_END_MAGIC: usize = 0x57AC_CE11_57AC_CE11usize;
@@ -79,7 +79,7 @@ pub trait TaskExt {
 /// The inner task structure.
 pub struct TaskInner {
     id: TaskId,
-    name: SpinNoIrq<String>,
+    name: SpinLock<String>,
     is_idle: bool,
     is_init: bool,
 
@@ -87,7 +87,7 @@ pub struct TaskInner {
     state: AtomicU8,
 
     /// CPU affinity mask.
-    cpumask: SpinNoIrq<AxCpuMask>,
+    cpumask: SpinLock<AxCpuMask>,
 
     /// Scheduling policy of the task.
     sched_policy: AtomicI32,
@@ -129,7 +129,7 @@ pub struct TaskInner {
     #[cfg(feature = "preempt")]
     preempt_disable_count: AtomicUsize,
 
-    interrupted: AtomicBool,
+    interrupted: InterruptState,
     interrupt_waker: AtomicWaker,
 
     exit_code: AtomicI32,
@@ -209,12 +209,12 @@ impl TaskInner {
 
     /// Gets the name of the task.
     pub fn name(&self) -> String {
-        self.name.lock().clone()
+        self.name.lock_irqsave().clone()
     }
 
     /// Set the name of the task.
     pub fn set_name(&self, name: &str) {
-        *self.name.lock() = String::from(name);
+        *self.name.lock_irqsave() = String::from(name);
     }
 
     /// Get a combined string of the task ID and name.
@@ -282,7 +282,7 @@ impl TaskInner {
     /// Returns the cpu affinity mask of the task in type [`AxCpuMask`].
     #[inline]
     pub fn cpumask(&self) -> AxCpuMask {
-        *self.cpumask.lock()
+        *self.cpumask.lock_irqsave()
     }
 
     /// Sets the cpu affinity mask of the task.
@@ -291,7 +291,7 @@ impl TaskInner {
     /// `cpumask` - The cpu affinity mask to be set in type [`AxCpuMask`].
     #[inline]
     pub fn set_cpumask(&self, cpumask: AxCpuMask) {
-        *self.cpumask.lock() = cpumask
+        *self.cpumask.lock_irqsave() = cpumask
     }
 
     #[inline]
@@ -322,43 +322,58 @@ impl TaskInner {
         // allow `interrupt()` to run and call `wake()` on an empty waker
         // slot — the wake is lost. Registering first closes the window.
         self.interrupt_waker.register(cx.waker());
-        if self.interrupted.swap(false, Ordering::AcqRel) {
+        if self.interrupted.consume() {
             Poll::Ready(())
         } else {
             Poll::Pending
         }
     }
 
-    /// Clears the interrupt state of the task.
+    /// Acknowledges all interruption publications visible at this call.
+    ///
+    /// Publications that race after the internal snapshot remain pending.
     #[inline]
     pub fn clear_interrupt(&self) {
-        self.interrupted.store(false, Ordering::Release);
+        let snapshot = self.interrupt_snapshot();
+        self.acknowledge_interrupt(snapshot);
     }
 
-    /// Atomically checks and clears the interrupt flag.
+    /// Consumes the interruption publications currently visible to this task.
     ///
     /// Returns `true` if the task was interrupted.
     #[inline]
     pub fn take_interrupt(&self) -> bool {
-        self.interrupted.swap(false, Ordering::AcqRel)
+        self.interrupted.consume()
     }
 
     /// Checks whether the task has been interrupted without clearing
     /// the flag.
     ///
-    /// This is a non-consuming read, unlike [`take_interrupt`]. Use this
+    /// This is a non-consuming read, unlike [`Self::take_interrupt`]. Use this
     /// when the interrupt flag needs to remain set for subsequent
-    /// consumers (e.g., an [`interruptible`] future wrapper).
+    /// consumers (e.g., an [`crate::future::interruptible`] future wrapper).
     #[inline]
     pub fn interrupted(&self) -> bool {
-        self.interrupted.load(Ordering::Acquire)
+        self.interrupted.is_pending()
     }
 
     /// Interrupts the task.
     #[inline]
     pub fn interrupt(&self) {
-        self.interrupted.store(true, Ordering::Release);
+        self.interrupted.publish();
         self.interrupt_waker.wake();
+    }
+
+    /// Captures the interruption publications visible before a safe-point scan.
+    #[inline]
+    pub fn interrupt_snapshot(&self) -> InterruptSnapshot {
+        self.interrupted.snapshot()
+    }
+
+    /// Acknowledges the interruption publications covered by `snapshot`.
+    #[inline]
+    pub fn acknowledge_interrupt(&self, snapshot: InterruptSnapshot) {
+        self.interrupted.acknowledge(snapshot);
     }
 }
 
@@ -367,13 +382,13 @@ impl TaskInner {
     fn new_common(id: TaskId, name: String, kstack: TaskStack) -> Self {
         Self {
             id,
-            name: SpinNoIrq::new(name),
+            name: SpinLock::new(name),
             is_idle: false,
             is_init: false,
             entry: Cell::new(None),
             state: AtomicU8::new(TaskState::Ready as u8),
             // By default, the task is allowed to run on all CPUs.
-            cpumask: SpinNoIrq::new(crate::api::cpu_mask_full()),
+            cpumask: SpinLock::new(crate::api::cpu_mask_full()),
             sched_policy: AtomicI32::new(0),
             sched_priority: AtomicI32::new(0),
             in_wait_queue: AtomicBool::new(false),
@@ -390,7 +405,7 @@ impl TaskInner {
             force_resched: AtomicBool::new(false),
             #[cfg(feature = "preempt")]
             preempt_disable_count: AtomicUsize::new(0),
-            interrupted: AtomicBool::new(false),
+            interrupted: InterruptState::new(),
             interrupt_waker: AtomicWaker::new(),
             exit_code: AtomicI32::new(0),
             wait_for_exit: WaitQueue::new(),
@@ -552,13 +567,25 @@ impl TaskInner {
     }
 
     #[inline]
-    #[cfg(all(test, feature = "preempt"))]
+    #[cfg(all(
+        test,
+        feature = "preempt",
+        feature = "smp",
+        feature = "ipi",
+        feature = "host-test"
+    ))]
     pub(crate) fn preempt_pending_for_test(&self) -> bool {
         self.need_resched.load(Ordering::Acquire)
     }
 
     #[inline]
-    #[cfg(all(test, feature = "preempt"))]
+    #[cfg(all(
+        test,
+        feature = "preempt",
+        feature = "smp",
+        feature = "ipi",
+        feature = "host-test"
+    ))]
     pub(crate) fn force_resched_pending_for_test(&self) -> bool {
         self.force_resched_pending()
     }
@@ -591,6 +618,15 @@ impl TaskInner {
     #[cfg(feature = "preempt")]
     pub(crate) fn enable_preempt(&self, resched: bool) {
         if self.preempt_disable_count.fetch_sub(1, Ordering::Release) == 1 && resched {
+            // Keep local IRQs masked until the preemption check has completely
+            // unwound. A device IRQ may wake a pinned maintenance task and
+            // immediately become pending again when that task rearms the
+            // source. If IRQs are restored by the scheduler's inner guard
+            // before this frame returns, every pending IRQ can recursively
+            // enter another preemption check on the interrupted task's stack.
+            // The outer IRQ guard turns that chain into successive IRQ exits
+            // instead of unbounded scheduler-stack growth.
+            let _irq_guard = crate::sync::IrqSaveGuard::new();
             // If current task is pending to be preempted, do rescheduling.
             Self::current_check_preempt_pending();
         }
@@ -598,17 +634,15 @@ impl TaskInner {
 
     #[cfg(feature = "preempt")]
     fn current_check_preempt_pending() {
-        use ax_kernel_guard::NoPreemptIrqSave;
+        use crate::sync::PreemptIrqSaveState;
         let curr = crate::current();
         if (curr.force_resched_pending() || curr.need_resched.load(Ordering::Acquire))
             && curr.can_preempt(0)
         {
             // Note: if we want to print log msg during `preempt_resched`, we have to
             // disable preemption here, because the ax-log may cause preemption.
-            let mut rq = crate::current_run_queue::<NoPreemptIrqSave>();
+            let mut rq = crate::current_run_queue::<PreemptIrqSaveState>();
             if curr.take_force_resched_pending() {
-                #[cfg(all(feature = "smp", feature = "ipi"))]
-                crate::run_queue::clear_remote_reschedule_pending_for_current_cpu();
                 rq.force_resched()
             } else if curr.need_resched.load(Ordering::Acquire) {
                 rq.preempt_resched()
@@ -893,10 +927,8 @@ fn flush_stack_guard_tlb(vaddr: VirtAddr) {
 
 #[cfg(all(feature = "stack-guard-page", feature = "smp", feature = "ipi"))]
 fn flush_stack_guard_tlb(vaddr: VirtAddr) {
-    let _guard = ax_kernel_guard::NoPreempt::new();
+    let _guard = crate::sync::PreemptGuard::new();
     let current_cpu = ax_hal::percpu::this_cpu_id();
-    let ack_count = Arc::new(AtomicUsize::new(0));
-    let mut remote_cpu_count = 0;
 
     core::sync::atomic::fence(Ordering::SeqCst);
 
@@ -905,31 +937,26 @@ fn flush_stack_guard_tlb(vaddr: VirtAddr) {
             continue;
         }
 
-        remote_cpu_count += 1;
-        let ack_count = ack_count.clone();
-        ax_ipi::run_on_cpu(cpu_id, move || {
-            ax_hal::asm::flush_tlb(Some(vaddr));
-            ack_count.fetch_add(1, Ordering::Release);
+        unsafe fn flush_on_target(argument: *mut ()) {
+            let address = unsafe { &*(argument as *const VirtAddr) };
+            ax_hal::asm::flush_tlb(Some(*address));
+        }
+
+        // SAFETY: call_on_cpu is synchronous, so the stack-borrowed address
+        // remains valid until the target finishes the hard-IRQ-safe TLB flush.
+        unsafe {
+            ax_ipi::call_on_cpu(
+                ax_hal::irq::CpuId(cpu_id),
+                flush_on_target,
+                core::ptr::from_ref(&vaddr).cast_mut().cast(),
+            )
+        }
+        .unwrap_or_else(|error| {
+            panic!("failed to flush stack guard TLB on CPU {cpu_id}: {error:?}")
         });
     }
 
     ax_hal::asm::flush_tlb(Some(vaddr));
-    if remote_cpu_count == 0 {
-        return;
-    }
-
-    const MAX_WAIT_NS: u64 = 5 * ax_hal::time::NANOS_PER_SEC;
-    let start = ax_hal::time::monotonic_time_nanos();
-    while ack_count.load(Ordering::Acquire) != remote_cpu_count {
-        core::hint::spin_loop();
-        if ax_hal::time::monotonic_time_nanos() - start > MAX_WAIT_NS {
-            let acked = ack_count.load(Ordering::Acquire);
-            panic!(
-                "task stack guard page TLB shootdown timeout: CPU {current_cpu} got \
-                 {acked}/{remote_cpu_count} ack(s) for vaddr={vaddr:#x}"
-            );
-        }
-    }
 }
 
 #[cfg(feature = "stack-guard-page")]
@@ -1092,4 +1119,74 @@ extern "C" fn task_entry() -> ! {
         entry()
     }
     crate::exit(0);
+}
+
+#[cfg(axtest)]
+pub(crate) fn task_id_and_state_hold_for_test() -> bool {
+    // Test TaskId
+    let id1 = TaskId(1);
+    let id2 = TaskId(2);
+    assert!(id1 != id2);
+    assert!(id1 == id1);
+
+    // Test TaskState variants
+    assert!(TaskState::Running as u8 == 1);
+    assert!(TaskState::Ready as u8 == 2);
+
+    true
+}
+
+#[cfg(axtest)]
+pub(crate) fn task_constants_hold_for_test() -> bool {
+    // Test TASK_STACK_ALIGN constant
+    assert_eq!(TASK_STACK_ALIGN, 16);
+
+    // Test STACK_END_MAGIC for 64-bit
+    #[cfg(target_pointer_width = "64")]
+    assert!(STACK_END_MAGIC == 0x57AC_CE11_57AC_CE11usize);
+
+    true
+}
+
+#[cfg(axtest)]
+pub(crate) fn task_id_operations_hold_for_test() -> bool {
+    // Test TaskId operations
+    let id1 = TaskId(100);
+    let id2 = TaskId(200);
+
+    // Test equality
+    assert!(id1 == id1);
+    assert!(id1 != id2);
+
+    // Test clone
+    let id3 = id1.clone();
+    assert!(id1 == id3);
+
+    // Test copy
+    let id4 = id1;
+    assert!(id4 == id1);
+
+    true
+}
+
+#[cfg(axtest)]
+pub(crate) fn task_state_all_variants_hold_for_test() -> bool {
+    // Test all TaskState variants
+    let running = TaskState::Running;
+    let ready = TaskState::Ready;
+    let blocked = TaskState::Blocked;
+    let exited = TaskState::Exited;
+
+    // Verify all are different
+    assert!(core::mem::discriminant(&running) != core::mem::discriminant(&ready));
+    assert!(core::mem::discriminant(&ready) != core::mem::discriminant(&blocked));
+    assert!(core::mem::discriminant(&blocked) != core::mem::discriminant(&exited));
+
+    // Verify ordinal values
+    assert!(running as u8 == 1);
+    assert!(ready as u8 == 2);
+    assert!(blocked as u8 == 3);
+    assert!(exited as u8 == 4);
+
+    true
 }

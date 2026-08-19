@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.17](https://github.com/rcore-os/tgoskits/compare/ax-percpu-v0.4.16...ax-percpu-v0.4.17) - 2026-08-09
+
+### Other
+
+- updated the following local packages: ax-percpu-macros, ax-lazyinit
+
+## [0.4.16](https://github.com/rcore-os/tgoskits/compare/ax-percpu-v0.4.15...ax-percpu-v0.4.16) - 2026-08-03
+
+### Other
+
+- updated the following local packages: cpu-local, ax-lazyinit
+
+## [0.4.15](https://github.com/rcore-os/tgoskits/compare/ax-percpu-v0.4.14...ax-percpu-v0.4.15) - 2026-07-23
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+
 ### Changed
 
 - Use dynamically allocated CPU areas exclusively; the ELF now retains one typed template and

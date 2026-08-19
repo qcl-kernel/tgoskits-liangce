@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4](https://github.com/rcore-os/tgoskits/compare/axpoll-v0.5.3...axpoll-v0.5.4) - 2026-08-09
+
+### Other
+
+- updated the following local packages: axtest, ax-kspin, ax-kspin
+
+## [0.5.3](https://github.com/rcore-os/tgoskits/compare/axpoll-v0.5.2...axpoll-v0.5.3) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
+## [0.5.2](https://github.com/rcore-os/tgoskits/compare/axpoll-v0.5.1...axpoll-v0.5.2) - 2026-07-23
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.5.1](https://github.com/rcore-os/tgoskits/compare/axpoll-v0.5.0...axpoll-v0.5.1) - 2026-07-08
 
 ### Other

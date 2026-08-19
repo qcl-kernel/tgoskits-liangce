@@ -1,9 +1,14 @@
-# Static outer-QEMU topology; no runner may treat this as a successful boot.
-# status: blocked_dma_console
-status = "blocked_dma_console"
-
+# Contest Linux+Zephyr dual-Guest outer QEMU (P4 mediated network).
+#
+# No outer NIC and no root block: the Linux rootfs travels as initramfs
+# (memory + ramdisk) and guest networking is entirely the host-owned vnet0
+# switch. The P4 runner appends the QMP socket, pidfile and QEMU name for
+# identity binding and drives the scenario markers itself; `timeout` here
+# is only a bounded fallback.
 args = [
   "-nographic",
+  "-nic",
+  "none",
   "-cpu",
   "cortex-a72",
   "-machine",
@@ -11,28 +16,17 @@ args = [
   "-smp",
   "4",
   "-m",
-  "8g",
-  "-drive",
-  "id=linux-root,if=none,format=raw,file=${workspaceFolder}/tmp/rootfs.img",
-  "-device",
-  "virtio-blk-device,id=linux-block,drive=linux-root,bus=virtio-mmio-bus.0",
-  "-append",
-  "root=/dev/vda rw init=/bin/sh",
-  "-netdev",
-  "hubport,id=linux-netdev,hubid=0",
-  "-device",
-  "virtio-net-device,id=linux-net,netdev=linux-netdev,bus=virtio-mmio-bus.1,mac=02:00:00:00:00:01",
-  "-netdev",
-  "hubport,id=zephyr-netdev,hubid=0",
-  "-device",
-  "virtio-net-device,id=zephyr-net,netdev=zephyr-netdev,bus=virtio-mmio-bus.2,mac=02:00:00:00:00:02",
+  "4g",
 ]
-
 fail_regex = [
   "(?i)Failed to initialize guest VM",
   "(?i)\\bpanic(?:ked)?\\b",
   "(?i)kernel panic",
+  "ESR_EL2:",
+  "AXVISOR_DUAL_GUEST_LINUX_FAIL",
+  "AXVISOR_DUAL_GUEST_ZEPHYR_FAIL",
 ]
 success_regex = []
+timeout = 900
 to_bin = true
 uefi = false

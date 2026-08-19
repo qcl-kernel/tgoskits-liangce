@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.14](https://github.com/rcore-os/tgoskits/compare/ax-memory-set-v0.6.13...ax-memory-set-v0.6.14) - 2026-08-09
+
+### Other
+
+- updated the following local packages: axtest, ax-errno, ax-memory-addr
+
+## [0.6.13](https://github.com/rcore-os/tgoskits/compare/ax-memory-set-v0.6.12...ax-memory-set-v0.6.13) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
 ## [0.6.12](https://github.com/rcore-os/tgoskits/compare/ax-memory-set-v0.6.11...ax-memory-set-v0.6.12) - 2026-07-07
 
 ### Fixed

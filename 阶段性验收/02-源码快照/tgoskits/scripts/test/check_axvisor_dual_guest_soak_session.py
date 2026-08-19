@@ -81,7 +81,7 @@ def must_fail(base: Path, payload: object, name: str, needle: str) -> None:
 
 
 def main() -> int:
-    base = ROOT / "results" / f".dual-guest-soak-contract-{uuid.uuid4().hex}"
+    base = ROOT / "target" / "contract-tests" / f"dual-guest-soak-contract-{uuid.uuid4().hex}"
     base.mkdir(parents=True)
     linux = b"[base]\nphys_cpu_ids = [0, 1]\n"
     zephyr = b"[base]\nphys_cpu_ids = [2]\n"

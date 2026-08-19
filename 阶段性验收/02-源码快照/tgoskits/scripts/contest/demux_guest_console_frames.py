@@ -72,11 +72,27 @@ class DemuxedGuest:
 
 
 @dataclass(frozen=True)
+class FrameRecord:
+    """One validated console frame with its exact source line number."""
+
+    line_number: int
+    vm_id: int
+    name: str
+    generation: int
+    sequence: int
+    payload: bytes
+    total: int
+    dropped: int
+    dma: int
+
+
+@dataclass(frozen=True)
 class DemuxResult:
     """All expected VM console streams reconstructed from one host log."""
 
     guests: dict[int, DemuxedGuest]
     frame_count: int
+    trailing_truncated: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -321,10 +337,64 @@ def _append_frame(
     current.last_sequence = frame.sequence
 
 
+def iter_host_log_frames(host_log: bytes) -> Iterator[FrameRecord]:
+    """Yield validated console-frame records from host log bytes.
+
+    Each record keeps the exact 1-based line number used by
+    :func:`demux_host_log`.  Non-frame lines are skipped; a line that contains
+    the frame marker at a non-leading position, a malformed prefix, or an
+    invalid frame payload raises :class:`GuestConsoleDemuxError` with the same
+    line-numbered diagnostics as the offline demux path.  Dropped-byte and
+    DMA-attempt counters are surfaced verbatim so a live consumer can fail
+    closed without mutating the shared demux state machine.
+    """
+
+    if not isinstance(host_log, bytes):
+        raise GuestConsoleDemuxError("host log data must be bytes")
+    if len(host_log) > MAX_HOST_LOG_BYTES:
+        raise GuestConsoleDemuxError(
+            f"host log exceeds the {MAX_HOST_LOG_BYTES}-byte limit"
+        )
+    for line_number, raw_line in enumerate(host_log.split(b"\n"), start=1):
+        line = raw_line[:-1] if raw_line.endswith(b"\r") else raw_line
+        marker_offset = line.find(FRAME_MARKER)
+        if marker_offset < 0:
+            continue
+        if marker_offset != 0:
+            raise GuestConsoleDemuxError(
+                f"line {line_number} frame marker is not at the start of its line"
+            )
+        if not line.startswith(FRAME_PREFIX):
+            raise GuestConsoleDemuxError(
+                f"line {line_number} frame marker is not followed by one space"
+            )
+        frame = _parse_frame(line, line_number=line_number)
+        yield FrameRecord(
+            line_number=line_number,
+            vm_id=frame.vm_id,
+            name=frame.name,
+            generation=frame.generation,
+            sequence=frame.sequence,
+            payload=frame.payload,
+            total=frame.total,
+            dropped=frame.dropped,
+            dma=frame.dma,
+        )
+
+
 def demux_host_log(
-    host_log_data: bytes, expected_vms: Mapping[int, str]
+    host_log_data: bytes,
+    expected_vms: Mapping[int, str],
+    *,
+    allow_trailing_truncation: bool = False,
 ) -> DemuxResult:
-    """Validate all protocol frames and reconstruct exact per-VM byte streams."""
+    """Validate all protocol frames and reconstruct exact per-VM byte streams.
+
+    With ``allow_trailing_truncation`` the final line of the log may carry a
+    frame whose payload is shorter than declared: this is a shutdown artifact
+    (hypervisor-buffered bytes lost when QEMU exits), not a runtime corruption.
+    The truncated frame is dropped and reported in the manifest.
+    """
 
     if not isinstance(host_log_data, bytes):
         raise GuestConsoleDemuxError("host log data must be bytes")
@@ -338,22 +408,34 @@ def demux_host_log(
         for vm_id, name in expected.items()
     }
     frame_count = 0
+    trailing_truncated: dict[str, Any] | None = None
+    lines = host_log_data.split(b"\n")
+    last_frame_line = 0
+    for idx, raw_line in enumerate(lines, start=1):
+        if FRAME_MARKER in raw_line:
+            last_frame_line = idx
 
-    for line_number, raw_line in enumerate(host_log_data.split(b"\n"), start=1):
+    for line_number, raw_line in enumerate(lines, start=1):
         line = raw_line[:-1] if raw_line.endswith(b"\r") else raw_line
         marker_offset = line.find(FRAME_MARKER)
         if marker_offset < 0:
             continue
-        if marker_offset != 0:
-            raise GuestConsoleDemuxError(
-                f"line {line_number} frame marker is not at the start of its line"
-            )
-        if not line.startswith(FRAME_PREFIX):
-            raise GuestConsoleDemuxError(
-                f"line {line_number} frame marker is not followed by one space"
-            )
-
-        frame = _parse_frame(line, line_number=line_number)
+        trailing_allowed = allow_trailing_truncation and line_number == last_frame_line
+        try:
+            if marker_offset != 0:
+                raise GuestConsoleDemuxError(
+                    f"line {line_number} frame marker is not at the start of its line"
+                )
+            if not line.startswith(FRAME_PREFIX):
+                raise GuestConsoleDemuxError(
+                    f"line {line_number} frame marker is not followed by one space"
+                )
+            frame = _parse_frame(line, line_number=line_number)
+        except GuestConsoleDemuxError as error:
+            if trailing_allowed:
+                trailing_truncated = {"line": line_number, "error": str(error)}
+                continue
+            raise
         if frame.vm_id not in expected:
             raise GuestConsoleDemuxError(
                 f"line {line_number} contains unexpected VM {frame.vm_id}"
@@ -391,7 +473,9 @@ def demux_host_log(
             records=state.records,
             generations=generations,
         )
-    return DemuxResult(guests=guests, frame_count=frame_count)
+    return DemuxResult(
+        guests=guests, frame_count=frame_count, trailing_truncated=trailing_truncated
+    )
 
 
 def _sha256(data: bytes) -> str:
@@ -447,6 +531,7 @@ def _build_manifest(
         "proofScope": (
             "provided-host-log-frame-validation-and-per-vm-byte-reconstruction"
         ),
+        "trailingTruncatedFrame": result.trailing_truncated,
         "doesNotProve": [
             "the frames were produced by a real AxVisor execution",
             "either guest booted",
@@ -646,6 +731,8 @@ def demux_and_publish(
     host_log_path: Path,
     output_directory: Path,
     expected_vms: Mapping[int, str],
+    *,
+    allow_trailing_truncation: bool = False,
 ) -> dict[str, Any]:
     """Read one sibling host log, demux it, and publish a new evidence bundle."""
 
@@ -671,7 +758,9 @@ def demux_and_publish(
             f"host log exceeds the {MAX_HOST_LOG_BYTES}-byte limit"
         )
     host_log_data = source.read_bytes()
-    result = demux_host_log(host_log_data, expected_vms)
+    result = demux_host_log(
+        host_log_data, expected_vms, allow_trailing_truncation=allow_trailing_truncation
+    )
     return publish_demux_evidence(
         result,
         output_directory=directory,
@@ -717,6 +806,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         metavar="VM_ID:NAME",
         help="expected VM id and exact framed name; repeat once per VM",
     )
+    parser.add_argument(
+        "--allow-trailing-truncation",
+        action="store_true",
+        help="tolerate a payload-short final frame (shutdown artifact) and record it",
+    )
     return parser.parse_args(argv)
 
 
@@ -725,7 +819,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         expected_vms = parse_expected_vms(args.expect_vm)
         manifest = demux_and_publish(
-            args.host_log, args.output_dir, expected_vms
+            args.host_log,
+            args.output_dir,
+            expected_vms,
+            allow_trailing_truncation=args.allow_trailing_truncation,
         )
     except GuestConsoleDemuxError as error:
         print(f"Guest console demux failed: {error}", file=sys.stderr)

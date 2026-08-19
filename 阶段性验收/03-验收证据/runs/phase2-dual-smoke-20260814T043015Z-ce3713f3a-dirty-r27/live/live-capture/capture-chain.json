@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "identity_bound_live_qmp_capture_completed",
+  "proofScope": "same-session-paused-qmp-final-guest-dtb-capture-chain",
+  "doesNotProve": [
+    "the AxVisor log writer belongs to QEMU when stdout is relayed through tee",
+    "device-tree semantic validity",
+    "captured device ownership matches the VM configuration",
+    "both guests booted",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity"
+  ],
+  "sourcePathBase": "capture-chain.json parent directory",
+  "sessionNonce": "b9e32521198f2a4d5f3e446431e9e54d",
+  "publication": "all bound artifacts published before this chain manifest",
+  "artifacts": [
+    {
+      "path": "axvisor-ready-prefix.log",
+      "size": 21354,
+      "sha256": "f3bc8206951ddd438c485c360fb1f8de3f2bdacd82809a6880e89f47596ab509"
+    },
+    {
+      "path": "capture-execution.json",
+      "size": 1916,
+      "sha256": "fd366b72ea38816e4e9d117b056d9d366136c301bf3954ce0b20c5ef9923dbaa"
+    },
+    {
+      "path": "capture-identity.json",
+      "size": 8814,
+      "sha256": "d857a1618a1a110e49f0e64135d8ff50d56d09ea5e56ee773a9a53059956338e"
+    },
+    {
+      "path": "capture-plan.json",
+      "size": 1371,
+      "sha256": "5529455aaf74a04e758241487067fd483fb645d0c0241ba6b0e1cdd228a1a9c8"
+    },
+    {
+      "path": "capture-result.json",
+      "size": 2337,
+      "sha256": "b77758ad4cee8ebef31ca2c5138485bbfdc62fab5351536b81c01fbb00a70716"
+    },
+    {
+      "path": "guest-vm-1.final.dtb",
+      "size": 2060,
+      "sha256": "232dbaee01d48e6741cc6dbdbe2d485415b04d237a2d556a58d318811bd3e0eb"
+    },
+    {
+      "path": "guest-vm-1.segment-000.bin",
+      "size": 2060,
+      "sha256": "232dbaee01d48e6741cc6dbdbe2d485415b04d237a2d556a58d318811bd3e0eb"
+    },
+    {
+      "path": "guest-vm-2.final.dtb",
+      "size": 1620,
+      "sha256": "d846788d2f0dac8093c52de895e11d0e9f05ec3d06ddfaa8dc96b0fe607c35c6"
+    },
+    {
+      "path": "guest-vm-2.segment-000.bin",
+      "size": 1620,
+      "sha256": "d846788d2f0dac8093c52de895e11d0e9f05ec3d06ddfaa8dc96b0fe607c35c6"
+    }
+  ]
+}

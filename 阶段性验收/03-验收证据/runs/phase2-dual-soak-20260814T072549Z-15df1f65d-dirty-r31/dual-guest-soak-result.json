@@ -1,0 +1,71 @@
+{
+  "artifactStatus": "observation-derived",
+  "cpuSets": {
+    "linux": [
+      0,
+      1
+    ],
+    "zephyr": [
+      2
+    ]
+  },
+  "doesNotProve": [
+    "Linux and Zephyr IP connectivity",
+    "DMA was executed",
+    "DMA isolation",
+    "end-to-end latency",
+    "AI closed-loop control"
+  ],
+  "durationNs": 1800519845152,
+  "guests": [
+    {
+      "guest": "linux",
+      "guestDtbMarker": "AXVISOR_GUEST_DTB_READY vm=1 gpa=0x234e00000 size=2060 hpa_segments=0x234e00000:2060",
+      "readyMarker": "AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea",
+      "vmConfig": {
+        "path": "linux.resolved.toml",
+        "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21",
+        "size": 852
+      },
+      "vmId": 1
+    },
+    {
+      "guest": "zephyr",
+      "guestDtbMarker": "AXVISOR_GUEST_DTB_READY vm=2 gpa=0x47e00000 size=1620 hpa_segments=0x23ce00000:1620",
+      "readyMarker": "AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea",
+      "vmConfig": {
+        "path": "zephyr.resolved.toml",
+        "sha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb",
+        "size": 1520
+      },
+      "vmId": 2
+    }
+  ],
+  "proofScope": "one-identity-bound-qemu-dual-guest-1800-second-coexistence-session",
+  "schemaVersion": 1,
+  "sessionIdentity": {
+    "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+    "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+    "qemuPid": 1390,
+    "qemuStartMonotonicNs": 8277858911590,
+    "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4"
+  },
+  "sources": {
+    "linuxVmConfig": {
+      "path": "linux.resolved.toml",
+      "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21",
+      "size": 852
+    },
+    "session": {
+      "path": "dual-guest-soak-session.json",
+      "sha256": "1a7aed0ec36171e99d396afa9d78646e63d770e0fdea44bec8dae2c8e6b6b316",
+      "size": 2840
+    },
+    "zephyrVmConfig": {
+      "path": "zephyr.resolved.toml",
+      "sha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb",
+      "size": 1520
+    }
+  },
+  "status": "dual_guest_30min_coexistence_observed"
+}

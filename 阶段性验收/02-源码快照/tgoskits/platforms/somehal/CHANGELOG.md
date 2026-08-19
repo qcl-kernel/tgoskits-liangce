@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** re-export the queryable someboot secondary CPU startup handle in place of the
+  blocking `cpu_on()` API; timeout and polling policy now belong to the platform adapter.
+
+## [0.8.3](https://github.com/rcore-os/tgoskits/compare/somehal-v0.8.2...somehal-v0.8.3) - 2026-08-09
+
+### Added
+
+- *(axvisor)* support ROCK 4D guest boot ([#1880](https://github.com/rcore-os/tgoskits/pull/1880))
+
+### Fixed
+
+- *(arm-gic-driver)* use hardware CPU targets for GICv2 routing ([#1803](https://github.com/rcore-os/tgoskits/pull/1803))
+
+### Other
+
+- *(ax-ipi)* establish typed IPI publication transport ([#1916](https://github.com/rcore-os/tgoskits/pull/1916))
+- *(axvm)* unify guest devices and AArch64 timer ownership ([#1717](https://github.com/rcore-os/tgoskits/pull/1717))
+
+## [0.8.2](https://github.com/rcore-os/tgoskits/compare/somehal-v0.8.1...somehal-v0.8.2) - 2026-08-03
+
+### Fixed
+
+- *(somehal)* make LS2K LIOINTC claim IRQ-safe ([#1831](https://github.com/rcore-os/tgoskits/pull/1831))
+
+### Other
+
+- virtualize AArch64 physical timer state ([#1770](https://github.com/rcore-os/tgoskits/pull/1770))
+- *(block)* adopt IRQ-driven multi-queue runtime ([#1768](https://github.com/rcore-os/tgoskits/pull/1768))
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
+## [0.8.1](https://github.com/rcore-os/tgoskits/compare/somehal-v0.8.0...somehal-v0.8.1) - 2026-07-23
+
+### Added
+
+- *(axvisor)* Enhance AxLoader and Asus NUC15CRH support with fixes ([#1555](https://github.com/rcore-os/tgoskits/pull/1555))
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+
 ## [0.8.0](https://github.com/rcore-os/tgoskits/compare/somehal-v0.7.8...somehal-v0.8.0) - 2026-07-10
 
 ### Added

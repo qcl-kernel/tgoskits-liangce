@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.30](https://github.com/rcore-os/tgoskits/compare/ax-ipi-v0.5.29...ax-ipi-v0.5.30) - 2026-08-09
+
+### Other
+
+- *(ax-ipi)* establish typed IPI publication transport ([#1916](https://github.com/rcore-os/tgoskits/pull/1916))
+- *(repo)* unify workspace dependencies ([#1860](https://github.com/rcore-os/tgoskits/pull/1860))
+
+## [0.5.29](https://github.com/rcore-os/tgoskits/compare/ax-ipi-v0.5.28...ax-ipi-v0.5.29) - 2026-08-03
+
+### Other
+
+- *(block)* adopt IRQ-driven multi-queue runtime ([#1768](https://github.com/rcore-os/tgoskits/pull/1768))
+
+## [0.5.28](https://github.com/rcore-os/tgoskits/compare/ax-ipi-v0.5.27...ax-ipi-v0.5.28) - 2026-07-23
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+
 ## [0.5.27](https://github.com/rcore-os/tgoskits/compare/ax-ipi-v0.5.26...ax-ipi-v0.5.27) - 2026-07-10
 
 ### Other

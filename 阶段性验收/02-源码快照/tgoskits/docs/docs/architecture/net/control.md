@@ -19,7 +19,7 @@ sidebar_label: "控制面"
 
 ## 设计边界
 
-控制面是 `NetControl` 持有的只读状态层，通过 `spin::RwLock` 保护接口 registry、DNS registry 和共享路由表。它的查询接口（`interfaces()`、`select_route()`、`dns_servers()` 等）只持读锁、返回快照，不进入 `Service` 或 `SocketSet` 锁，也不接触设备收发队列。协议状态机推进、包收发和 socket payload 读写全部由数据面的 `Service::poll()` 和设备 worker 在独立的锁层级中完成。
+控制面是 `NetControl` 持有的只读状态层，通过 `ax_sync::SpinRwLock` 保护接口 registry、DNS registry 和共享路由表。它的查询接口（`interfaces()`、`select_route()`、`dns_servers()` 等）只持读锁、返回快照，不进入 `Service` 或 `SocketSet` 锁，也不接触设备收发队列。协议状态机推进、包收发和 socket payload 读写全部由数据面的 `Service::poll()` 和设备 worker 在独立的锁层级中完成。
 
 ### 无线控制面句柄
 
@@ -245,7 +245,7 @@ impl NetControl {
 
 ```rust
 // lib.rs, 简化示意
-let routes: SharedRouteTable = Arc::new(spin::RwLock::new(RouteTable::new()));
+let routes: SharedRouteTable = Arc::new(ax_sync::SpinRwLock::new(RouteTable::new()));
 let mut router = Router::new(routes.clone());
 
 let lo_id = InterfaceId::LOOPBACK;
@@ -447,7 +447,7 @@ pub fn select_route_with_binding(
     &self,
     dst_addr: &IpAddress,
     binding: DeviceBinding,
-) -> AxResult<RouteDecision> {
+) -> NetResult<RouteDecision> {
     let state = self.state.read();
     let routes = self.routes.read();
     let route = routes
@@ -677,7 +677,7 @@ socket 层通过控制面把本地地址、`SO_BINDTODEVICE` 和 DNS server 可�
 `bind(具体本地地址)` 会推导接口绑定。核心函数是 `local_binding_for()`：
 
 ```rust
-pub fn local_binding_for(&self, endpoint: &IpListenEndpoint) -> AxResult<DeviceBinding> {
+pub fn local_binding_for(&self, endpoint: &IpListenEndpoint) -> NetResult<DeviceBinding> {
     match endpoint.addr {
         Some(addr) => {
             let state = self.state.read();

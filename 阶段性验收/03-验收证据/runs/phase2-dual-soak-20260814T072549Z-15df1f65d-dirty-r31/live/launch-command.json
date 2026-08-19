@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "command": [
+    "cargo",
+    "xtask",
+    "qemu",
+    "--config",
+    "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/board/qemu-aarch64-dual-guest-evidence.toml",
+    "--qemu-config",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/qemu.no-dataplane.toml",
+    "--vmconfigs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux.resolved.toml",
+    "--vmconfigs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml",
+    "--qmp-socket",
+    "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qmp.sock",
+    "--qemu-pidfile",
+    "/tmp/axdual-0c924b826c08f09f3fe8919e760fe3b4/qemu.pid",
+    "--qemu-name",
+    "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+    "--rootfs",
+    "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/linux-console-rootfs.ext4"
+  ]
+}

@@ -9,7 +9,7 @@ use std::{
 use anyhow::{Context, anyhow, bail};
 use cargo_metadata::Package;
 use clap::{Args, Subcommand, ValueEnum};
-use ostool::{board::RunBoardOptions, build::config::Cargo, run::qemu::QemuConfig};
+use ostool::{board::RunBoardOptions, build::config::Cargo, ovmf::Arch, run::qemu::QemuConfig};
 
 use crate::{
     axvisor,
@@ -29,7 +29,7 @@ const AXTEST_SUITE_OK: &str = "AXTEST_SUITE_OK";
 const AXTEST_SUITE_FAIL: &str = "AXTEST_SUITE_FAIL";
 const AXTEST_CASE_FAIL: &str = "AXTEST_CASE .* status=fail";
 const PANIC_FAIL: &str = "panicked at";
-const COVERAGE_IGNORED_SOURCE_REGEX: &str = r"[/\\]\.(cargo|rustup)[/\\]";
+const COVERAGE_IGNORED_SOURCE_REGEX: &str = r"[/\\](\.(cargo|rustup)|target)[/\\]";
 
 #[derive(Args, Debug, Clone)]
 pub(crate) struct ArgsKtest {
@@ -205,10 +205,13 @@ async fn run_qemu(args: ArgsKtestQemu) -> anyhow::Result<()> {
         crate::rootfs::qemu::patch_rootfs(
             &mut qemu,
             &rootfs,
-            crate::rootfs::qemu::RootfsPatchMode::EnsureDiskBootNet,
-        );
+            crate::rootfs::qemu::RootfsPatchOptions {
+                mode: crate::rootfs::qemu::RootfsPatchMode::EnsureDiskBootNet,
+                write_policy: crate::rootfs::qemu::RootfsWritePolicy::Discard,
+            },
+        )?;
     }
-    patch_system_x86_64_uefi_kernel_loader(&mut qemu, &arch, output.elf_path())?;
+    patch_x86_64_uefi_kernel_loader(&mut qemu, &arch, output.elf_path()).await?;
     apply_axtest_qemu_markers(&mut qemu);
     app.run_qemu_with_axtest_coverage(&cargo, qemu, None)
         .await?;
@@ -218,7 +221,7 @@ async fn run_qemu(args: ArgsKtestQemu) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn patch_system_x86_64_uefi_kernel_loader(
+async fn patch_x86_64_uefi_kernel_loader(
     qemu: &mut QemuConfig,
     arch: &str,
     elf_path: &Path,
@@ -227,26 +230,22 @@ fn patch_system_x86_64_uefi_kernel_loader(
         return Ok(());
     }
 
-    let Some((code, vars_template)) = find_system_x86_64_ovmf_pair() else {
-        return Ok(());
-    };
-
+    let firmware = crate::support::ovmf::OvmfFirmware::fetch(Arch::X64).await?;
     let vars = elf_path.with_extension("vars.fd");
-    fs::copy(vars_template, &vars).with_context(|| {
+    fs::copy(firmware.vars(), &vars).with_context(|| {
         format!(
             "failed to copy OVMF vars from {} to {}",
-            vars_template.display(),
+            firmware.vars().display(),
             vars.display()
         )
     })?;
-    apply_system_x86_64_uefi_kernel_loader(qemu, code, &vars);
+    apply_x86_64_uefi_kernel_loader(qemu, firmware.code(), &vars);
     Ok(())
 }
 
-fn apply_system_x86_64_uefi_kernel_loader(qemu: &mut QemuConfig, code: &Path, vars: &Path) {
-    // Keep ostool's BIN conversion and QEMU `-kernel` loader, but bypass its
-    // prebuilt OVMF path. QEMU can load this x86_64 UEFI image directly via
-    // `-kernel` when system OVMF pflash drives are supplied explicitly.
+fn apply_x86_64_uefi_kernel_loader(qemu: &mut QemuConfig, code: &Path, vars: &Path) {
+    // Keep ostool's BIN conversion and QEMU kernel loader while supplying
+    // the shared OVMF cache as explicit pflash drives.
     qemu.uefi = false;
     qemu.to_bin = true;
     qemu.args.extend([
@@ -258,29 +257,6 @@ fn apply_system_x86_64_uefi_kernel_loader(qemu: &mut QemuConfig, code: &Path, va
         "-drive".to_string(),
         format!("if=pflash,format=raw,unit=1,file={}", vars.display()),
     ]);
-}
-
-fn find_system_x86_64_ovmf_pair() -> Option<(&'static Path, &'static Path)> {
-    x86_64_system_ovmf_candidates()
-        .iter()
-        .copied()
-        .map(|(code, vars)| (Path::new(code), Path::new(vars)))
-        .find(|(code, vars)| code.is_file() && vars.is_file())
-}
-
-fn x86_64_system_ovmf_candidates() -> &'static [(&'static str, &'static str)] {
-    &[
-        (
-            "/usr/share/OVMF/OVMF_CODE.fd",
-            "/usr/share/OVMF/OVMF_VARS.fd",
-        ),
-        (
-            "/usr/share/OVMF/OVMF_CODE_4M.fd",
-            "/usr/share/OVMF/OVMF_VARS_4M.fd",
-        ),
-        ("/usr/share/ovmf/OVMF.fd", "/usr/share/OVMF/OVMF_VARS.fd"),
-        ("/usr/share/qemu/OVMF.fd", "/usr/share/OVMF/OVMF_VARS.fd"),
-    ]
 }
 
 #[derive(Debug, Clone, Copy)]

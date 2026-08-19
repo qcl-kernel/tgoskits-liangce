@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "run-complete",
+  "status": "virtio_dma_effect_probe_completed",
+  "success": true,
+  "publication": "published last after identity-bound pidfd shutdown and runtime cleanup",
+  "cleanup": {
+    "pgid": 477,
+    "signals": [
+      "SIGINT"
+    ],
+    "launcherExitCode": 0,
+    "groupGone": true,
+    "noLiveMembers": true,
+    "zombiePids": [],
+    "reapPolls": 0,
+    "reapElapsedSeconds": 0.06590842499997507
+  },
+  "inputArtifacts": {
+    "rootfsPlan": {
+      "path": "linux-dma-effect-rootfs.json",
+      "size": 2275,
+      "sha256": "1abf7dcc2291f09c865191ab2ad21ba703a68e1c7f42970ab80f50215f16e03c"
+    },
+    "qemuPlan": {
+      "path": "plan.json",
+      "size": 3501,
+      "sha256": "92eeb4ff6510f6df900a8b47c4cd1e06d70b2eb1b511a1cff5d710ccc200703b"
+    },
+    "qemuConfig": {
+      "path": "qemu.toml",
+      "size": 1523,
+      "sha256": "0240166730a2c4e2e5dc15425e7aa7561cd83047a40f8b083729c741c6683037"
+    },
+    "buildConfig": {
+      "path": "qemu-aarch64-linux-dma-guard-evidence.toml",
+      "size": 520,
+      "sha256": "d9c3b0d8833676a0512a352913726c4cf0c54a515a1a50d73fc0b68e6f6a37da"
+    },
+    "vmConfig": {
+      "path": "vmconfig.map-reserved.toml",
+      "size": 653,
+      "sha256": "9d9801a08073f2a14093aca9be01508397c51eee6369e52b6582b80c6ee469da"
+    },
+    "kernelPrerequisiteManifest": {
+      "path": "guest-kernel-virtio-console.json",
+      "size": 984,
+      "sha256": "3fd743579c5f5c4d5b6a0a45b647b36b51209cbcd3d11f78c7582b9acfce855b"
+    },
+    "guestKernel": {
+      "path": "qemu-aarch64",
+      "size": 49265152,
+      "sha256": "d8127a4ce952ae9bfa539d3535260b8d67973b766e51a3de0b97b526bfd6722c"
+    },
+    "hostDtb": {
+      "path": "host-carveout.dtb",
+      "size": 8351,
+      "sha256": "2f0d95df1f60b621468025a71d7ba03b604043b97bf539ae138f92aaa8e6cc40"
+    },
+    "expectedSector": {
+      "path": "probe.raw",
+      "size": 512,
+      "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+    }
+  },
+  "preLaunchRootfs": {
+    "path": "linux-dma-effect-rootfs.ext4",
+    "size": 33554432,
+    "sha256": "acf9fcffd78ec85fde7d826af3d8f5df11eab2e09bfe7e074f5f7240b6a1b9ec"
+  },
+  "postRunMutableRootfs": {
+    "path": "linux-dma-effect-rootfs.ext4",
+    "size": 33554432,
+    "sha256": "61c6bb40eaac3f7198949ada06ee9dcf7c09c393b3ce7bccf942eb84855800a7"
+  },
+  "outputs": {
+    "request.json": {
+      "path": "request.json",
+      "size": 3783,
+      "sha256": "d17f92b94623e00423ac9bd179d4d0de8420a798f114d2968918687c6e4db61e"
+    },
+    "session.json": {
+      "path": "session.json",
+      "size": 4957,
+      "sha256": "5ba712ec98726ca5ddd0e5e8057f0cc539bba02be11d21508c2f91f83396f032"
+    },
+    "result.json": {
+      "path": "result.json",
+      "size": 6717,
+      "sha256": "dafadcfb18c7c799fcac3634c12a305ce8928de1a702722aa7d0f0fc5275734c"
+    },
+    "before-guard.bin": {
+      "path": "before-guard.bin",
+      "size": 2097152,
+      "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+    },
+    "before-payload.bin": {
+      "path": "before-payload.bin",
+      "size": 512,
+      "sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827"
+    },
+    "after-guard.bin": {
+      "path": "after-guard.bin",
+      "size": 2097152,
+      "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+    },
+    "after-payload.bin": {
+      "path": "after-payload.bin",
+      "size": 512,
+      "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+    },
+    "observed-log-prefix.bin": {
+      "path": "observed-log-prefix.bin",
+      "size": 40692,
+      "sha256": "fc1053bd4f7320c1968756c4da6d6ac6570941efc91e0bbd42813bd973e09ea9"
+    },
+    "axvisor.log": {
+      "path": "axvisor.log",
+      "size": 40998,
+      "sha256": "a31df9796ee3526d2b8e4bf7ca3ea2e02c745a6c3b7efafe423da305009b66ef"
+    }
+  }
+}

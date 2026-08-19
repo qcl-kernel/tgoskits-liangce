@@ -13,12 +13,12 @@
 // limitations under the License.
 
 pub(crate) mod hvc;
-mod ivc;
+pub(crate) mod ivc;
 pub(crate) mod vcpus;
 
 mod dispatcher;
 mod queue;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Re-exported for [`VmRuntimeHandle`](crate::vm::VmRuntimeHandle) which will
 // embed the dispatcher as a field and expose it to the vCPU run loop.
@@ -44,18 +44,30 @@ pub fn init() {
 
 /// Start the VMM.
 pub fn start() {
+    launch_all();
+    wait_for_all();
+}
+
+/// Start all registered VMs and return the IDs that entered Running.
+pub fn launch_all() -> std::vec::Vec<usize> {
     info!("VMM starting, booting VMs...");
+    let mut started = std::vec::Vec::new();
     for vm in crate::get_vm_list() {
         match vm.start() {
             Ok(_) => {
                 RUNNING_VM_COUNT.fetch_add(1, Ordering::Release);
                 vcpus::notify_primary_vcpu(vm.id());
-                info!("VM[{}] boot success", vm.id())
+                started.push(vm.id());
+                info!("VM[{}] boot success", vm.id());
             }
             Err(err) => warn!("VM[{}] boot failed, error {:?}", vm.id(), err),
         }
     }
+    started
+}
 
+/// Wait until every counted VM runtime has stopped.
+pub fn wait_for_all() {
     // Do not exit until all VMs are stopped.
     crate::host::task::wait_queue_wait_until(&VMM, || {
         let vm_count = RUNNING_VM_COUNT.load(Ordering::Acquire);
@@ -94,6 +106,33 @@ pub fn start_vm(vm_id: usize) -> AxVmResult {
     add_running_vm_count(1);
     vcpus::notify_primary_vcpu(vm_id);
     Ok(())
+}
+
+/// Wake the primary vCPU of a VM.
+///
+/// Single-vCPU guests retain pending device work across the WFI boundary.
+/// SMP guests keep the legacy wake-only behavior until AxVM provides a
+/// per-vCPU wait queue that can target vCPU0.
+pub fn notify_vm(vm_id: usize) -> AxVmResult {
+    let vm = vm_by_id(vm_id)?;
+    let vcpu_num = vm.vcpu_num();
+    vm.with_runtime(|runtime| {
+        notify_runtime_for_device_poll(runtime, vcpu_num);
+        Ok(())
+    })
+}
+
+fn notify_runtime_for_device_poll(runtime: &crate::vm::VmRuntimeHandle, vcpu_num: usize) {
+    if vcpu_num == 1 {
+        runtime.notify_device_poll();
+    } else {
+        // The runtime wait queue is shared by all vCPUs, so notify_one cannot
+        // target vCPU0. Keep the legacy wake semantics for SMP guests until a
+        // dedicated per-vCPU wake path is available; publishing the shared
+        // device-poll flag here could keep a secondary vCPU spinning while
+        // the primary vCPU remains asleep.
+        runtime.notify_one();
+    }
 }
 
 pub fn stop_vm(vm_id: usize) -> AxVmResult {
@@ -162,5 +201,25 @@ mod tests {
     fn missing_vm_is_reported_with_its_id() {
         let vm_id = usize::MAX;
         assert_eq!(missing_vm_error(vm_id), AxVmError::VmNotFound { vm_id });
+    }
+
+    #[test]
+    fn smp_notification_does_not_publish_a_shared_device_poll_request() {
+        let runtime = crate::vm::VmRuntimeHandle::new();
+        let observed_generation = runtime.notification_generation();
+
+        notify_runtime_for_device_poll(&runtime, 2);
+
+        assert!(!runtime.device_poll_requested());
+        assert_ne!(runtime.notification_generation(), observed_generation);
+    }
+
+    #[test]
+    fn single_vcpu_notification_publishes_a_device_poll_request() {
+        let runtime = crate::vm::VmRuntimeHandle::new();
+
+        notify_runtime_for_device_poll(&runtime, 1);
+
+        assert!(runtime.device_poll_requested());
     }
 }

@@ -10,9 +10,10 @@ use core::{
     sync::atomic::{AtomicU64, AtomicUsize, Ordering},
 };
 
-use ax_errno::{AxError, AxResult};
 use ax_memory_addr::VirtAddr;
 use scope_local::scope_local;
+
+use crate::{StarryError, StarryResult};
 
 static GENERATION_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -134,11 +135,11 @@ impl MemoryAccounting {
     }
 
     /// Record a Cow resident page after PTE mapping succeeds.
-    pub fn record_charge(&self, vaddr: VirtAddr, kind: RssKind) -> AxResult<()> {
+    pub fn record_charge(&self, vaddr: VirtAddr, kind: RssKind) -> StarryResult<()> {
         // SAFETY: `AddrSpace` lock held by all callers.
         let charges = unsafe { &mut *self.charges.get() };
         if charges.contains_key(&vaddr) {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         }
         charges.insert(vaddr, kind);
         self.inc(kind, 1);
@@ -211,7 +212,7 @@ impl MemoryAccounting {
 
     /// Establish an Anon charge after a file-backed COW write when no File
     /// charge exists at `vaddr` (accounting drift recovery).
-    pub fn adopt_cow_write_as_anon(&self, vaddr: VirtAddr) -> AxResult<()> {
+    pub fn adopt_cow_write_as_anon(&self, vaddr: VirtAddr) -> StarryResult<()> {
         self.record_charge(vaddr, RssKind::Anon)?;
         if self.rss_file_pages() > 0 {
             self.dec(RssKind::File, 1);
@@ -245,8 +246,8 @@ impl MemoryAccounting {
     }
 
     /// Fork: copy parent's bucket after child PTE maps the shared page.
-    pub fn copy_charge_from(&self, parent: &Self, vaddr: VirtAddr) -> AxResult<()> {
-        let kind = parent.charge_kind(vaddr).ok_or(AxError::InvalidInput)?;
+    pub fn copy_charge_from(&self, parent: &Self, vaddr: VirtAddr) -> StarryResult<()> {
+        let kind = parent.charge_kind(vaddr).ok_or(StarryError::InvalidInput)?;
         self.record_charge(vaddr, kind)?;
         Ok(())
     }
@@ -256,8 +257,8 @@ impl MemoryAccounting {
     pub fn reconcile_fork_charges_from_parent(
         child: &Self,
         parent: &Self,
-        child_pt: &mut ax_runtime::hal::paging::PageTableCursor,
-    ) -> AxResult<()> {
+        child_pt: &mut ax_runtime::hal::paging::PageTable,
+    ) -> StarryResult<()> {
         use ax_runtime::hal::paging::PagingError;
 
         let parent_entries = parent.charge_entries();
@@ -296,7 +297,7 @@ impl MemoryAccounting {
     }
 
     /// mremap: migrate charge after PTE move (src unmapped, dst mapped).
-    pub fn move_charge(&self, src: VirtAddr, dst: VirtAddr) -> AxResult<()> {
+    pub fn move_charge(&self, src: VirtAddr, dst: VirtAddr) -> StarryResult<()> {
         // SAFETY: `AddrSpace` lock held by all callers.
         let charges = unsafe { &mut *self.charges.get() };
         let Some(kind) = charges.remove(&src) else {
@@ -305,7 +306,7 @@ impl MemoryAccounting {
         if charges.contains_key(&dst) {
             debug_assert!(false, "move_charge: dst {dst:?} already charged");
             charges.insert(src, kind);
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         }
         charges.insert(dst, kind);
         Ok(())
@@ -361,6 +362,52 @@ pub(crate) fn bridge_rss_accounting() -> Option<&'static MemoryAccounting> {
     } else {
         Some(unsafe { &*(ptr as *const MemoryAccounting) })
     }
+}
+
+#[cfg(axtest)]
+pub(crate) fn accounting_edge_cases_and_snapshot_rules_hold_for_test() -> bool {
+    use ax_memory_addr::VirtAddr;
+
+    // inc(0) and dec(0) are no-ops.
+    let acct = MemoryAccounting::new();
+    acct.inc(RssKind::Anon, 0);
+    assert!(acct.rss_total_pages() == 0);
+    acct.dec(RssKind::File, 0);
+    assert!(acct.rss_total_pages() == 0);
+
+    // hiwater_rss starts at 0 and tracks max(total, stored).
+    assert!(acct.hiwater_rss_pages() == 0);
+    acct.inc(RssKind::Anon, 5);
+    assert!(acct.hiwater_rss_pages() == 5);
+    acct.dec(RssKind::Anon, 3);
+    // hiwater stays at peak even after dec.
+    assert!(acct.hiwater_rss_pages() == 5);
+    assert!(acct.rss_total_pages() == 2);
+
+    // snapshot_resident_charges counts by kind from charge map.
+    let va1 = VirtAddr::from(0x1000usize);
+    let va2 = VirtAddr::from(0x2000usize);
+    let va3 = VirtAddr::from(0x3000usize);
+    acct.record_charge(va1, RssKind::Anon).unwrap();
+    acct.record_charge(va2, RssKind::File).unwrap();
+    acct.record_charge(va3, RssKind::File).unwrap();
+    let (anon, file, shmem) = acct.snapshot_resident_charges();
+    assert_eq!(anon, 1); // va1
+    assert_eq!(file, 2); // va2 + va3
+    assert_eq!(shmem, 0);
+
+    // generation is monotonic (new() sets it from global counter).
+    let gen1 = acct.generation.load(core::sync::atomic::Ordering::Relaxed);
+    acct.remove_charge(va1);
+    let gen2 = acct.generation.load(core::sync::atomic::Ordering::Relaxed);
+    assert!(gen2 > gen1);
+
+    // move_charge with non-existent src is a no-op (returns Ok).
+    let ghost = VirtAddr::from(0xDEADusize);
+    assert!(acct.move_charge(ghost, VirtAddr::from(0xBEEFusize)).is_ok());
+    assert!(acct.charge_kind(ghost).is_none());
+
+    true
 }
 
 #[cfg(test)]
@@ -454,4 +501,53 @@ mod tests {
         assert_eq!(child_anon, parent_anon + 1);
         assert_eq!(child_file, 0);
     }
+}
+
+#[cfg(axtest)]
+pub(crate) fn rss_kind_and_accounting_rules_hold_for_test() -> bool {
+    // RssKind variants are Debug, Clone, Copy, PartialEq, Eq
+    let anon = RssKind::Anon;
+    let file = RssKind::File;
+    let shmem = RssKind::Shmem;
+
+    // PartialEq
+    assert!(anon == RssKind::Anon);
+    assert!(anon != file);
+    assert!(file != shmem);
+
+    // Clone
+    let anon2 = anon.clone();
+    assert!(anon2 == anon);
+
+    // Default MemoryAccounting has zero counters
+    let acc = MemoryAccounting::new();
+    let (a, f, s) = acc.snapshot_resident_charges();
+    assert!(a == 0);
+    assert!(f == 0);
+    assert!(s == 0);
+
+    true
+}
+
+#[cfg(axtest)]
+pub(crate) fn accounting_rss_kind_debug_and_default_hold_for_test() -> bool {
+    // Test MemoryAccounting default trait
+    let acc_default = MemoryAccounting::default();
+    assert_eq!(acc_default.rss_anon_pages(), 0);
+    assert_eq!(acc_default.rss_file_pages(), 0);
+    assert_eq!(acc_default.rss_shmem_pages(), 0);
+    assert_eq!(acc_default.rss_total_pages(), 0);
+
+    // Test individual rss getters
+    let acc_new = MemoryAccounting::new();
+    assert_eq!(acc_new.rss_anon_pages(), 0);
+    assert_eq!(acc_new.rss_file_pages(), 0);
+    assert_eq!(acc_new.rss_shmem_pages(), 0);
+
+    // Test RssKind Copy trait
+    let anon = RssKind::Anon;
+    let copied = anon;
+    assert_eq!(anon, copied);
+
+    true
 }

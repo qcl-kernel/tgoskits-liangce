@@ -29,7 +29,7 @@ tgoskits/
 │   ├── arceos/                # ArceOS 模块化内核
 │   ├── StarryOS/              # StarryOS Linux 兼容 OS
 │   └── axvisor/               # Axvisor Type-I Hypervisor
-├── platforms/                 # 平台与板卡适配 crate
+├── platform/                  # 平台与板卡适配 crate
 ├── drivers/                   # 可复用驱动与驱动子系统
 ├── test-suit/                 # 系统级测试用例
 ├── xtask/                     # 根目录统一命令入口
@@ -37,7 +37,7 @@ tgoskits/
 └── docs/                      # Docusaurus 文档站点
 ```
 
-更多关于 subtree 同步、组件分层和开发约定的说明，请参考 [仓库结构与协作方式](https://rcore-os.cn/tgoskits/docs/contributing/repo) 和 [组件开发指南](https://rcore-os.cn/tgoskits/docs/development/components)。
+更多关于 subtree 同步、组件分层和开发约定的说明，请参考 [仓库结构与协作方式](https://rcore-os.cn/tgoskits/docs/contributing/repo) 和 [架构设计概览](https://rcore-os.cn/tgoskits/docs/architecture/overview)。
 
 ## 3. 快速体验
 

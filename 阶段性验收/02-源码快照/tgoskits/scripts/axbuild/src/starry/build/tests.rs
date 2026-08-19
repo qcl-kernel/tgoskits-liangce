@@ -533,7 +533,7 @@ fn load_cargo_config_keeps_original_bare_target_for_dynamic_platform_request() {
     let target = "aarch64-unknown-none-softfloat";
     let mut request = request(PathBuf::from("/tmp/.build.toml"), "aarch64", target);
     request.build_info_override = Some(StarryBuildInfo {
-        features: vec!["ax-driver/virtio-blk".to_string()],
+        features: vec!["ax-driver/nvme".to_string()],
         ..default_starry_build_info()
     });
 
@@ -739,4 +739,49 @@ fn ensure_starry_bin_arg_keeps_existing_bin_arg() {
     ensure_starry_bin_arg(&mut args, STARRY_PACKAGE, &metadata).unwrap();
 
     assert_eq!(args, vec!["--bin".to_string(), "starryos".to_string()]);
+}
+
+#[test]
+fn riscv_image_header_accepts_compact_entry_and_fixed_offsets() {
+    let image = riscv_image_fixture(0x0032_2297, 0x4982_8067);
+
+    validate_riscv_image_header(&image).unwrap();
+}
+
+#[test]
+fn riscv_image_header_rejects_legacy_sixteen_byte_entry() {
+    let mut image = vec![0_u8; 0x80];
+    let image_size = image.len() as u64;
+    put_u32(&mut image, 0x00, 0x0032_2297);
+    put_u32(&mut image, 0x04, 0x0002_8293); // addi t0, t0, 0 from the old lla expansion
+    put_u32(&mut image, 0x08, 0x4982_8067);
+    put_u32(&mut image, 0x0c, 0x0000_0013); // nop
+    put_u64(&mut image, 0x10, 0x20_0000);
+    put_u64(&mut image, 0x18, image_size);
+    image[0x38..0x3d].copy_from_slice(b"RISCV");
+    image[0x40..0x44].copy_from_slice(b"RSC\x05");
+
+    let error = validate_riscv_image_header(&image).unwrap_err();
+
+    assert!(error.to_string().contains("code1"), "{error:#}");
+}
+
+fn riscv_image_fixture(code0: u32, code1: u32) -> Vec<u8> {
+    let mut image = vec![0_u8; 0x80];
+    let image_size = image.len() as u64;
+    put_u32(&mut image, 0x00, code0);
+    put_u32(&mut image, 0x04, code1);
+    put_u64(&mut image, 0x08, 0x20_0000);
+    put_u64(&mut image, 0x10, image_size);
+    image[0x30..0x35].copy_from_slice(b"RISCV");
+    image[0x38..0x3c].copy_from_slice(b"RSC\x05");
+    image
+}
+
+fn put_u32(image: &mut [u8], offset: usize, value: u32) {
+    image[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+}
+
+fn put_u64(image: &mut [u8], offset: usize, value: u64) {
+    image[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
 }

@@ -1,44 +1,14 @@
+use ax_lazyinit::OnceLock;
 use ax_plat::mem::{
-    DCacheOp, DmaGuard, IomapAttrs, IomapDecision, IomapError, MemIf, PhysAddr, RawRange, VirtAddr,
-    VmCarveout,
+    DCacheOp, IomapAttrs, IomapDecision, IomapError, MemIf, PhysAddr, RawRange, VirtAddr,
 };
 use heapless::Vec;
 use someboot::ArchTrait;
 use somehal::mem::MemoryType;
-use spin::Once;
 
-static FREE_LIST: Once<Vec<RawRange, 32>> = Once::new();
-static RESERVED_LIST: Once<Vec<RawRange, 32>> = Once::new();
-static MMIO_LIST: Once<Vec<RawRange, 16>> = Once::new();
-static VM_CARVEOUTS: Once<Vec<VmCarveout, 32>> = Once::new();
-static DMA_GUARDS: Once<Vec<DmaGuard, 32>> = Once::new();
-
-fn copy_vm_carveouts(source: &[somehal::mem::VmCarveout]) -> Vec<VmCarveout, 32> {
-    let mut manifest = Vec::new();
-    for carveout in source {
-        manifest
-            .push(VmCarveout {
-                vm_id: carveout.vm_id,
-                physical_start: carveout.physical_start,
-                size: carveout.size,
-            })
-            .expect("someboot VM carveout manifest exceeds platform capacity");
-    }
-    manifest
-}
-
-fn copy_dma_guards(source: &[somehal::mem::DmaGuard]) -> Vec<DmaGuard, 32> {
-    let mut manifest = Vec::new();
-    for guard in source {
-        manifest
-            .push(DmaGuard {
-                physical_start: guard.physical_start,
-                size: guard.size,
-            })
-            .expect("someboot DMA guard manifest exceeds platform capacity");
-    }
-    manifest
-}
+static FREE_LIST: OnceLock<Vec<RawRange, 32>> = OnceLock::new();
+static RESERVED_LIST: OnceLock<Vec<RawRange, 32>> = OnceLock::new();
+static MMIO_LIST: OnceLock<Vec<RawRange, 16>> = OnceLock::new();
 
 #[cfg(target_arch = "x86_64")]
 const X86_FIXED_MMIO_RANGES: &[RawRange] = &[
@@ -134,18 +104,6 @@ impl MemIf for MemIfImpl {
         })
     }
 
-    fn vm_carveouts() -> &'static [VmCarveout] {
-        // someboot publishes this manifest during primary CPU early memory
-        // setup. Its accessor fails closed if this platform API is used sooner.
-        VM_CARVEOUTS.call_once(|| copy_vm_carveouts(somehal::mem::vm_carveouts()))
-    }
-
-    fn dma_guards() -> &'static [DmaGuard] {
-        // Do not cache a pre-initialization empty set: the someboot accessor
-        // fails closed until early memory setup has published the manifest.
-        DMA_GUARDS.call_once(|| copy_dma_guards(somehal::mem::dma_guards()))
-    }
-
     fn mmio_ranges() -> &'static [RawRange] {
         MMIO_LIST.call_once(|| {
             let mut list = Vec::new();
@@ -221,78 +179,5 @@ fn to_somehal_dcache_op(op: DCacheOp) -> somehal::cache::DCacheOp {
         DCacheOp::Clean => somehal::cache::DCacheOp::Clean,
         DCacheOp::Invalidate => somehal::cache::DCacheOp::Invalidate,
         DCacheOp::CleanInvalidate => somehal::cache::DCacheOp::CleanInvalidate,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn copies_vm_carveout_manifest_without_generic_reserved_ranges() {
-        let source = [somehal::mem::VmCarveout {
-            vm_id: 2,
-            physical_start: 0x1_0000_0000,
-            size: 0x0800_0000,
-        }];
-
-        assert_eq!(
-            copy_vm_carveouts(&source).as_slice(),
-            &[VmCarveout {
-                vm_id: 2,
-                physical_start: 0x1_0000_0000,
-                size: 0x0800_0000,
-            }]
-        );
-    }
-
-    #[test]
-    fn copies_dma_guard_manifest() {
-        let source = [somehal::mem::DmaGuard {
-            physical_start: 0x2_0000_0000,
-            size: 0x0100_0000,
-        }];
-
-        assert_eq!(
-            copy_dma_guards(&source).as_slice(),
-            &[DmaGuard {
-                physical_start: 0x2_0000_0000,
-                size: 0x0100_0000,
-            }]
-        );
-    }
-
-    #[test]
-    fn copies_empty_dma_guard_manifest() {
-        assert!(copy_dma_guards(&[]).is_empty());
-    }
-
-    #[test]
-    fn keeps_dma_guards_separate_from_vm_carveouts() {
-        let guards = copy_dma_guards(&[somehal::mem::DmaGuard {
-            physical_start: 0x2_0000_0000,
-            size: 0x0100_0000,
-        }]);
-        let carveouts = copy_vm_carveouts(&[somehal::mem::VmCarveout {
-            vm_id: 7,
-            physical_start: 0x3_0000_0000,
-            size: 0x0200_0000,
-        }]);
-
-        assert_eq!(
-            guards.as_slice(),
-            &[DmaGuard {
-                physical_start: 0x2_0000_0000,
-                size: 0x0100_0000,
-            }]
-        );
-        assert_eq!(
-            carveouts.as_slice(),
-            &[VmCarveout {
-                vm_id: 7,
-                physical_start: 0x3_0000_0000,
-                size: 0x0200_0000,
-            }]
-        );
     }
 }

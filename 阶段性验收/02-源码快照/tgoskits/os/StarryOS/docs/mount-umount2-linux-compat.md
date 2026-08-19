@@ -308,18 +308,18 @@ match fs_type.as_str() {
 let propagation = flags & PROPAGATION_FLAGS;
 
 if propagation.count_ones() > 1 {
-    return Err(AxError::InvalidInput);
+    return Err(StarryError::InvalidInput);
 }
 
 if propagation != 0 {
     let allowed = propagation | MS_REC | MS_SILENT;
     if flags & !allowed != 0 {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
 
     let target = FS_CONTEXT.lock().resolve(target)?;
     if !target.is_root_of_mount() {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
     let mountpoint = target.mountpoint().clone();
     if (flags & MS_REC) != 0 {
@@ -369,7 +369,7 @@ pub struct Mountpoint {
 
 对应代码位置：
 
-- `components/axfs-ng-vfs/src/mount.rs`
+- `fs/axfs-ng-vfs/src/mount.rs`
 
 ### 为什么放在 `Mountpoint` 上
 
@@ -571,7 +571,7 @@ if self.inner.location().is_readonly()
 ```rust
 if (flags & MNT_EXPIRE) != 0 {
     if !target.mountpoint().mark_expired() {
-        return Err(AxError::from(LinuxError::EAGAIN));
+        return Err(Errno::EAGAIN.into());
     }
 }
 ```

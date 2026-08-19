@@ -29,7 +29,7 @@ tgoskits/
 │   ├── arceos/                # ArceOS modular kernel
 │   ├── StarryOS/              # StarryOS Linux-compatible OS
 │   └── axvisor/               # Axvisor Type-I Hypervisor
-├── platforms/                 # platform and board support crates
+├── platform/                  # platform and board support crates
 ├── drivers/                   # reusable drivers and driver subsystems
 ├── test-suit/                 # system-level test cases
 ├── xtask/                     # unified root command entry
@@ -37,7 +37,7 @@ tgoskits/
 └── docs/                      # Docusaurus documentation site
 ```
 
-For subtree synchronization, component layering, and development conventions, see [repository structure and collaboration](https://rcore-os.cn/tgoskits/docs/contributing/repo) and the [component development guide](https://rcore-os.cn/tgoskits/docs/development/components).
+For subtree synchronization, component layering, and development conventions, see [repository structure and collaboration](https://rcore-os.cn/tgoskits/docs/contributing/repo) and the [architecture overview](https://rcore-os.cn/tgoskits/docs/architecture/overview).
 
 ## 3. Quick Experience
 
@@ -61,7 +61,7 @@ If you do not use the container, prepare at least Rust, basic build tools, and c
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo apt update
-sudo apt install -y cmake make ninja-build pkg-config
+sudo apt install -y cmake make ninja-build pkg-config e2fsprogs fakeroot
 sudo apt install -y qemu-system-arm qemu-system-riscv64 qemu-system-x86
 cargo install cargo-binutils
 ```

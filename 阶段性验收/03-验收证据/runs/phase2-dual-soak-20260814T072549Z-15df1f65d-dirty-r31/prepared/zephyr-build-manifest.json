@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+  "elf": {
+    "path": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.elf",
+    "sha256": "02acbf378037b2e25e0f971945cd34fcc5dcd34381a346d729b43597cdcd72b6"
+  },
+  "binary": {
+    "path": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.bin",
+    "sha256": "e4a3ece0263f37cc0d22331184530fe6f23e742985538dad7f8f45268b81e3c0"
+  },
+  "template": {
+    "path": "/mnt/f/project/泉城实验室/tgoskits/os/axvisor/configs/vms/qemu/aarch64/zephyr-smp1-dual.toml",
+    "sha256": "3813c8451727e25cbd41dd2b9d10a4f36428ad154063fc0855cd3a1cb3d67647"
+  }
+}

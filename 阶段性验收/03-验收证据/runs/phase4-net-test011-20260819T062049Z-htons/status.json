@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase4-net-test011-20260819T062049Z-htons",
+  "success": true,
+  "status": "guest_network_completed",
+  "primaryError": null,
+  "cleanupError": null,
+  "completedChecks": [
+    "runtime-markers",
+    "cleanup"
+  ],
+  "manifestSha256": "d1b61d6aa3e16abfe08dd543bca96d81b95bd47b4d60174984ae9b8936cf5043"
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase4-net-test015-20260819T153636Z-icpc-bidir4",
+  "success": true,
+  "status": "guest_network_completed",
+  "primaryError": null,
+  "cleanupError": null,
+  "completedChecks": [
+    "runtime-markers",
+    "cleanup"
+  ],
+  "manifestSha256": "d488118a1c08ed5ec28bf71cbe98b3e6db03778df93a397c20015b10c325940b"
+}

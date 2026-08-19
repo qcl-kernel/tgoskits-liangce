@@ -1,2 +1,0 @@
-cd /mnt/f/project/泉城实验室/tgoskits/os/axvisor
-  timeout --signal=INT --kill-after=30s 600 cargo xtask qemu --config configs/board/qemu-aarch64-zephyr-smoke.toml --qemu-config /mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-zephyr-pl011-current-20260805-01e0531-dirty-r9/configs/qemu-aarch64-zephyr-framed-console.toml --vmconfigs /mnt/f/project/泉城实验室/tgoskits/os/axvisor/tmp/vmconfigs/zephyr-aarch64-qemu-smoke.generated.toml --rootfs /mnt/f/project/泉城实验室/tgoskits/tmp/contest/zephyr-smoke/rootfs-placeholder.img 

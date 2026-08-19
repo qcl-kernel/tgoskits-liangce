@@ -1,6 +1,6 @@
 //! AArch64 compatibility facade and target-specific guest FDT policy.
 
-use alloc::vec::Vec;
+use std::vec::Vec;
 
 use fdt_edit::Fdt;
 
@@ -19,11 +19,17 @@ pub use core::{
     update_fdt, update_provided_fdt,
 };
 
+pub(crate) fn host_gic_maintenance_intid(fdt: &Fdt) -> AxVmResult<Option<u32>> {
+    core::interrupt::host_gic_maintenance_intid(fdt)
+}
+
 pub(crate) fn guest_fdt_policy() -> core::GuestFdtPolicy {
     core::GuestFdtPolicy {
         patch_runtime: super::capabilities::patch_runtime_fdt,
         patch_provided: super::capabilities::patch_provided_fdt,
         decode_interrupt: super::capabilities::decode_gic_spi,
+        resolve_cpu_index: super::capabilities::resolve_cpu_index,
+        host_cpu_count: super::capabilities::host_cpu_count,
     }
 }
 
@@ -45,12 +51,10 @@ pub(super) fn initrd_start_size_from_image_config(
 pub(super) fn update_cpu_node(
     fdt: &Fdt,
     host_fdt: Option<&Fdt>,
-    crate_config: &axvmconfig::AxVMCrateConfig,
+    crate_config: &axvmconfig::GuestConfig,
 ) -> AxVmResult<Vec<u8>> {
     let Some(host_fdt) = host_fdt else {
-        let mut provided_fdt = fdt.clone();
-        core::sanitize::sanitize_guest_fdt(&mut provided_fdt)?;
-        return Ok(provided_fdt.encode().as_ref().to_vec());
+        return Ok(fdt.encode().as_ref().to_vec());
     };
 
     let phys_cpu_ids = crate_config
@@ -58,12 +62,41 @@ pub(super) fn update_cpu_node(
         .phys_cpu_ids
         .as_deref()
         .ok_or_else(|| ax_err_type!(InvalidInput, "phys_cpu_ids is missing"))?;
-    core::sanitize::replace_cpu_nodes_from_host(fdt, host_fdt, phys_cpu_ids)
+    let mut tree = core::tree::FdtTree::from_fdt(fdt.clone());
+    tree.inner_mut().remove_by_path("/cpus");
+
+    if let Some(host_cpus_id) = host_fdt.get_by_path_id("/cpus") {
+        let cpus_id =
+            tree.copy_subtree_from(host_fdt, host_cpus_id, tree.inner().root_id(), true)?;
+        let cpu_paths = tree
+            .node_paths()
+            .into_iter()
+            .filter_map(|(id, path)| {
+                (path.starts_with("/cpus/cpu@")
+                    && !core::create::need_cpu_node(phys_cpu_ids, tree.inner(), id, &path))
+                .then_some(path)
+            })
+            .collect::<Vec<_>>();
+        for path in cpu_paths {
+            tree.inner_mut().remove_by_path(&path);
+        }
+        if let Some(cpus) = tree.inner_mut().node_mut(cpus_id) {
+            for property in [
+                "riscv,cbop-block-size",
+                "riscv,cboz-block-size",
+                "riscv,cbom-block-size",
+            ] {
+                cpus.remove_property(property);
+            }
+        }
+    }
+
+    Ok(tree.finish())
 }
 
 pub fn handle_fdt_operations(
     vm_config: &mut AxVMConfig,
-    vm_create_config: &mut axvmconfig::AxVMCrateConfig,
+    vm_create_config: &mut axvmconfig::GuestConfig,
     provider: &dyn BootImageProvider,
 ) -> AxVmResult<Option<GuestDtbImage>> {
     core::prepare_dtb_guest(vm_config, vm_create_config, provider)

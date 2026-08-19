@@ -37,10 +37,8 @@ M: @Josen-B
 R: @Josen-B
 F: virtualization/x86_vcpu/
 F: virtualization/x86_vlapic/
-F: components/axfs-ng-vfs/
-F: components/rsext4/
+F: fs/
 F: components/axsched/
-F: os/arceos/modules/axfs-ng/
 K: `x86_vcpu`, x86_64 virtualization, VMX, SVM, VMCS, VMCB, Linux/UEFI guest boot, PIT handling, IVC/HVC, guest communication, FreeRTOS/Zephyr guest, host-fs, `axfs-ng-vfs`, `rsext4`, ext4, `axsched`, `BaseScheduler`, FIFO/RR/CFS, `sched-rr`, `sched-cfs`
 
 ## SD/MMC, Syscall, And RISC-V
@@ -54,9 +52,9 @@ F: drivers/blk/dwmmc-host/
 F: drivers/blk/cv181x-sdhci/
 F: drivers/blk/starfive-jh7110-dwmmc/
 F: drivers/ax-driver/src/block/
-F: components/sdio-host/
-F: components/sdio-host2/
-F: components/sdhci-cv1800/
+F: drivers/blk/sdio-host/
+F: drivers/blk/sdio-host2/
+F: drivers/blk/sdhci-cv1800/
 F: os/arceos/api/arceos_posix_api/
 F: os/arceos/ulib/axlibc/
 F: virtualization/riscv_vcpu/
@@ -77,4 +75,4 @@ F: virtualization/axaddrspace/
 F: virtualization/axvm/src/layout.rs
 F: virtualization/x86_vcpu/src/ept.rs
 F: platforms/
-K: memory management, address space, page table, paging, `ax-mm`, `axaddrspace`, `page-table-generic`, `ax-page-table-multiarch`, `ax-page-table-entry`, `ax-memory-set`, `ax-memory-addr`, `axalloc`, `AddrSpace`, `KERNEL_ASPACE`, `PageTable`, `PageTableCursor`, `FrameAllocator`, `PagingHandlerImpl`, `MappingFlags`, `MemRegionFlags`, `Backend::Allocation`, `mmap`, `munmap`, `mprotect`, `brk`, user memory, EPT/NPT, Stage-2, nested page table, `NestedPagingConfig`, GPA/GVA
+K: memory management, address space, page table, paging, `ax-mm`, `axaddrspace`, `page-table-generic`, `ax-memory-set`, `ax-memory-addr`, `axalloc`, `AddrSpace`, `KERNEL_ASPACE`, `PageTable`, `PageTableCursor`, `FrameAllocator`, `PagingHandlerImpl`, `MappingFlags`, `MemRegionFlags`, `Backend::Allocation`, `mmap`, `munmap`, `mprotect`, `brk`, user memory, EPT/NPT, Stage-2, nested page table, `NestedPagingConfig`, GPA/GVA

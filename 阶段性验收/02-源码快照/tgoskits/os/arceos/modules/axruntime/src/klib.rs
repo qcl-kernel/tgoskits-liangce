@@ -15,11 +15,23 @@ use core::time::Duration;
 #[cfg(feature = "paging")]
 use ax_memory_addr::MemoryAddr;
 use axklib::{
-    AxError, AxResult, BoxedIrqHandler, ConcurrentBoxedIrqHandler, IrqCpuId, IrqCpuMask, IrqError,
-    IrqHandle, IrqId, Klib, PhysAddr, VirtAddr, impl_trait,
+    BoxedIrqHandler, ConcurrentBoxedIrqHandler, DmaCoherentMappingOutcome, IrqCpuId, IrqCpuMask,
+    IrqError, IrqHandle, IrqId, Klib, KlibError, KlibResult, PhysAddr, VirtAddr, impl_trait,
 };
 
 struct KlibImpl;
+
+#[cfg(feature = "paging")]
+pub(crate) fn map_mm_error(err: ax_mm::MmError) -> KlibError {
+    match err {
+        ax_mm::MmError::InvalidInput(_) => KlibError::InvalidInput,
+        ax_mm::MmError::NoMemory => KlibError::NoMemory,
+        ax_mm::MmError::AlreadyExists => KlibError::AlreadyExists,
+        ax_mm::MmError::BadAddress => KlibError::BadAddress,
+        ax_mm::MmError::BadState(_) => KlibError::BadState,
+        ax_mm::MmError::Unsupported => KlibError::Unsupported,
+    }
+}
 
 #[cfg(feature = "paging")]
 fn dma_coherent_range(addr: VirtAddr, size: usize) -> Option<(VirtAddr, usize)> {
@@ -32,16 +44,24 @@ fn dma_coherent_range(addr: VirtAddr, size: usize) -> Option<(VirtAddr, usize)> 
     Some((start, end - start))
 }
 
+#[cfg(feature = "paging")]
+fn coherent_mapping_outcome(result: KlibResult) -> DmaCoherentMappingOutcome {
+    match result {
+        Ok(()) => DmaCoherentMappingOutcome::Updated,
+        Err(err) => DmaCoherentMappingOutcome::StateUncertain(err),
+    }
+}
+
 #[cfg(feature = "irq")]
-fn map_irq_error(err: IrqError) -> AxError {
+fn map_irq_error(err: IrqError) -> KlibError {
     match err {
-        IrqError::InvalidIrq | IrqError::InvalidCpu => AxError::InvalidInput,
-        IrqError::CpuOffline | IrqError::Unsupported => AxError::Unsupported,
-        IrqError::Timeout => AxError::TimedOut,
-        IrqError::Busy | IrqError::InIrqContext => AxError::ResourceBusy,
-        IrqError::NoMemory => AxError::NoMemory,
-        IrqError::NotFound => AxError::NotFound,
-        IrqError::Controller => AxError::Io,
+        IrqError::InvalidIrq | IrqError::InvalidCpu => KlibError::InvalidInput,
+        IrqError::CpuOffline | IrqError::Unsupported => KlibError::Unsupported,
+        IrqError::Timeout => KlibError::TimedOut,
+        IrqError::Busy | IrqError::InIrqContext => KlibError::ResourceBusy,
+        IrqError::NoMemory => KlibError::NoMemory,
+        IrqError::NotFound => KlibError::NotFound,
+        IrqError::Controller => KlibError::Io,
     }
 }
 
@@ -54,17 +74,16 @@ impl_trait! {
         /// Map a physical region by delegating to the memory manager (`axmm`).
         ///
         /// This function forwards the request to `ax_mm::iomap` and returns the
-        /// resulting virtual address wrapped in an `AxResult`.
-        fn mem_iomap(addr: PhysAddr, size: usize) -> AxResult<VirtAddr> {
+        /// resulting virtual address wrapped in a `KlibResult`.
+        fn mem_iomap(addr: PhysAddr, size: usize) -> KlibResult<VirtAddr> {
             #[cfg(feature = "paging")]
             {
-                // Convert from AxError (struct in ax_errno 0.2) to AxErrorKind (enum used by axklib)
-                ax_mm::iomap(addr, size)
+                ax_mm::iomap(addr, size).map_err(map_mm_error)
             }
             #[cfg(not(feature = "paging"))]
             {
                 let _ = (addr, size);
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
@@ -84,33 +103,41 @@ impl_trait! {
             dma_cache_range(ax_hal::mem::DCacheOp::CleanInvalidate, addr, size);
         }
 
-        fn mem_make_dma_coherent_uncached(addr: VirtAddr, size: usize) -> AxResult {
+        fn mem_make_dma_coherent_uncached(
+            addr: VirtAddr,
+            size: usize,
+        ) -> DmaCoherentMappingOutcome {
             #[cfg(feature = "paging")]
             {
                 let Some((start, size)) = dma_coherent_range(addr, size) else {
-                    return Ok(());
+                    return DmaCoherentMappingOutcome::Updated;
                 };
 
                 ax_hal::mem::dma_coherent_before_make_uncached(start, size);
-                ax_mm::kernel_aspace().lock().protect(
-                    start,
-                    size,
-                    ax_hal::paging::MappingFlags::READ
-                        | ax_hal::paging::MappingFlags::WRITE
-                        | ax_hal::paging::MappingFlags::UNCACHED,
-                )?;
-                ax_hal::asm::flush_tlb(None);
+                let outcome = coherent_mapping_outcome(
+                    crate::kernel_mapping::protect_kernel_range(
+                        start,
+                        size,
+                        ax_hal::paging::MappingFlags::READ
+                            | ax_hal::paging::MappingFlags::WRITE
+                            | ax_hal::paging::MappingFlags::UNCACHED,
+                    )
+                    .map_err(crate::error::runtime_error_to_klib_error),
+                );
+                if outcome != DmaCoherentMappingOutcome::Updated {
+                    return outcome;
+                }
                 ax_hal::mem::dma_coherent_after_mapping_update();
-                Ok(())
+                DmaCoherentMappingOutcome::Updated
             }
             #[cfg(not(feature = "paging"))]
             {
                 let _ = (addr, size);
-                Err(AxError::Unsupported)
+                DmaCoherentMappingOutcome::NotStarted(KlibError::Unsupported)
             }
         }
 
-        fn mem_restore_dma_cached(addr: VirtAddr, size: usize) -> AxResult {
+        fn mem_restore_dma_cached(addr: VirtAddr, size: usize) -> KlibResult {
             #[cfg(feature = "paging")]
             {
                 let Some((start, size)) = dma_coherent_range(addr, size) else {
@@ -118,23 +145,23 @@ impl_trait! {
                 };
 
                 ax_hal::mem::dma_coherent_before_restore_cached(start, size);
-                ax_mm::kernel_aspace().lock().protect(
+                crate::kernel_mapping::protect_kernel_range(
                     start,
                     size,
                     ax_hal::paging::MappingFlags::READ | ax_hal::paging::MappingFlags::WRITE,
-                )?;
-                ax_hal::asm::flush_tlb(None);
+                )
+                .map_err(crate::error::runtime_error_to_klib_error)?;
                 ax_hal::mem::dma_coherent_after_mapping_update();
                 Ok(())
             }
             #[cfg(not(feature = "paging"))]
             {
                 let _ = (addr, size);
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
-        fn dma_alloc_pages(dma_mask: u64, num_pages: usize, align: usize) -> AxResult<VirtAddr> {
+        fn dma_alloc_pages(dma_mask: u64, num_pages: usize, align: usize) -> KlibResult<VirtAddr> {
             let addr = if dma_mask <= u32::MAX as u64 {
                 ax_alloc::global_allocator().alloc_dma32_pages(
                     num_pages,
@@ -147,7 +174,8 @@ impl_trait! {
                     align,
                     ax_alloc::UsageKind::Dma,
                 )
-            }?;
+            }
+            .map_err(|_| KlibError::NoMemory)?;
             Ok(VirtAddr::from(addr))
         }
 
@@ -182,35 +210,35 @@ impl_trait! {
         /// `ax_hal::irq::set_enable`. Platforms built without IRQ support
         /// ignore this request because there is no interrupt controller
         /// service to program.
-        fn irq_set_enable(_irq: IrqId, _enabled: bool) -> AxResult {
+        fn irq_set_enable(_irq: IrqId, _enabled: bool) -> KlibResult {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::set_enable(_irq, _enabled).map_err(map_irq_error)
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
         fn irq_request_shared(
             _irq: IrqId,
             _handler: BoxedIrqHandler,
-        ) -> AxResult<IrqHandle> {
+        ) -> KlibResult<IrqHandle> {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::request_shared_irq(_irq, _handler).map_err(map_irq_error)
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
         fn irq_request_shared_disabled(
             _irq: IrqId,
             _handler: BoxedIrqHandler,
-        ) -> AxResult<IrqHandle> {
+        ) -> KlibResult<IrqHandle> {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::request_irq(
@@ -223,7 +251,7 @@ impl_trait! {
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
@@ -231,7 +259,7 @@ impl_trait! {
             _irq: IrqId,
             _cpus: IrqCpuMask,
             _handler: ConcurrentBoxedIrqHandler,
-        ) -> AxResult<IrqHandle> {
+        ) -> KlibResult<IrqHandle> {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::request_percpu_irq(_irq, _cpus, _handler)
@@ -239,40 +267,40 @@ impl_trait! {
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
-        fn irq_free(_handle: IrqHandle) -> AxResult {
+        fn irq_free(_handle: IrqHandle) -> KlibResult {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::free_irq(_handle).map_err(map_irq_error)
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
-        fn irq_enable(_handle: IrqHandle) -> AxResult {
+        fn irq_enable(_handle: IrqHandle) -> KlibResult {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::enable_irq(_handle).map_err(map_irq_error)
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
-        fn irq_disable(_handle: IrqHandle) -> AxResult {
+        fn irq_disable(_handle: IrqHandle) -> KlibResult {
             #[cfg(feature = "irq")]
             {
                 ax_hal::irq::disable_irq(_handle).map_err(map_irq_error)
             }
             #[cfg(not(feature = "irq"))]
             {
-                Err(AxError::Unsupported)
+                Err(KlibError::Unsupported)
             }
         }
 
@@ -291,5 +319,28 @@ impl_trait! {
                 Err(IrqError::Unsupported)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(not(feature = "paging"))]
+    #[test]
+    fn coherent_mapping_reports_not_started_without_paging() {
+        assert_eq!(
+            KlibImpl::mem_make_dma_coherent_uncached(VirtAddr::from_usize(0x1000), 0x1000),
+            DmaCoherentMappingOutcome::NotStarted(KlibError::Unsupported)
+        );
+    }
+
+    #[cfg(feature = "paging")]
+    #[test]
+    fn coherent_mapping_failure_reports_uncertain_state() {
+        assert_eq!(
+            coherent_mapping_outcome(Err(KlibError::TimedOut)),
+            DmaCoherentMappingOutcome::StateUncertain(KlibError::TimedOut)
+        );
     }
 }

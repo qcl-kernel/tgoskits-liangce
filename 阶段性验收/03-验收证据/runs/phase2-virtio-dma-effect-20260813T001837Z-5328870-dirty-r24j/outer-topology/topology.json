@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "probe-generated-unreviewed",
+  "status": "topology_validated",
+  "proofScope": "qemu-aarch64-virtio-mmio-resource-map",
+  "doesNotProve": [
+    "AxVisor booted both guests",
+    "guest DTBs expose only their owned devices",
+    "passthrough DMA is isolated",
+    "Linux and Zephyr have IP connectivity",
+    "dual-guest stability"
+  ],
+  "sourcePathBase": "topology.json parent directory",
+  "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.17)",
+  "fixedContract": {
+    "machine": "virt,virtualization=on,gic-version=3",
+    "mmioBase": "0x0a000000",
+    "mmioStride": "0x200",
+    "spiOffsetBase": 16,
+    "networkBackend": "qemu-hubport",
+    "networkHubId": 0
+  },
+  "devices": [
+    {
+      "guest": "linux",
+      "purpose": "root-block",
+      "qemuId": "linux-block",
+      "qemuType": "virtio-blk-device",
+      "slot": 0,
+      "bus": "virtio-mmio-bus.0",
+      "mmioBase": "0x0a000000",
+      "mmioSize": "0x200",
+      "spiOffset": 16,
+      "gicIntid": 48,
+      "irqFlags": 1
+    },
+    {
+      "guest": "linux",
+      "purpose": "ip-network",
+      "qemuId": "linux-net",
+      "qemuType": "virtio-net-device",
+      "slot": 1,
+      "bus": "virtio-mmio-bus.1",
+      "mmioBase": "0x0a000200",
+      "mmioSize": "0x200",
+      "spiOffset": 17,
+      "gicIntid": 49,
+      "irqFlags": 1
+    },
+    {
+      "guest": "zephyr",
+      "purpose": "ip-network",
+      "qemuId": "zephyr-net",
+      "qemuType": "virtio-net-device",
+      "slot": 2,
+      "bus": "virtio-mmio-bus.2",
+      "mmioBase": "0x0a000400",
+      "mmioSize": "0x200",
+      "spiOffset": 18,
+      "gicIntid": 50,
+      "irqFlags": 1
+    }
+  ],
+  "sources": {
+    "qmpQtree": {
+      "path": "qtree.qmp.jsonl",
+      "sha256": "a7245597cdd1f0de9d8db786f531024b3ff76ba7ccce68ec941aa963d2fe1179"
+    },
+    "hostDts": {
+      "path": "host.dts",
+      "sha256": "0c0a4f7d5c0e0e12a54b4cf8bec5b6a32bc5aa86b62820fbde9dc59112421639"
+    },
+    "hostDtb": {
+      "path": "host.dtb",
+      "sha256": "ce2ff04e241f04d3bc8c29d84f9e7cf1c98839b92ab8af8d520cfa2cab549fad"
+    },
+    "qemuVersion": {
+      "path": "qemu-version.txt",
+      "sha256": "dcd5d573c55b7faaa757e5d4d7ae8376706837b30e7fcf7c17b80eb77330d548"
+    }
+  }
+}

@@ -29,7 +29,7 @@ struct VmKernelRootfsProbe {
 }
 
 pub(super) async fn qemu(axvisor: &mut Axvisor, args: super::ArgsQemu) -> anyhow::Result<()> {
-    let request = axvisor.prepare_request(
+    let mut request = axvisor.prepare_request(
         (&args.build).into(),
         args.qemu_config,
         None,
@@ -46,101 +46,21 @@ pub(super) async fn qemu(axvisor: &mut Axvisor, args: super::ArgsQemu) -> anyhow
             )
         })
         .transpose()?;
+    let mut cargo = build::load_cargo_config(&request)?;
+    request.vmconfigs = build::vmconfigs_from_cargo(&cargo);
     ensure_qemu_rootfs_ready(
         &request,
         axvisor.app.workspace_root(),
         explicit_rootfs.as_deref(),
     )
     .await?;
-    let mut cargo = build::load_cargo_config(&request)?;
-    let mut qemu =
+    let qemu =
         load_patched_qemu_config(axvisor, &request, &cargo, explicit_rootfs.as_deref()).await?;
-    patch_live_capture_identity_args(
-        &mut qemu,
-        args.qmp_socket.as_deref(),
-        args.qemu_pidfile.as_deref(),
-        args.qemu_name.as_deref(),
-    )?;
     cargo.to_bin = qemu_to_bin_requested(&qemu)?;
     axvisor
         .app
         .qemu(cargo, request.build_info_path, Some(qemu))
         .await
-}
-
-fn patch_live_capture_identity_args(
-    qemu: &mut QemuConfig,
-    qmp_socket: Option<&Path>,
-    qemu_pidfile: Option<&Path>,
-    qemu_name: Option<&str>,
-) -> anyhow::Result<()> {
-    let (Some(qmp_socket), Some(qemu_pidfile), Some(qemu_name)) =
-        (qmp_socket, qemu_pidfile, qemu_name)
-    else {
-        if qmp_socket.is_some() || qemu_pidfile.is_some() || qemu_name.is_some() {
-            bail!("--qmp-socket, --qemu-pidfile, and --qemu-name must be provided together");
-        }
-        return Ok(());
-    };
-
-    if !qmp_socket.is_absolute() || !qemu_pidfile.is_absolute() {
-        bail!("live-capture QMP socket and pidfile paths must be absolute");
-    }
-    if qmp_socket == qemu_pidfile {
-        bail!("live-capture QMP socket and pidfile paths must be different");
-    }
-    let qmp_socket = qmp_socket
-        .to_str()
-        .ok_or_else(|| anyhow!("live-capture QMP socket path is not UTF-8"))?;
-    let qemu_pidfile = qemu_pidfile
-        .to_str()
-        .ok_or_else(|| anyhow!("live-capture QEMU pidfile path is not UTF-8"))?;
-    if qmp_socket.as_bytes().len() > 100 {
-        bail!("live-capture QMP socket path exceeds the bounded Unix-socket length");
-    }
-    for (label, value) in [("QMP socket", qmp_socket), ("QEMU pidfile", qemu_pidfile)] {
-        if value.contains(',') || value.chars().any(char::is_control) {
-            bail!("live-capture {label} path contains a forbidden delimiter");
-        }
-    }
-    let nonce = ["axvisor-guest-dtb-", "axvisor-dma-effect-"]
-        .into_iter()
-        .find_map(|prefix| qemu_name.strip_prefix(prefix))
-        .ok_or_else(|| anyhow!("identity-bound QEMU name has the wrong prefix"))?;
-    if nonce.len() != 32
-        || !nonce
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    {
-        bail!("identity-bound QEMU name must end in a 128-bit lowercase hexadecimal nonce");
-    }
-
-    for argument in &qemu.args {
-        if argument
-            .chars()
-            .any(|character| matches!(character, '\0' | '\r' | '\n'))
-        {
-            bail!("raw QEMU argument contains a forbidden control character");
-        }
-        for token in argument.split_ascii_whitespace() {
-            if ["-qmp", "-pidfile", "-name"]
-                .iter()
-                .any(|option| token == *option || token.starts_with(&format!("{option}=")))
-            {
-                bail!("raw QEMU args conflict with the identity-bound live-capture option {token}");
-            }
-        }
-    }
-
-    qemu.args.extend([
-        "-qmp".to_string(),
-        format!("unix:{qmp_socket},server=on,wait=off"),
-        "-pidfile".to_string(),
-        qemu_pidfile.to_string(),
-        "-name".to_string(),
-        qemu_name.to_string(),
-    ]);
-    Ok(())
 }
 
 fn qemu_to_bin_requested(qemu: &QemuConfig) -> anyhow::Result<bool> {
@@ -198,8 +118,11 @@ pub(crate) fn patch_qemu_rootfs(
     explicit_rootfs: Option<&Path>,
 ) -> anyhow::Result<()> {
     let rootfs_path = qemu_rootfs_path(request, workspace_root, explicit_rootfs)?;
-    patch_qemu_rootfs_path(config, &rootfs_path);
-    Ok(())
+    patch_qemu_rootfs_path(
+        config,
+        &rootfs_path,
+        rootfs::qemu::RootfsWritePolicy::Persist,
+    )
 }
 
 /// Resolves the rootfs path selected for an Axvisor QEMU request.
@@ -220,12 +143,19 @@ pub(crate) fn qemu_rootfs_path(
 }
 
 /// Patches a QEMU config with a concrete Axvisor rootfs path.
-pub(crate) fn patch_qemu_rootfs_path(config: &mut QemuConfig, rootfs_path: &Path) {
+pub(crate) fn patch_qemu_rootfs_path(
+    config: &mut QemuConfig,
+    rootfs_path: &Path,
+    write_policy: rootfs::qemu::RootfsWritePolicy,
+) -> anyhow::Result<()> {
     rootfs::qemu::patch_rootfs(
         config,
         rootfs_path,
-        rootfs::qemu::RootfsPatchMode::ReplaceDriveOnly,
-    );
+        rootfs::qemu::RootfsPatchOptions {
+            mode: rootfs::qemu::RootfsPatchMode::ReplaceDriveOnly,
+            write_policy,
+        },
+    )
 }
 
 /// Returns the managed rootfs path Axvisor should prepare, if any.
@@ -259,9 +189,16 @@ pub(crate) fn infer_rootfs_path(vmconfigs: &[PathBuf]) -> anyhow::Result<Option<
         let Some(kernel_path) = probe.kernel.and_then(|kernel| kernel.kernel_path) else {
             continue;
         };
-        let rootfs_path = Path::new(&kernel_path)
-            .parent()
-            .map(|dir| dir.join("rootfs.img"));
+        let kernel_path = Path::new(&kernel_path);
+        let kernel_path = if kernel_path.is_absolute() {
+            kernel_path.to_path_buf()
+        } else {
+            vmconfig
+                .parent()
+                .map(|parent| parent.join(kernel_path))
+                .unwrap_or_else(|| kernel_path.to_path_buf())
+        };
+        let rootfs_path = kernel_path.parent().map(|dir| dir.join("rootfs.img"));
         if let Some(rootfs_path) = rootfs_path
             && rootfs_path.exists()
         {
@@ -278,15 +215,14 @@ mod tests {
     use super::*;
 
     fn managed_rootfs_path_for_test(root: &Path, image_name: &str) -> PathBuf {
-        root.join(".tgos-images").join(image_name).join(image_name)
+        root.join(".tgos-images").join(image_name)
     }
 
     fn write_test_image_config(root: &Path) {
         let config = crate::image::config::ImageConfig {
-            local_storage: root.join(".tgos-images"),
             registry: crate::image::config::DEFAULT_REGISTRY_URL.to_string(),
-            auto_sync: true,
-            auto_sync_threshold: 60,
+            download_dir: root.join(".tgos-downloads"),
+            extract_dir: root.join(".tgos-images"),
         };
         crate::image::config::ImageConfig::write_config(root, &config).unwrap();
     }
@@ -315,13 +251,10 @@ mod tests {
         let vmconfig = root.path().join("vm.toml");
         fs::write(
             &vmconfig,
-            format!(
-                r#"
+            r#"
 [kernel]
-kernel_path = "{}"
+kernel_path = "image/qemu-aarch64"
 "#,
-                image_dir.join("qemu-aarch64").display()
-            ),
         )
         .unwrap();
 
@@ -389,7 +322,10 @@ kernel_path = "{}"
         .unwrap();
 
         let mut qemu = QemuConfig {
-            args: vec!["id=disk0,if=none,format=raw,file=/old/tmp/rootfs.img".to_string()],
+            args: vec![
+                "-drive".to_string(),
+                "id=disk0,if=none,format=raw,file=/old/tmp/rootfs.img".to_string(),
+            ],
             ..Default::default()
         };
         patch_qemu_rootfs(
@@ -402,73 +338,9 @@ kernel_path = "{}"
 
         assert_eq!(
             qemu.args,
-            vec![format!(
-                "id=disk0,if=none,format=raw,file={}",
-                rootfs_path.display()
-            )]
-        );
-    }
-
-    #[test]
-    fn patch_qemu_rootfs_preserves_dma_probe_and_control_topology() {
-        let root = tempdir().unwrap();
-        let explicit_rootfs = root.path().join("explicit-rootfs.ext4");
-        let probe_drive =
-            "id=dma-probe-disk,if=none,format=raw,readonly=on,file=/run/dma-probe.raw";
-        let probe_device =
-            "virtio-blk-device,id=dma-probe,drive=dma-probe-disk,bus=virtio-mmio-bus.1";
-        let control_chardev =
-            "socket,id=dma-go-chardev,path=/tmp/axdma-test/control.sock,server=on,wait=off";
-        let control_serial = "virtio-serial-device,id=dma-go-serial,bus=virtio-mmio-bus.2";
-        let control_port = "virtconsole,id=dma-go-port,chardev=dma-go-chardev,name=dma-go";
-        let mut qemu = QemuConfig {
-            args: vec![
-                "-drive".to_string(),
-                "id=disk0,if=none,format=raw,file=/run/old-rootfs.ext4".to_string(),
-                "-device".to_string(),
-                "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0".to_string(),
-                "-drive".to_string(),
-                probe_drive.to_string(),
-                "-device".to_string(),
-                probe_device.to_string(),
-                "-chardev".to_string(),
-                control_chardev.to_string(),
-                "-device".to_string(),
-                control_serial.to_string(),
-                "-device".to_string(),
-                control_port.to_string(),
-            ],
-            ..Default::default()
-        };
-
-        patch_qemu_rootfs(
-            &mut qemu,
-            &request(root.path(), vec![]),
-            root.path(),
-            Some(&explicit_rootfs),
-        )
-        .unwrap();
-
-        assert_eq!(
-            qemu.args,
             vec![
                 "-drive".to_string(),
-                format!(
-                    "id=disk0,if=none,format=raw,file={}",
-                    explicit_rootfs.display()
-                ),
-                "-device".to_string(),
-                "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0".to_string(),
-                "-drive".to_string(),
-                probe_drive.to_string(),
-                "-device".to_string(),
-                probe_device.to_string(),
-                "-chardev".to_string(),
-                control_chardev.to_string(),
-                "-device".to_string(),
-                control_serial.to_string(),
-                "-device".to_string(),
-                control_port.to_string(),
+                format!("id=disk0,if=none,format=raw,file={}", rootfs_path.display())
             ]
         );
     }
@@ -479,7 +351,10 @@ kernel_path = "{}"
         write_test_image_config(root.path());
         let rootfs = managed_rootfs_path_for_test(root.path(), "rootfs-aarch64-alpine.img");
         let mut qemu = QemuConfig {
-            args: vec!["id=disk0,if=none,format=raw,file=/old/tmp/rootfs.img".to_string()],
+            args: vec![
+                "-drive".to_string(),
+                "id=disk0,if=none,format=raw,file=/old/tmp/rootfs.img".to_string(),
+            ],
             ..Default::default()
         };
 
@@ -487,10 +362,10 @@ kernel_path = "{}"
 
         assert_eq!(
             qemu.args,
-            vec![format!(
-                "id=disk0,if=none,format=raw,file={}",
-                rootfs.display()
-            )]
+            vec![
+                "-drive".to_string(),
+                format!("id=disk0,if=none,format=raw,file={}", rootfs.display())
+            ]
         );
     }
 
@@ -502,9 +377,9 @@ kernel_path = "{}"
         let mut qemu = QemuConfig {
             args: vec![
                 "-device".to_string(),
-                "virtio-blk-device,drive=disk0".to_string(),
+                "nvme,drive=disk0,serial=tgoskits,max_ioqpairs=64,msix_qsize=65".to_string(),
                 "-append".to_string(),
-                "root=/dev/vda rw init=/bin/sh".to_string(),
+                "root=/dev/nvme0n1 rw init=/bin/sh".to_string(),
             ],
             ..Default::default()
         };
@@ -515,11 +390,11 @@ kernel_path = "{}"
             qemu.args,
             vec![
                 "-device".to_string(),
-                "virtio-blk-device,drive=disk0".to_string(),
+                "nvme,drive=disk0,serial=tgoskits,max_ioqpairs=64,msix_qsize=65".to_string(),
                 "-drive".to_string(),
                 format!("id=disk0,if=none,format=raw,file={}", rootfs.display()),
                 "-append".to_string(),
-                "root=/dev/vda rw init=/bin/sh".to_string(),
+                "root=/dev/nvme0n1 rw init=/bin/sh".to_string(),
             ]
         );
     }
@@ -600,108 +475,28 @@ kernel_path = "{}"
         assert!(qemu_to_bin_requested(&qemu).is_err());
     }
 
-    fn absolute_test_path(name: &str) -> PathBuf {
-        if cfg!(windows) {
-            PathBuf::from(format!(r"C:\axvisor-live-capture\{name}"))
-        } else {
-            PathBuf::from(format!("/tmp/axvisor-live-capture/{name}"))
-        }
-    }
-
     #[test]
-    fn live_capture_identity_args_are_exact_and_ordered() {
-        let socket = absolute_test_path("qmp.sock");
-        let pidfile = absolute_test_path("qemu.pid");
-        let name = "axvisor-guest-dtb-0123456789abcdef0123456789abcdef";
-        let mut qemu = QemuConfig {
-            args: vec!["-nographic".to_string()],
-            ..Default::default()
-        };
+    fn axvisor_host_rootfs_configs_use_nvme_device_names() {
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let configs = [
+            "test-suit/axvisor/normal/qemu/smoke/qemu-aarch64.toml",
+            "test-suit/axvisor/normal/qemu/smoke/qemu-riscv64.toml",
+            "test-suit/axvisor/normal/qemu/build-loongarch64-unknown-none-softfloat.toml",
+            "os/axvisor/configs/qemu/qemu-aarch64.toml",
+            "os/axvisor/configs/qemu/qemu-riscv64.toml",
+            "os/axvisor/configs/board/qemu-loongarch64.toml",
+        ];
 
-        patch_live_capture_identity_args(&mut qemu, Some(&socket), Some(&pidfile), Some(name))
-            .unwrap();
-
-        assert_eq!(
-            &qemu.args[1..],
-            &[
-                "-qmp".to_string(),
-                format!("unix:{},server=on,wait=off", socket.display()),
-                "-pidfile".to_string(),
-                pidfile.display().to_string(),
-                "-name".to_string(),
-                name.to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn dma_effect_identity_name_is_accepted_without_weakening_the_nonce() {
-        let socket = absolute_test_path("dma-qmp.sock");
-        let pidfile = absolute_test_path("dma-qemu.pid");
-        let name = "axvisor-dma-effect-0123456789abcdef0123456789abcdef";
-        let mut qemu = QemuConfig {
-            args: vec!["-nographic".to_string()],
-            ..Default::default()
-        };
-
-        patch_live_capture_identity_args(&mut qemu, Some(&socket), Some(&pidfile), Some(name))
-            .unwrap();
-
-        assert_eq!(qemu.args.last().map(String::as_str), Some(name));
-        let weak = "axvisor-dma-effect-0123456789abcdef";
-        assert!(
-            patch_live_capture_identity_args(
-                &mut QemuConfig::default(),
-                Some(&socket),
-                Some(&pidfile),
-                Some(weak),
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn live_capture_identity_args_reject_partial_and_raw_conflicts() {
-        let socket = absolute_test_path("qmp.sock");
-        let pidfile = absolute_test_path("qemu.pid");
-        let name = "axvisor-guest-dtb-0123456789abcdef0123456789abcdef";
-        let mut partial = QemuConfig::default();
-        assert!(
-            patch_live_capture_identity_args(&mut partial, Some(&socket), None, Some(name))
-                .is_err()
-        );
-
-        for conflict in ["-qmp", "-pidfile=/tmp/other.pid", "-name old"] {
-            let mut qemu = QemuConfig {
-                args: vec![conflict.to_string()],
-                ..Default::default()
-            };
+        for relative in configs {
+            let config = fs::read_to_string(workspace_root.join(relative)).unwrap();
             assert!(
-                patch_live_capture_identity_args(
-                    &mut qemu,
-                    Some(&socket),
-                    Some(&pidfile),
-                    Some(name),
-                )
-                .is_err(),
-                "raw conflict {conflict} was accepted"
+                !config.contains("root=/dev/vda"),
+                "{relative} still names the removed VirtIO block root device"
+            );
+            assert!(
+                config.contains("ax-driver/nvme") || config.contains("\"nvme,drive=disk0"),
+                "{relative} does not enable or attach NVMe"
             );
         }
-    }
-
-    #[test]
-    fn live_capture_identity_args_reject_weak_name_and_path_injection() {
-        let socket = absolute_test_path("qmp,sock");
-        let pidfile = absolute_test_path("qemu.pid");
-        let mut qemu = QemuConfig::default();
-        assert!(
-            patch_live_capture_identity_args(
-                &mut qemu,
-                Some(&socket),
-                Some(&pidfile),
-                Some("axvisor-guest-dtb-not-a-nonce"),
-            )
-            .is_err()
-        );
     }
 }

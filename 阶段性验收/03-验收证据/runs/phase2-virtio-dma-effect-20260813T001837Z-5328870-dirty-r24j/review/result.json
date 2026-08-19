@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "derived-observation-unreviewed",
+  "status": "controlled_virtio_blk_dma_effect_observed",
+  "proofScope": "one-virtio-blk-read-payload-and-guard-byte-observation",
+  "doesNotProve": [
+    "the observed bytes were written by a hardware DMA engine",
+    "DMA isolation",
+    "isolation for any other device, request, range, or session",
+    "dual-Guest execution",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "binding": {
+    "sessionNonce": "567630cdd99a14c067186bd7539295af",
+    "qemuName": "axvisor-dma-effect-567630cdd99a14c067186bd7539295af",
+    "device": {
+      "kind": "virtio-blk-device",
+      "id": "dma-probe",
+      "bus": "virtio-mmio-bus.1",
+      "driveId": "dma-probe-disk",
+      "guestPath": "/dev/vdb"
+    },
+    "request": {
+      "requestId": "virtio-blk-read-567630cdd99a14c067186bd7539295af",
+      "guestMarkers": {
+        "ready": "AXVISOR_VIRTIO_BLK_ODIRECT_READY nonce=567630cdd99a14c067186bd7539295af gpa=0x82785000 size=512 sector=0 device=/dev/vdb control_device=/dev/hvc0",
+        "done": "AXVISOR_VIRTIO_BLK_ODIRECT_DONE nonce=567630cdd99a14c067186bd7539295af bytes=512 gpa=0x82785000"
+      },
+      "sector": 0,
+      "vmId": 1,
+      "payload": {
+        "gpa": 2188922880,
+        "hpa": 2188922880,
+        "size": 512
+      },
+      "guard": {
+        "hpa": 6442450944,
+        "size": 2097152
+      },
+      "boundMapReservedRegion": {
+        "gpa": 2147483648,
+        "hpa": 2147483648,
+        "size": 268435456,
+        "flags": 7,
+        "mapType": 2,
+        "identity": true
+      },
+      "control": {
+        "kind": "virtio-console",
+        "chardevId": "dma-go-chardev",
+        "serialDeviceId": "dma-go-serial",
+        "serialBus": "virtio-mmio-bus.2",
+        "portId": "dma-go-port",
+        "portName": "dma-go",
+        "guestPath": "/dev/hvc0",
+        "socketPath": "/tmp/axdma-567630cdd99a14c067186bd7539295af/control.sock"
+      }
+    }
+  },
+  "mappingEvidence": {
+    "payloadGpa": 2188922880,
+    "payloadHpa": 2188922880,
+    "payloadSize": 512,
+    "mapType": 2,
+    "identity": true,
+    "boundMapReservedRegion": {
+      "gpa": 2147483648,
+      "hpa": 2147483648,
+      "size": 268435456,
+      "flags": 7,
+      "mapType": 2,
+      "identity": true
+    }
+  },
+  "guestControlEvidence": {
+    "rawLog": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/observed-log-prefix.bin",
+      "size": 40692,
+      "sha256": "fc1053bd4f7320c1968756c4da6d6ac6570941efc91e0bbd42813bd973e09ea9"
+    },
+    "markerObservations": {
+      "ready": {
+        "line": 568,
+        "byteOffset": 40448,
+        "marker": "AXVISOR_VIRTIO_BLK_ODIRECT_READY nonce=567630cdd99a14c067186bd7539295af gpa=0x82785000 size=512 sector=0 device=/dev/vdb control_device=/dev/hvc0"
+      },
+      "done": {
+        "line": 569,
+        "byteOffset": 40595,
+        "marker": "AXVISOR_VIRTIO_BLK_ODIRECT_DONE nonce=567630cdd99a14c067186bd7539295af bytes=512 gpa=0x82785000"
+      }
+    },
+    "guestControl": {
+      "channel": "virtio-console-unix-socket",
+      "control": {
+        "kind": "virtio-console",
+        "chardevId": "dma-go-chardev",
+        "serialDeviceId": "dma-go-serial",
+        "serialBus": "virtio-mmio-bus.2",
+        "portId": "dma-go-port",
+        "portName": "dma-go",
+        "guestPath": "/dev/hvc0",
+        "socketPath": "/tmp/axdma-567630cdd99a14c067186bd7539295af/control.sock"
+      },
+      "command": "GO 567630cdd99a14c067186bd7539295af\n",
+      "bytes": 36,
+      "sha256": "45ee89248b9120cde61fb1cd60670c7e93f27ff5aa894a257b9f81519c6010d1",
+      "peer": {
+        "pid": 682,
+        "uid": 0
+      }
+    }
+  },
+  "effect": {
+    "payloadBeforeSha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+    "payloadAfterSha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa",
+    "expectedPayloadSha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa",
+    "payloadMatchesExpected": true,
+    "guardBeforeSha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee",
+    "guardAfterSha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee",
+    "guardUnchanged": true,
+    "observation": "in-bounds-payload-expected-guard-unchanged"
+  },
+  "sources": {
+    "request": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/request.json",
+      "size": 3783,
+      "sha256": "d17f92b94623e00423ac9bd179d4d0de8420a798f114d2968918687c6e4db61e"
+    },
+    "session": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/session.json",
+      "size": 4957,
+      "sha256": "5ba712ec98726ca5ddd0e5e8057f0cc539bba02be11d21508c2f91f83396f032"
+    },
+    "rawLog": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/observed-log-prefix.bin",
+      "size": 40692,
+      "sha256": "fc1053bd4f7320c1968756c4da6d6ac6570941efc91e0bbd42813bd973e09ea9"
+    },
+    "expectedPayload": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/topology/probe.raw",
+      "size": 512,
+      "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+    },
+    "beforeGuard": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/before-guard.bin",
+      "size": 2097152,
+      "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+    },
+    "afterGuard": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/after-guard.bin",
+      "size": 2097152,
+      "sha256": "5647f05ec18958947d32874eeb788fa396a05d0bab7c1b71f112ceb7e9b31eee"
+    },
+    "beforePayload": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/before-payload.bin",
+      "size": 512,
+      "sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827"
+    },
+    "afterPayload": {
+      "path": "/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-virtio-dma-effect-20260813T001837Z-5328870-dirty-r24j/live/after-payload.bin",
+      "size": 512,
+      "sha256": "645b975f5bb62ffd01f0257e10c8970a75cab528c988adf374d10377d7e432fa"
+    }
+  }
+}

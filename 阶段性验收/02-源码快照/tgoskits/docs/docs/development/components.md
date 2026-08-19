@@ -56,13 +56,13 @@ flowchart TD
 
 上述流程图表示常见的三种组件依赖路径：
 
-1. 纯复用 crate 直接被系统包依赖  
+1. 纯复用 crate 直接被系统包依赖
    例如 `components/starry-process`、`virtualization/axvm`
 
-2. 先经过 ArceOS 模块层，再被上层系统消费  
+2. 先经过 ArceOS 模块层，再被上层系统消费
    例如 `ax-hal`、`ax-task`、`ax-driver`、`ax-net`
 
-3. 通过平台和配置接到最终系统  
+3. 通过平台和配置接到最终系统
    例如内置动态平台 `platforms/axplat-dyn`、外部自定义 `ax-plat-*` 兼容包、Axvisor 的 `configs/board/*.toml`
 
 ### 2.1 依赖统计

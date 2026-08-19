@@ -42,11 +42,12 @@ cargo arceos qemu --package arceos-httpserver   # 同上
 | `cargo xtask ktest` | 在 QEMU 或板卡运行 harness=false 内核 axtest | [内核测试](./ktest) |
 | `cargo xtask clippy` | workspace clippy（feature × target 矩阵） | [Clippy 检查](./clippy) |
 | `cargo xtask sync-lint` | 可疑 `Relaxed` 原子序检查 | [Sync Lint](./sync_lint) |
-| `cargo xtask spin-lint` | vendored `spin` 迁移守护 | [Spin Lint](./spin_lint) |
+| `cargo xtask lock-lint` | 统一锁依赖与 runtime provider 边界检查 | [Lock Lint](./lock_lint) |
 | **辅助工具** | | |
 | `cargo xtask board` | 远程板卡管理（ls/connect/config） | [板卡管理](./board) |
 | `cargo xtask backtrace` | host 端 backtrace 符号化 | [Backtrace 符号化](./backtrace) |
 | `cargo xtask image` | TGOS rootfs/guest 镜像管理 | [镜像管理](./image) |
+| `cargo xtask ovmf` | 获取经校验的 OVMF CODE/VARS 路径 | 本节 |
 | `cargo xtask axloader` | UEFI bootloader 构建与 HTTP smoke 测试 | [Axloader](./axloader) |
 | `cargo xtask agent-review-bench` | 历史 PR 快照的离线 review benchmark | [Review Benchmark](./agent-review-bench) |
 | **OS 子系统** | | |
@@ -116,13 +117,14 @@ cargo xtask sync-lint --since origin/main # 增量
 
 ### 3.5 依赖检查
 
-守护 vendored `spin` 迁移结果，禁止外部 `spin` 与 `spin::RwLock`。无参数。
+守护统一锁边界，禁止已移除锁 crate、第一方直接 `spin`、Starry/Axvisor facade 绕过和
+重复 runtime provider。无参数。
 
 ```bash
-cargo xtask spin-lint
+cargo xtask lock-lint
 ```
 
-详见 [Spin Lint](./spin_lint)。
+详见 [Lock Lint](./lock_lint)。
 
 ---
 
@@ -164,20 +166,33 @@ cargo xtask backtrace symbolize --elf target/x86_64/debug/arceos-httpserver --lo
 
 ### 4.3 镜像管理
 
-TGOS rootfs/guest 镜像管理。**全局选项**（所有子命令可用）：`-S/--local-storage <PATH>`、`-R/--registry <URL>`、`-N/--no-auto-sync`、`--auto-sync-threshold <SECS>`
+TGOS rootfs/guest 镜像管理。**全局选项**（所有子命令可用）：`-R/--registry <URL>`、`-D/--download-dir <PATH>`、`-E/--extract-dir <PATH>`。
 
 | 子命令 | 用法 | 说明 |
 |--------|------|------|
 | `ls` | `image ls [-v] [PATTERN]` | 列出注册表镜像（`-v` 详情，`PATTERN` 正则过滤） |
-| `pull` | `image pull [<IMAGE>] [--arch <ARCH>] [-o <DIR>] [--no-extract]` | 拉取镜像并校验 SHA-256 |
+| `pull` | `image pull [<IMAGE>] [--arch <ARCH>] [--no-extract]` | 拉取镜像并校验 SHA-256 |
 | `resize` | `image resize <IMAGE> --size-mib <MIB> [-o <OUT>]` | 扩容 ext rootfs（不支持缩容） |
 | `check` | `image check <IMAGE> [--sha256 <HASH>]` | 输出并可选校验本地镜像 SHA-256 |
 
-`pull` 的 `<IMAGE>` 可选带 `:version`（如 `rootfs-riscv64-alpine.img:v0.0.6`）；省略时配合 `--arch` 拉取该架构默认 rootfs。
+`pull` 的 `<IMAGE>` 可选带 `:version`（如 `rootfs-riscv64-alpine.img:0.0.11`）；省略时配合 `--arch` 拉取该架构默认 rootfs。
 
 详见 [镜像管理](./image)。
 
-### 4.4 UEFI 引导
+### 4.4 OVMF 固件
+
+通过 Ostool 的固定版本、镜像探测和 SHA-256 校验流程准备 OVMF，并在 stdout 输出一个
+仅包含 `code`、`vars` 路径的 JSON 对象：
+
+```bash
+cargo xtask ovmf --arch x86_64
+TGOS_OVMF_DIR=/path/to/cache cargo xtask ovmf --arch aarch64
+```
+
+`--arch` 支持 `x86_64`、`aarch64`、`riscv64`、`loongarch64` 和 `ia32`。默认缓存根目录为
+`$TMPDIR/ostool/ovmf`；`TGOS_OVMF_DIR` 只覆盖缓存根目录，不绕过版本选择和校验。
+
+### 4.5 UEFI 引导
 
 UEFI bootloader（axloader）构建与 HTTP smoke 测试。
 
@@ -188,7 +203,7 @@ UEFI bootloader（axloader）构建与 HTTP smoke 测试。
 
 详见 [Axloader](./axloader)。
 
-### 4.5 Review Benchmark
+### 4.6 Review Benchmark
 
 离线回放 `scripts/agent-review-bench/cases/*.toml` 中登记的历史 PR 快照，并对 review findings 评分。该命令面向维护 benchmark，而非日常构建：
 

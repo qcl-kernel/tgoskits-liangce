@@ -1,0 +1,1725 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.48s
+     Running `/mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/debug/xtask qemu --config os/axvisor/configs/board/qemu-aarch64-contest-network.toml --qemu-config results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/qemu.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/linux.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/zephyr.resolved.toml`
+[2026-08-19T06:21:11Z INFO  axbuild::context] Workspace root: /mnt/f/project/泉城实验室/tgoskits-upstream-integration
+[2026-08-19T06:21:23Z INFO  axbuild::context] Workspace member dir for axvisor: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor
+Using build config: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml
+[2026-08-19T06:21:35Z INFO  ostool::run::qemu] Using QEMU config file: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/qemu.resolved.toml
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ...
+sh -c /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/prebuild/prebuild-aarch64-unknown-linux-musl-9ee3857e53a3a7ca.sh
+AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar
+AXVISOR_VM_CONFIGS=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/linux.resolved.toml:/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-20260819T062049Z-htons/configs/zephyr.resolved.toml
+AX_ARCH=aarch64
+AX_LOG=info
+AX_TARGET=aarch64-unknown-none-softfloat
+CARGO_UNSTABLE_JSON_TARGET_SPEC=true
+CC_aarch64_unknown_linux_musl=aarch64-linux-musl-cc
+CFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+CXXFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+cargo build --config /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/config-aarch64-unknown-linux-musl-dynamic.toml -p axvisor --target scripts/targets/std/pie/aarch64-unknown-linux-musl.json -Z unstable-options --target-dir /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target --features log/release_max_level_info -Z json-target-spec --bin axvisor --release --message-format json-render-diagnostics
+   Compiling axvisor v0.5.24 (/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor)
+warning: associated function `after_external_interrupt` is never used
+   --> virtualization/axvm/src/architecture/ops.rs:113:8
+    |
+ 12 | pub(crate) trait ArchOps {
+    |                  ------- associated function in this trait
+...
+113 |     fn after_external_interrupt(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `host_console_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:92:15
+   |
+92 | pub(crate) fn host_console_irq() -> Option<modules::ax_hal::irq::IrqId> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `dispatch_host_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:96:15
+   |
+96 | pub(crate) fn dispatch_host_irq(vector: usize) {
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `with_vm` is never used
+  --> virtualization/axvm/src/manager.rs:56:15
+   |
+56 | pub(crate) fn with_vm<F, R>(vm_id: VMId, f: F) -> Option<R>
+   |               ^^^^^^^
+
+warning: function `active_vcpu_mask` is never used
+  --> virtualization/axvm/src/manager.rs:65:15
+   |
+65 | pub(crate) fn active_vcpu_mask(vm_id: VMId) -> Option<usize> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `inject_interrupt` is never used
+  --> virtualization/axvm/src/manager.rs:77:15
+   |
+77 | pub(crate) fn inject_interrupt(vm_id: VMId, vcpu_id: usize, vector: usize) -> AxVmResult {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: variant `Generic` is never constructed
+  --> virtualization/axvm/src/runtime/hvc.rs:26:5
+   |
+25 | pub(crate) enum HyperCallAbi {
+   |                 ------------ variant in this enum
+26 |     Generic,
+   |     ^^^^^^^
+   |
+   = note: `HyperCallAbi` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `handle` is never used
+   --> virtualization/axvm/src/timer.rs:169:8
+    |
+124 | impl TimerWheels {
+    | ---------------- method in this implementation
+...
+169 |     fn handle(&self, token: usize) -> Option<VmTimerHandle> {
+    |        ^^^^^^
+
+warning: function `cancel_timer` is never used
+   --> virtualization/axvm/src/timer.rs:247:15
+    |
+247 | pub(crate) fn cancel_timer(token: usize) {
+    |               ^^^^^^^^^^^^
+
+warning: associated items `try_handle_port_write`, `handle_nested_page_fault`, and `debug_nested_page_fault` are never used
+    --> virtualization/axvm/src/vm/mod.rs:1522:19
+     |
+1042 | impl AxVM {
+     | --------- associated items in this implementation
+...
+1522 |     pub(crate) fn try_handle_port_write(
+     |                   ^^^^^^^^^^^^^^^^^^^^^
+...
+1535 |     pub(crate) fn handle_nested_page_fault(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1550 |     fn debug_nested_page_fault(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SimpleVmPlan` is never constructed
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:65:19
+   |
+65 | pub(crate) struct SimpleVmPlan(VmDevicePlan);
+   |                   ^^^^^^^^^^^^
+
+warning: associated function `new` is never used
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:68:25
+   |
+67 | impl SimpleVmPlan {
+   | ----------------- associated function in this implementation
+68 |     pub(crate) const fn new(devices: VmDevicePlan) -> Self {
+   |                         ^^^
+
+warning: `axvm` (lib) generated 12 warnings
+warning: unused import: `collections::VecDeque`
+ --> os/axvisor/src/virtio_blk.rs:3:13
+  |
+3 | use alloc::{collections::VecDeque, format, string::String, sync::Arc, vec, vec::Vec};
+  |             ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `AtomicUsize`
+ --> os/axvisor/src/virtio_blk.rs:4:38
+  |
+4 | use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+  |                                      ^^^^^^^^^^^
+
+warning: associated functions `create_vm_from_toml` and `start_vm` are never used
+  --> os/axvisor/src/manager.rs:50:12
+   |
+24 | impl AxvmManager {
+   | ---------------- associated functions in this implementation
+...
+50 |     pub fn create_vm_from_toml(raw_cfg: &str) -> Result<VMId> {
+   |            ^^^^^^^^^^^^^^^^^^^
+...
+55 |     pub fn start_vm(vm_id: VMId) -> Result<()> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `can_start_vm` is never used
+  --> os/axvisor/src/shell/command/vm.rs:32:4
+   |
+32 | fn can_start_vm(status: VmStatus) -> Result<(), &'static str> {
+   |    ^^^^^^^^^^^^
+
+warning: function `start_single_vm` is never used
+   --> os/axvisor/src/shell/command/vm.rs:243:4
+    |
+243 | fn start_single_vm(vm: axvm::AxVMRef) -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `start_vm_by_id` is never used
+   --> os/axvisor/src/shell/command/vm.rs:254:4
+    |
+254 | fn start_vm_by_id(vm_id: usize, attach_console: bool) {
+    |    ^^^^^^^^^^^^^^
+
+warning: `axvisor` (bin "axvisor") generated 6 warnings (run `cargo fix --bin "axvisor" -p axvisor` to apply 2 suggestions)
+    Finished `release` profile [optimized] target(s) in 28.12s
+warning: the following packages contain code that will be rejected by a future version of Rust: core v0.0.0 (/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core), memchr v2.8.3
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+Converting ELF to BIN format...
+  elf: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor
+  bin: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-objcopy --strip-all -O binary /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+qemu-system-aarch64 -nographic -nic none -cpu cortex-a72 -machine virt,virtualization=on,gic-version=3 -smp 4 -m 4g -qmp unix:/tmp/axp4-88f0ac523d7bddf8f9112d680e61a139/qmp.sock,server=on,wait=off -pidfile /tmp/axp4-88f0ac523d7bddf8f9112d680e61a139/qemu.pid -name axvisor-dual-smoke-88f0ac523d7bddf8f9112d680e61a139 -kernel /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+Boot entropy source: FDT /chosen/rng-seed
+VM Load @PA:0x40200000
+VM Load Offset: 0xffff0000c0200000
+Memory Map:
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Free   0x00000044000000 - 0x00000140000000 (3.94 GiB)
+Initialize RAM allocator: 0x44000000..0x140000000
+Reserving CPU-local areas
+CPU-local area stride: 0x45000 bytes
+Total CPU-local allocation: 0x114000 bytes (4 CPUs)
+Flushed RAM used range to memory map: 0x44000000..0x44100000, current: 0x44100000
+Flushed RAM used range to memory map: 0x44100000..0x44214000, current: 0x44214000
+CPU-local areas allocated at 0x44100000 - 0x44214000
+EL: 2
+Mapping early memory regions...
+Ram                 : [0x0000000040000000, 0x0000000140000000) -> [0x0000000040000000, 0x0000000140000000) (4 GiB)
+KImage              : [0x0000ffff80000000, 0x0000ffff83e00000) -> [0x0000000040200000, 0x0000000044000000) (62 MiB)
+PerCpu              : [0x0000ff0044100000, 0x0000ff0044214000) -> [0x0000000044100000, 0x0000000044214000) (1.08 MiB)
+Debug serial        : [0x0000000009000000, 0x0000000009001000) -> [0x0000000009000000, 0x0000000009001000) (4 KiB)
+Boot page table at physical address: PA:0x44214000
+Setting up table registers...
+MMU Entry point at physical address: 0x403c5ec8
+Trap vector at 0xffff801b9800
+Memory Map:
+  MMIO   0x00000009000000 - 0x00000009001000 (4 KiB)
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Rsv    0x00000044000000 - 0x00000044100000 (1 MiB)
+  PerCPU 0x00000044100000 - 0x00000044214000 (1.08 MiB)
+  Rsv    0x00000044214000 - 0x0000004421e000 (40 KiB)
+  Free   0x0000004421e000 - 0x00000140000000 (3.94 GiB)
+Jumping to main entry point at 0xffff801a3ed4 with SP 0x0000ff0044145000
+
+       d8888                            .d88888b.   .d8888b.
+      d88888                           d88P" "Y88b d88P  Y88b
+     d88P888                           888     888 Y88b.
+    d88P 888 888d888  .d8888b  .d88b.  888     888  "Y888b.
+   d88P  888 888P"   d88P"    d8P  Y8b 888     888     "Y88b.
+  d88P   888 888     888      88888888 888     888       "888
+ d8888888888 888     Y88b.    Y8b.     Y88b. .d88P Y88b  d88P
+d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
+
+arch = aarch64
+platform = linux,dummy-virt
+target = aarch64-unknown-none-softfloat
+build_mode = 
+log_level = info
+backtrace = false
+smp = 4
+
+[37m[  0.090601 ax_runtime:222] [32mLogging is enabled.[m
+[m[37m[  0.091208 ax_runtime:223] [32mPrimary CPU 0 started, arg = 0x44000000.[m
+[m[37m[  0.091357 ax_runtime:225] [32mFound physcial memory regions:[m
+[m[37m[  0.093662 ax_runtime:227] [32m  [PA:0x9000000, PA:0x9001000) mmio (READ | WRITE | DEVICE | RESERVED)[m
+[m[37m[  0.094024 ax_runtime:227] [32m  [PA:0x40000000, PA:0x40200000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.094216 ax_runtime:227] [32m  [PA:0x40200000, PA:0x44000000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.094388 ax_runtime:227] [32m  [PA:0x44000000, PA:0x44100000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.094552 ax_runtime:227] [32m  [PA:0x44100000, PA:0x44214000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.094721 ax_runtime:227] [32m  [PA:0x44214000, PA:0x4421e000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.094885 ax_runtime:227] [32m  [PA:0x4421e000, PA:0x140000000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.095068 ax_runtime:375] [32mInitialize global memory allocator...[m
+[m[37m[  0.095214 ax_runtime:376] [32m  use buddy-slab-allocator allocator.[m
+[m[37m[  0.095539 ax_alloc::buddy_slab:158] [32mInitialize global memory allocator, start_vaddr: 0x4421e000, size: 0xfbde2000[m
+[m[37m[  0.105516 ax_alloc::buddy_slab:424] [32mglobal allocator initialized[m
+[m[37m[  0.105776 ax_alloc::buddy_slab:168] [32mAdd memory region, start_vaddr: 0x40000000, size: 0x200000[m
+[m[37m[  0.106018 buddy_slab_allocator::global:151] [32mGlobalAllocator: skip region 0x40000000+0x200000, no allocator-visible memory after 2097152 alignment[m
+[m[37m[  0.106524 ax_runtime:262] [32mkernel aspace: [VA:0x0, VA:0xffffffffffffffff)[m
+[m[37m[  0.106737 ax_mm:107] [32mInitialize virtual memory management...[m
+[m[37m[  0.533214 ax_runtime:274] [32mInitialize platform devices...[m
+[m[37m[  0.543321 someboot::arch::power:23] [32mPower management method : SMC[m
+[m[37m[  0.543693 somehal::driver:5] [32mInitializing rdrive with FDT at 0x44000000[m
+[m[37m[  0.564993 somehal::arch::gic::v3:274] [32mGICv3 CPU 0 EOI mode: two_step=true[m
+[m[37m[  0.651937 ax_task::api:137] [32mInitialize scheduling...[m
+[m[37m[  0.654210 ax_task::api:145] [32m  use FIFO scheduler.[m
+[m[37m[  0.654802 ax_runtime:300] [32mInitialize interrupt handlers...[m
+[m[37m[  0.658848 ax_runtime::devices:2] [32mProbe platform devices...[m
+[m[37m[  0.682545 somehal::arch::gic::v3:274] [32mGICv3 CPU 1 EOI mode: two_step=true[m
+[m[37m[  0.683201 ax_runtime::mp:79] [32mSecondary CPU 1 started.[m
+[m[37m[  0.684263 ax_runtime::mp:110] [32mSecondary CPU 1 init OK.[m
+[m[37m[  0.697082 somehal::arch::gic::v3:274] [32mGICv3 CPU 2 EOI mode: two_step=true[m
+[m[37m[  0.697268 ax_runtime::mp:79] [32mSecondary CPU 2 started.[m
+[m[37m[  0.697565 ax_runtime::mp:110] [32mSecondary CPU 2 init OK.[m
+[m[37m[  0.710745 somehal::arch::gic::v3:274] [32mGICv3 CPU 3 EOI mode: two_step=true[m
+[m[37m[  0.710945 ax_runtime::mp:79] [32mSecondary CPU 3 started.[m
+[m[37m[  0.711051 ax_runtime:348] [32mPrimary CPU 0 init OK.[m
+[m[37m[  0.712409 ax_runtime::mp:110] [32mSecondary CPU 3 init OK.[m
+[m
+
+       d8888            888     888  d8b
+      d88888            888     888  Y8P
+     d88P888            888     888
+    d88P 888  888  888  Y88b   d88P  888  .d8888b    .d88b.   888d888
+   d88P  888  `Y8bd8P'   Y88b d88P   888  88K       d88""88b  888P"
+  d88P   888    X88K      Y88o88P    888  "Y8888b.  888  888  888
+ d8888888888  .d8""8b.     Y888P     888       X88  Y88..88P  888
+d88P     888  888  888      Y8P      888   88888P'   "Y88P"   888
+
+
+by AxVisor Team
+
+[37m[  0.716549 0:2 axvisor:74] [32mStarting virtualization...[m
+[m[37m[  0.716818 0:2 axvm::host::arceos:352] [32mEnabling hardware virtualization support on all cores...[m
+[m[37m[  0.717049 0:2 axvm::host::arceos:358] [32mCore 0 is initializing hardware virtualization support...[m
+[m[37m[  0.717315 0:2 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.725337 0:2 axvm::host::arceos:360] [32mHardware virtualization support enabled on core 0[m
+[m[37m[  0.726824 0:2 axvm::host::arceos:386] [32mWaiting for all cores to enable hardware virtualization...[m
+[m[37m[  0.727184 2:12 axvm::host::arceos:370] [32mCore 2 is initializing hardware virtualization support...[m
+[m[37m[  0.727241 3:13 axvm::host::arceos:370] [32mCore 3 is initializing hardware virtualization support...[m
+[m[37m[  0.727519 2:12 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.727966 3:13 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.727213 1:11 axvm::host::arceos:370] [32mCore 1 is initializing hardware virtualization support...[m
+[m[37m[  0.728900 1:11 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.729052 3:13 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 3[m
+[m[37m[  0.729051 2:12 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 2[m
+[m[37m[  0.729721 1:11 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 1[m
+[m[37m[  0.731388 0:2 axvm::host::arceos:402] [32mAll cores have enabled hardware virtualization support.[m
+[m[37m[  0.731767 0:2 axvisor::config:90] [32mUsing static VM configs.[m
+[m[37m[  0.755933 0:2 axvm::arch::aarch64::fdt::core:78] [32mVM[1] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37m[  0.760110 0:2 axvm::arch::aarch64::fdt::core:92] [32mVM[1] architectural timer follows host firmware PPIs[m
+[m[37m[  0.766431 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37m[  0.766771 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37m[  0.767024 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37m[  0.767220 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37m[  0.767512 0:2 axvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37m[  0.768555 0:2 axvm::arch::aarch64::fdt::core:143] [32mVM[1] DTB not found, generating from the VM configuration[m
+[m[37m[  0.785382 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  0.797658 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  0.799754 0:2 axvisor::config:137] [32mCreating VM[1] "linux-qemu-smp2-dual"[m
+[m[37m[  0.826214 0:2 axvm::vm:1064] [32mVM created: id=1[m
+[m[37m[  1.325276 0:2 axvisor::config:149] [32mVM[1] created success, loading images...[m
+[m[37m[  1.496050 0:2 axvm::boot::images:137] [32mLoading ramdisk image from memory (10388217 bytes) into GPA @0x88000000[m
+[m[37m[  1.560148 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=0[m
+[m[37m[  1.560804 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=1[m
+[m[37m[  1.561090 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=2[m
+[m[37m[  1.565609 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=3[m
+[m[37m[  1.567130 0:2 axvisor::virtio_net:140] [32mvirtio-net vm=1 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37m[  1.569028 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=4[m
+[m[37m[  1.575117 0:2 axvm::vm::prepare:82] [32mVM setup: id=1[m
+[m[37m[  1.580080 0:2 axvm::arch::aarch64::fdt::core:78] [32mVM[2] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37m[  1.581001 0:2 axvm::arch::aarch64::fdt::core:92] [32mVM[2] architectural timer follows host firmware PPIs[m
+[m[37m[  1.586331 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37m[  1.586673 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37m[  1.586895 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37m[  1.587135 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37m[  1.587378 0:2 axvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37m[  1.587552 0:2 axvm::arch::aarch64::fdt::core:143] [32mVM[2] DTB not found, generating from the VM configuration[m
+[m[37m[  1.598705 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  1.606122 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  1.607360 0:2 axvisor::config:137] [32mCreating VM[2] "zephyr-qemu-dual"[m
+[m[37m[  1.609594 0:2 axvm::vm:1064] [32mVM created: id=2[m
+[m[37m[  1.860710 0:2 axvisor::config:149] [32mVM[2] created success, loading images...[m
+[m[37m[  1.867062 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=0[m
+[m[37m[  1.867228 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=1[m
+[m[37m[  1.867355 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=2[m
+[m[37m[  1.867615 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=3[m
+[m[37m[  1.867835 0:2 axvisor::virtio_net:140] [32mvirtio-net vm=2 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37m[  1.869114 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=4[m
+[m[37m[  1.869536 0:2 axvm::vm::prepare:82] [32mVM setup: id=2[m
+[m[37m[  1.870023 0:2 axvm::runtime:42] [32mInitializing VMM...[m
+[m[37m[  1.872048 3:2 axvm::runtime:53] [32mVMM starting, booting VMs...[m
+[m[37m[  1.872372 3:2 axvm::vm:1279] [32mStarting VM[1][m
+[m[37m[  1.872715 3:2 axvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[0][m
+[m[37m[  1.873341 3:2 axvm::runtime::vcpus:386] [32mVCpu task Task(18, "VM[1]-VCpu[0]") created cpumask: [0, ][m
+[m[37m[  1.878362 3:2 axvm::runtime:61] [32mVM[1] boot success[m
+[m[37m[  1.878581 0:18 axvm::runtime::vcpus:440] [32mVM[1] VCpu[0] waiting for running[m
+[m[37m[  1.878670 3:2 axvm::vm:1279] [32mStarting VM[2][m
+[m[37m[  1.878904 3:2 axvm::runtime::vcpus:369] [32mSpawning task for VM[2] VCpu[0][m
+[m[37m[  1.879205 3:2 axvm::runtime::vcpus:386] [32mVCpu task Task(20, "VM[2]-VCpu[0]") created cpumask: [2, ][m
+[m[37m[  1.879276 0:18 axvm::runtime::vcpus:478] [32mVM[1] VCpu[0] running...[m
+[m[37m[  1.879625 3:2 axvm::runtime:61] [32mVM[2] boot success[m
+[m[37m[  1.879767 2:20 axvm::runtime::vcpus:440] [32mVM[2] VCpu[0] waiting for running[m
+[m[37m[  1.880099 2:20 axvm::runtime::vcpus:478] [32mVM[2] VCpu[0] running...[m
+[m[37m[  1.882944 3:2 axvisor:90] [32m[OK] Default guest initialized[m
+[m[VM 2] contest-icmpinit: echo handler register ret=0
+[VM 1] [    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[VM 2] eth_virtio_net: send total=1
+[37m[  2.007938 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[37m[  2.028846 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 2] eth_virtio_net: send total=2
+[37m[  2.061678 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[VM 2] eth_virtio_net: send total=3
+[37m[  2.081266 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=78 dst=33:33:ff:00:00:02 src=02:00:00:00:00:02[m
+[m[VM 2] eth_virtio_net: send total=4
+[37m[  2.104134 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=62 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[VM 1] [    0.000000] Linux version 6.18.0-rc6-gfd95357fd8c6-dirty (runner@s1lqc) (aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #25 SMP PREEMPT Fri Mar 20 11:22:05 CST 2026
+[VM 2] *** Booting Zephyr OS build v4.4.0 ***
+[VM 1] [    0.000000] KASLR disabled due to lack of seed
+[37m[  2.180647 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37m[  2.180841 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37m[  2.180969 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] Machine model: linux,dummy-virt
+[VM 1] [    0.000000] earlycon: pl11 at MMIO32 0x0000000009000000 (options '')
+[VM 1] [    0.000000] printk: legacy bootconsole [pl11] enabled
+[VM 1] [    0.000000] efi: UEFI not found.
+[VM 1] [    0.000000] OF: reserved mem: Reserved memory: No reserved-memory node in the DT
+[VM 1] [    0.000000] NUMA: Faking a node at [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] NODE_DATA(0) allocated [mem 0x8ff86f40-0x8ff895bf]
+[VM 2] AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=zdbg iface=device mac=02:00:00:00:00:02 ipv4=10.77.0.2 prefix=24 route=10.77.0.0/24 mtu=1500
+[VM 1] [    0.000000] Zone ranges:
+[VM 2] TGOS_ZEPHYR_L3_SMOKE_READY
+[VM 1] [    0.000000]   DMA      [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000]   DMA32    empty
+[VM 1] [    0.000000]   Normal   empty
+[VM 1] [    0.000000] Movable zone start for each node
+[VM 1] [    0.000000] Early memory node ranges
+[VM 1] [    0.000000]   node   0: [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] Initmem setup node 0 [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] cma: Reserved 32 MiB at 0x000000008da00000
+[VM 1] [    0.000000] psci: probing for conduit method from DT.
+[VM 1] [    0.000000] psci: PSCIv1.1 detected in firmware.
+[VM 1] [    0.000000] psci: Using standard PSCI v0.2 function IDs
+[VM 1] [    0.000000] psci: Trusted OS migration not required
+[37m[  2.960941 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0x80000000[m
+[m[VM 1] [    0.000000] psci: SMC Calling Convention v65535.65535
+[37m[  3.004897 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000001[m
+[m[37m[  3.005505 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc400000e[m
+[m[37m[  3.005887 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000012[m
+[m[37m[  3.006201 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000015[m
+[m[VM 1] [    0.000000] percpu: Embedded 25 pages/cpu s62488 r8192 d31720 u102400
+[VM 1] [    0.000000] Detected PIPT I-cache on CPU0
+[VM 1] [    0.000000] CPU features: detected: GICv3 CPU interface
+[VM 2] eth_virtio_net: send total=5
+[37m[  3.135187 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37m[  3.138276 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] CPU features: detected: Spectre-v2
+[VM 1] [    0.000000] CPU features: detected: Spectre-v3a
+[VM 1] [    0.000000] CPU features: detected: Spectre-v4
+[VM 1] [    0.000000] CPU features: detected: Spectre-BHB
+[VM 1] [    0.000000] CPU features: detected: ARM erratum 1742098
+[VM 1] [    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[VM 1] [    0.000000] alternatives: applying boot alternatives
+[VM 1] [    0.000000] Kernel command line: console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000
+[VM 1] [    0.000000] printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+[VM 1] [    0.000000] Dentry cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[VM 1] [    0.000000] Inode-cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size adjusted to 0MB
+[VM 1] [    0.000000] software IO TLB: area num 2.
+[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size roundup to 0MB
+[VM 1] [    0.000000] software IO TLB: mapped [mem 0x000000008fe5e000-0x000000008fede000] (0MB)
+[VM 1] [    0.000000] Fallback order for Node 0: 0 
+[VM 1] [    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 65536
+[VM 1] [    0.000000] Policy zone: DMA
+[VM 1] [    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[VM 1] [    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[VM 1] [    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[VM 1] [    0.000000] rcu: 	RCU event tracing is enabled.
+[VM 1] [    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=2.
+[VM 1] [    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[VM 1] [    0.000000] 	Tracing variant of Tasks RCU enabled.
+[VM 2] eth_virtio_net: send total=6
+[37m[  4.175141 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37m[  4.175687 0:18 axvisor::virtio_net:433] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[VM 1] [    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[VM 1] [    0.000000] RCU Tasks: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] RCU Tasks Trace: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[VM 1] [    0.000000] GICv3: 256 SPIs implemented
+[VM 1] [    0.000000] GICv3: 0 Extended SPIs implemented
+[VM 1] [    0.000000] Root IRQ handler: gic_handle_irq
+[VM 1] [    0.000000] GICv3: GICv3 features: 16 PPIs, RSS
+[VM 1] [    0.000000] GICv3: GICD_CTLR.DS=0, SCR_EL3.FIQ=0
+[VM 1] [    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x00000000080a0000
+[VM 1] [    0.000000] ITS [mem 0x08080000-0x0809ffff]
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Devices @83450000 (indirect, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Interrupt Collections @83460000 (flat, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] GICv3: using LPI property table @0x0000000083470000
+[VM 1] [    0.000000] GICv3: CPU0: using allocated LPI pending table @0x0000000083480000
+[VM 1] [    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[VM 1] [    0.000000] arch_timer: cp15 timer running at 62.50MHz (virt).
+[VM 1] [    0.000000] clocksource: arch_sys_counter: mask: 0x1ffffffffffffff max_cycles: 0x1cd42e208c, max_idle_ns: 881590405314 ns
+[VM 1] [    0.000164] sched_clock: 57 bits at 63MHz, resolution 16ns, wraps every 4398046511096ns
+[VM 1] [    0.053273] Console: colour dummy device 80x25
+[VM 1] [    0.078837] Calibrating delay loop (skipped), value calculated using timer frequency.. 125.00 BogoMIPS (lpj=250000)
+[VM 1] [    0.144014] pid_max: default: 32768 minimum: 301
+[VM 1] [    0.192966] LSM: initializing lsm=capability
+[VM 1] [    0.221075] Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.268113] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.356446] /cpus/cpu-map/socket0/cluster0/core2: Can't get CPU for leaf core
+[VM 1] [    0.401153] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[VM 1] [    0.460363] rcu: Hierarchical SRCU implementation.
+[VM 1] [    0.485441] rcu: 	Max phase no-delay instances is 1000.
+[VM 1] [    0.521741] Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+[VM 1] [    0.571860] fsl-mc MSI: its@8080000 domain created
+[VM 1] [    0.599228] EFI services will not be available.
+[VM 1] [    0.629159] smp: Bringing up secondary CPUs ...
+[37m[  5.704124 0:18 axvm::runtime::hvc:272] [32mVM[1] PSCI_CPU_ON target=0x1 entry=0x8203f570 context=0x0[m
+[m[37m[  5.705252 0:18 axvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[1][m
+[m[37m[  5.705498 0:18 axvm::runtime::vcpus:386] [32mVCpu task Task(23, "VM[1]-VCpu[1]") created cpumask: [1, ][m
+[m[37m[  5.706137 1:23 axvm::runtime::vcpus:440] [32mVM[1] VCpu[1] waiting for running[m
+[m[37m[  5.706789 1:23 axvm::runtime::vcpus:478] [32mVM[1] VCpu[1] running...[m
+[m[VM 1] [    0.663100] Detected PIPT I-cache on CPU1
+[VM 1] [    0.664929] GICv3: CPU1: found redistributor 1 region 0:0x00000000080c0000
+[VM 1] [    0.667868] GICv3: CPU1: using allocated LPI pending table @0x0000000083490000
+[VM 1] [    0.671467] CPU1: Booted secondary processor 0x0000000001 [0x410fd083]
+[VM 1] [    0.682594] smp: Brought up 1 node, 2 CPUs
+[VM 1] [    0.868980] SMP: Total of 2 processors activated.
+[VM 1] [    0.898257] CPU: All CPU(s) started at EL1
+[VM 1] [    0.924522] CPU features: detected: 32-bit EL0 Support
+[VM 1] [    0.951239] CPU features: detected: 32-bit EL1 Support
+[VM 1] [    0.977780] CPU features: detected: CRC32 instructions
+[VM 1] [    1.010824] CPU features: detected: PMUv3
+[VM 1] [    1.040215] alternatives: applying system-wide alternatives
+[VM 1] [    1.110294] Memory: 162436K/262144K available (17920K kernel code, 5422K rwdata, 12940K rodata, 11648K init, 690K bss, 64816K reserved, 32768K cma-reserved)
+[VM 1] [    1.233826] devtmpfs: initialized
+[VM 1] [    1.297323] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[VM 1] [    1.360869] posixtimers hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[VM 1] [    1.399441] futex hash table entries: 512 (32768 bytes on 1 NUMA nodes, total 32 KiB, linear).
+[VM 1] [    1.446939] 20544 pages in range for non-PLT usage
+[VM 1] [    1.447016] 512064 pages in range for PLT usage
+[VM 1] [    1.483204] pinctrl core: initialized pinctrl subsystem
+[VM 1] [    1.556032] DMI not present or invalid.
+[VM 1] [    1.652074] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[VM 1] [    1.703963] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[VM 1] [    1.750271] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[VM 1] [    1.794832] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[VM 1] [    1.835384] audit: initializing netlink subsys (disabled)
+[VM 1] [    1.879170] thermal_sys: Registered thermal governor 'step_wise'
+[VM 1] [    1.879234] thermal_sys: Registered thermal governor 'power_allocator'
+[VM 1] [    1.883139] audit: type=2000 audit(0.492:1): state=initialized audit_enabled=0 res=1
+[VM 1] [    2.002509] cpuidle: using governor menu
+[VM 1] [    2.026329] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[VM 1] [    2.066111] ASID allocator initialised with 65536 entries
+[VM 1] [    2.116086] Serial: AMBA PL011 UART driver
+[VM 1] [    2.195187] 9000000.pl011: ttyAMA0 at MMIO 0x9000000 (irq = 13, base_baud = 0) is a PL011 rev1
+[VM 1] [    2.258948] printk: console [ttyAMA0] enabled
+[VM 1] [    2.258948] printk: console [ttyAMA0] enabled
+[VM 1] [    2.314883] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.314883] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.424859] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[VM 1] [    2.426584] HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+[VM 1] [    2.426656] HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.426664] HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+[VM 1] [    2.426671] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.426675] HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+[VM 1] [    2.426681] HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+[VM 1] [    2.426686] HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+[VM 1] [    2.612441] ACPI: Interpreter disabled.
+[VM 1] [    2.620690] iommu: Default domain type: Translated
+[VM 1] [    2.620745] iommu: DMA domain TLB invalidation policy: strict mode
+[VM 1] [    2.648106] SCSI subsystem initialized
+[VM 1] [    2.652266] usbcore: registered new interface driver usbfs
+[VM 1] [    2.652554] usbcore: registered new interface driver hub
+[VM 1] [    2.652744] usbcore: registered new device driver usb
+[VM 1] [    2.656639] pps_core: LinuxPPS API ver. 1 registered
+[VM 1] [    2.656664] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[VM 1] [    2.656747] PTP clock support registered
+[VM 1] [    2.656998] EDAC MC: Ver: 3.0.0
+[VM 1] [    2.664046] scmi_core: SCMI protocol bus registered
+[VM 1] [    2.668548] FPGA manager framework
+[VM 1] [    2.689122] vgaarb: loaded
+[VM 1] [    2.707835] clocksource: Switched to clocksource arch_sys_counter
+[VM 1] [    2.709938] VFS: Disk quotas dquot_6.6.0
+[VM 1] [    2.710062] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[VM 1] [    2.777631] pnp: PnP ACPI: disabled
+[VM 1] [    2.816286] NET: Registered PF_INET protocol family
+[VM 1] [    2.818497] IP idents hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[VM 1] [    2.827456] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[VM 1] [    2.840589] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[VM 1] [    2.840784] TCP established hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.841003] TCP bind hash table entries: 2048 (order: 4, 65536 bytes, linear)
+[VM 1] [    2.841271] TCP: Hash tables configured (established 2048 bind 2048)
+[VM 1] [    2.842715] UDP hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.842987] UDP-Lite hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.846072] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[VM 1] [    2.867403] RPC: Registered named UNIX socket transport module.
+[VM 1] [    2.867475] RPC: Registered udp transport module.
+[VM 1] [    2.867486] RPC: Registered tcp transport module.
+[VM 1] [    2.867493] RPC: Registered tcp-with-tls transport module.
+[VM 1] [    2.867499] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[VM 1] [    2.868488] PCI: CLS 0 bytes, default 64
+[VM 1] [    2.875103] Unpacking initramfs...
+[VM 1] [    2.878028] kvm [1]: HYP mode not available
+[VM 1] [    2.982782] Initialise system trusted keyrings
+[VM 1] [    3.005378] workingset: timestamp_bits=42 max_order=16 bucket_order=0
+[VM 1] [    3.028821] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[VM 1] [    3.034248] NFS: Registering the id_resolver key type
+[VM 1] [    3.034673] Key type id_resolver registered
+[VM 1] [    3.034703] Key type id_legacy registered
+[VM 1] [    3.035075] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[VM 1] [    3.035156] nfs4flexfilelayout_init: NFSv4 Flexfile Layout Driver Registering...
+[VM 1] [    3.054290] 9p: Installing v9fs 9p2000 file system support
+[VM 1] [    3.260343] Key type asymmetric registered
+[VM 1] [    3.260432] Asymmetric key parser 'x509' registered
+[VM 1] [    3.260995] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 244)
+[VM 1] [    3.261232] io scheduler mq-deadline registered
+[VM 1] [    3.261309] io scheduler kyber registered
+[VM 1] [    3.261685] io scheduler bfq registered
+[VM 1] [    3.392575] ledtrig-cpu: registered to indicate activity on CPUs
+[VM 1] [    3.637202] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[VM 1] [    3.677283] msm_serial: driver initialized
+[VM 1] [    3.677782] SuperH (H)SCI(F) driver initialized
+[VM 1] [    3.677904] STM32 USART driver initialized
+[VM 1] [    3.796590] loop: module loaded
+[VM 1] [    3.798868] megasas: 07.734.00.00-rc1
+[VM 1] [    3.839362] tun: Universal TUN/TAP device driver, 1.6
+[VM 1] [    3.931117] Freeing initrd memory: 10144K
+[VM 1] [    3.937380] thunder_xcv, ver 1.0
+[VM 1] [    3.937503] thunder_bgx, ver 1.0
+[VM 1] [    3.937615] nicpf, ver 1.0
+[VM 1] [    3.940747] e1000: Intel(R) PRO/1000 Network Driver
+[VM 1] [    3.940775] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[VM 1] [    3.941027] e1000e: Intel(R) PRO/1000 Network Driver
+[VM 1] [    3.941042] e1000e: Copyright(c) 1999 - 2015 Intel Corporation.
+[VM 1] AXVISOR_LINUX_INIT_ENTER vm=1 boot_id=p4net-test011-20260819T062022Z[    3.941178] igb: Intel(R) Gigabit Ethernet Network Driver
+[VM 1] [    3.941190] igb: Copyright (c) 2007-2014 Intel Corporation.
+[VM 1] [    3.941294] igbvf: Intel(R) Gigabit Virtual Function Network Driver
+[VM 1] [    3.941336] igbvf: Copyright (c) 2009 - 2012 Intel Corporation.
+[VM 1] [    3.941850] sky2: driver version 1.30
+[VM 1] 
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=p4net-test011-20260819T062022Z[    3.946457] VFIO - User Level meta-driver version: 0.3
+[VM 1] 
+[VM 1] [    3.956852] usbcore: registered new interface driver usb-storage
+[VM 1] [    3.965368] i2c_dev: i2c /dev entries driver
+[VM 1] [    3.977174] sdhci: Secure Digital Host Controller Interface driver
+[VM 1] [    3.977202] sdhci: Copyright(c) Pierre Ossman
+[VM 1] [    3.977972] Synopsys Designware Multimedia Card Interface Driver
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=<boot-id> iface=eth0 mac=02:00:00:00:00:01 ipv4=10.77.0.1 prefix=24 route=10.77.0.0/24 mtu=1500[    3.978869] sdhci-pltfm: SDHCI platform and OF driver helper
+[VM 1] 
+[VM 1] [    3.985290] SMCCC: SOC_ID: ARCH_SOC_ID not implemented, skipping ....
+[VM 1] [    3.988654] usbcore: registered new interface driver usbhid
+[VM 1] [    3.988684] usbhid: USB HID core driver
+[VM 1] linux-ai-controller: probe attempt=0 src=10.77.0.1 dst=10.77.0.2[    4.001497] NET: Registered PF_PACKET protocol family
+[VM 1] 
+[VM 1] [    4.002782] 9pnet: Installing 9P2000 support
+[37m[ 10.506420 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=42 dst=ff:ff:ff:ff:ff:ff src=02:00:00:00:00:01[m
+[m[37m[ 10.507618 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 1] [    4.003294] Key type dns_resolver registered
+[VM 1] [    4.045827] registered taskstats version 1
+[VM 1] [    4.050996] Loading compiled-in X.509 certificates
+[VM 1] [    4.128728] Demotion targets for Node 0: null
+[VM 2] eth_virtio_net: rx_cb len=54 total=1 buf=00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff ff 02 00 00 00 00 01 08 06 00 01 08 00 06 04 00 01 02 00 00 00 00 01 0a 4d 
+[VM 1] [    4.143071] clk: Disabling unused clocks
+[VM 2] eth_virtio_net: send total=7
+[37m[ 10.632140 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=42 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.633308 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 10.638359 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.639317 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 1] [    4.143412] PM: genpd: Disabling unused power domains
+[VM 1] [    4.507355] Freeing unused kernel memory: 11648K
+[VM 1] [    4.510794] Run /init as init process
+[VM 2] eth_virtio_net: rx_cb len=110 total=2 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 22 54 40 00 40 01 03 b9 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadbe
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=8
+[37m[ 10.873907 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.874552 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] linux-ai-controller: peer_ok=1 entering 100-echo measurement
+[37m[ 11.006477 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.006955 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=3 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 22 b3 40 00 40 01 03 5a 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadbe
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=9
+[37m[ 11.262359 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.263022 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 11.285914 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.286407 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=4 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 22 e1 40 00 40 01 03 2c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadbd
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=10
+[37m[ 11.538082 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.538763 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 11.561674 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.562184 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=5 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 22 f9 40 00 40 01 03 14 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadbc
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=11
+[37m[ 11.779252 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.779784 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 11.802913 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.803384 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=6 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 27 40 00 40 01 02 e6 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadbb
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=12
+[37m[ 12.025723 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.026211 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 12.049264 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.049707 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=7 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 50 40 00 40 01 02 bd 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadba
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=13
+[37m[ 12.279923 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.280417 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 12.303650 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.304104 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=8 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 6e 40 00 40 01 02 9f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb9
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=14
+[37m[ 12.569085 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.569634 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 12.598883 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.599450 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=9 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 82 40 00 40 01 02 8b 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb8
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=15
+[37m[ 12.843284 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.843845 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 12.867833 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.868395 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=10 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 93 40 00 40 01 02 7a 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb7
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=16
+[37m[ 13.133921 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.134461 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 13.157520 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.158047 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=11 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 a0 40 00 40 01 02 6d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb6
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=17
+[37m[ 13.489896 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.490722 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 13.513690 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.514240 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=12 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 d6 40 00 40 01 02 37 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb5
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=18
+[37m[ 13.781388 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.782207 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 13.805588 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.806002 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=13 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 23 e9 40 00 40 01 02 24 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb4
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=19
+[37m[ 14.027323 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.027969 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 14.051155 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.052982 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=14 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 20 40 00 40 01 01 ed 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb3
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=20
+[37m[ 14.349835 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.350749 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 14.373767 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.374275 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=15 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 50 40 00 40 01 01 bd 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb2
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=21
+[37m[ 14.719591 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.720168 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 14.743250 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.743673 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=16 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 7d 40 00 40 01 01 90 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb1
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=22
+[37m[ 14.970856 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.971628 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 14.995152 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.995611 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=17 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 7e 40 00 40 01 01 8f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadb0
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=23
+[37m[ 15.210122 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.211418 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 15.234743 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.235421 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=18 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 a7 40 00 40 01 01 66 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadaf
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=24
+[37m[ 15.494683 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.495371 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 15.521232 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.521678 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=19 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 ce 40 00 40 01 01 3f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadae
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=25
+[37m[ 15.818120 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.818783 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 15.842517 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.843077 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=20 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 24 da 40 00 40 01 01 33 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadad
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=26
+[37m[ 16.080328 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 16.080881 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 16.103942 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 16.104461 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=21 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 0e 40 00 40 01 00 ff 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadac
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=27
+[37m[ 16.316472 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 16.316898 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 16.340709 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 16.341144 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=22 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 3a 40 00 40 01 00 d3 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadab
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=28
+[37m[ 16.572940 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 16.573644 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 16.596519 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 16.596951 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=23 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 77 40 00 40 01 00 96 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xadaa
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=29
+[37m[ 16.861084 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 16.861663 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 16.884574 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 16.885053 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=24 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 9a 40 00 40 01 00 73 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada9
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=30
+[37m[ 17.131806 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 17.132518 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 17.156224 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 17.156618 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=25 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 bb 40 00 40 01 00 52 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada8
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=31
+[37m[ 17.399512 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 17.399977 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 17.422785 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 17.423216 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=26 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 25 ee 40 00 40 01 00 1f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada7
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=32
+[37m[ 17.730510 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 17.731047 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 17.754037 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 17.754685 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=27 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 03 40 00 40 01 00 0a 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada6
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=33
+[37m[ 17.980072 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 17.980720 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 18.003873 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 18.004319 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=28 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 3e 40 00 40 01 ff ce 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada5
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=34
+[37m[ 18.256983 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 18.257656 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 18.281468 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 18.281966 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=29 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 6f 40 00 40 01 ff 9d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada4
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=35
+[37m[ 18.559087 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 18.559760 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 18.588866 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 18.589304 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=30 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 96 40 00 40 01 ff 76 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada3
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=36
+[37m[ 18.790880 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 18.791412 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 18.814285 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 18.814894 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=31 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 a8 40 00 40 01 ff 64 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada2
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=37
+[37m[ 19.072028 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 19.072987 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 19.095987 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 19.096629 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=32 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 bd 40 00 40 01 ff 4f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada1
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=38
+[37m[ 19.368520 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 19.369018 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 19.392027 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 19.392862 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=33 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 26 d5 40 00 40 01 ff 37 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xada0
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=39
+[37m[ 19.637422 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 19.638294 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 19.663022 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 19.663467 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=34 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 18 40 00 40 01 fe f4 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9f
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=40
+[37m[ 19.969046 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 19.969702 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 19.994693 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 19.995149 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=35 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 43 40 00 40 01 fe c9 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9e
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=41
+[37m[ 20.226018 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 20.226580 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 20.249259 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 20.249731 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=36 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 5c 40 00 40 01 fe b0 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9d
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=42
+[37m[ 20.490715 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 20.491254 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 20.514395 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 20.515043 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=37 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 61 40 00 40 01 fe ab 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9c
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=43
+[37m[ 20.785992 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 20.786516 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 20.810291 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 20.810703 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=38 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 a7 40 00 40 01 fe 65 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9b
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=44
+[37m[ 21.090246 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 21.091076 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 21.114019 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 21.114447 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=39 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 bd 40 00 40 01 fe 4f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad9a
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=45
+[37m[ 21.353290 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 21.353812 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 21.377071 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 21.377792 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=40 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 27 f6 40 00 40 01 fe 16 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad99
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=46
+[37m[ 21.599176 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 21.599806 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 21.623819 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 21.624403 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=41 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 09 40 00 40 01 fe 03 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad98
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=47
+[37m[ 21.918741 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 21.919333 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 21.942579 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 21.943078 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=42 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 25 40 00 40 01 fd e7 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad97
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=48
+[37m[ 22.195180 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 22.195649 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 22.219044 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 22.219454 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=43 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 36 40 00 40 01 fd d6 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad96
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=49
+[37m[ 22.437514 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 22.438044 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 22.461610 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 22.462069 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=44 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 6d 40 00 40 01 fd 9f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad95
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=50
+[37m[ 22.691480 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 22.691944 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 22.715416 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 22.715843 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=45 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 78 40 00 40 01 fd 94 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad94
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=51
+[37m[ 22.988381 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 22.989779 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 23.012662 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 23.013333 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=46 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 af 40 00 40 01 fd 5d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad93
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=52
+[37m[ 23.272081 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 23.272867 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 23.296419 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 23.296914 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=47 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 c0 40 00 40 01 fd 4c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad92
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=53
+[37m[ 23.602872 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 23.603328 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 23.631166 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 23.631779 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=48 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 28 e7 40 00 40 01 fd 25 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad91
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=54
+[37m[ 23.966845 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 23.967324 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 23.991058 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 23.991651 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=49 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 01 40 00 40 01 fd 0b 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad90
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=55
+[37m[ 24.287299 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 24.287820 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 24.318886 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 24.319384 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=50 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 48 40 00 40 01 fc c4 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8f
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=56
+[37m[ 24.519398 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 24.520005 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 24.542645 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 24.543335 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=51 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 57 40 00 40 01 fc b5 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8e
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=57
+[37m[ 24.790002 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 24.790511 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 24.813600 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 24.814046 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=52 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 6f 40 00 40 01 fc 9d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8d
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=58
+[37m[ 25.072662 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 25.073392 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 25.097361 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 25.097868 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=53 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 a0 40 00 40 01 fc 6c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8c
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=59
+[37m[ 25.354965 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 25.355687 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 25.379368 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 25.379864 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=54 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 a2 40 00 40 01 fc 6a 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8b
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=60
+[37m[ 25.618722 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 25.619328 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 25.649010 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 25.649587 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=55 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 c8 40 00 40 01 fc 44 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad8a
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=61
+[37m[ 25.909664 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 25.910113 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 25.933606 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 25.934061 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=56 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 ec 40 00 40 01 fc 20 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad89
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=62
+[37m[ 26.173097 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 26.173815 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 26.197872 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 26.198478 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=57 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 29 f9 40 00 40 01 fc 13 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad88
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=63
+[37m[ 26.432427 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 26.433199 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 26.456226 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 26.456632 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=58 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a 2c 40 00 40 01 fb e0 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad87
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=64
+[37m[ 26.724010 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 26.724776 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 26.747491 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 26.748028 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=59 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a 54 40 00 40 01 fb b8 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad86
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=65
+[37m[ 27.065931 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 27.066734 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 27.090874 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 27.091455 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=60 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a 6d 40 00 40 01 fb 9f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad85
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=66
+[37m[ 27.382567 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 27.383046 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 27.405955 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 27.406452 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=61 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a 88 40 00 40 01 fb 84 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad84
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=67
+[37m[ 27.643432 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 27.644040 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 27.669750 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 27.670205 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=62 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a ac 40 00 40 01 fb 60 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad83
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=68
+[37m[ 27.864880 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 27.869611 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 27.892791 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 27.893248 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=63 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a b9 40 00 40 01 fb 53 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad82
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=69
+[37m[ 28.139895 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 28.140563 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 28.163879 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 28.164510 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=64 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a c8 40 00 40 01 fb 44 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad81
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=70
+[37m[ 28.405314 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 28.405968 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 28.429545 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 28.429966 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=65 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a d2 40 00 40 01 fb 3a 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad80
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=71
+[37m[ 28.612164 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 28.612837 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 28.635856 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 28.636390 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=66 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a e3 40 00 40 01 fb 29 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7f
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=72
+[37m[ 28.911161 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 28.911734 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 28.935174 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 28.935674 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=67 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2a ff 40 00 40 01 fb 0d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7e
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=73
+[37m[ 29.184067 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 29.184677 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 29.209034 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 29.209823 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=68 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 06 40 00 40 01 fb 06 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7d
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=74
+[37m[ 29.472323 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 29.472877 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 29.497595 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 29.498410 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=69 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 18 40 00 40 01 fa f4 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7c
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=75
+[37m[ 29.775932 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 29.776558 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 29.809051 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 29.809542 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=70 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 2a 40 00 40 01 fa e2 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7b
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=76
+[37m[ 30.029439 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 30.030263 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 30.055756 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 30.056261 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=71 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 66 40 00 40 01 fa a6 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad7a
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=77
+[37m[ 30.338156 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 30.338996 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 30.368977 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 30.369507 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=72 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 68 40 00 40 01 fa a4 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad79
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=78
+[37m[ 30.637555 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 30.638196 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 30.668844 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 30.669256 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=73 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 78 40 00 40 01 fa 94 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad78
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=79
+[37m[ 30.929272 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 30.929854 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 30.953438 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 30.953963 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=74 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b 9d 40 00 40 01 fa 6f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad77
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=80
+[37m[ 31.208683 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 31.209571 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 31.238898 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 31.239302 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=75 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b bf 40 00 40 01 fa 4d 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad76
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=81
+[37m[ 31.470922 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 31.471435 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 31.494753 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 31.495355 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=76 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2b d0 40 00 40 01 fa 3c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad75
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=82
+[37m[ 31.802432 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 31.803396 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 31.831184 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 31.831670 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=77 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 03 40 00 40 01 fa 09 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad74
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=83
+[37m[ 32.091049 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 32.091855 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 32.115849 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 32.116344 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=78 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 05 40 00 40 01 fa 07 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad73
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=84
+[37m[ 32.339706 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 32.340193 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 32.364169 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 32.364678 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=79 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 19 40 00 40 01 f9 f3 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad72
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=85
+[37m[ 32.612301 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 32.612832 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 32.636776 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 32.637809 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=80 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 44 40 00 40 01 f9 c8 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad71
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=86
+[37m[ 32.882476 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 32.883054 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 32.909537 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 32.909996 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=81 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 7c 40 00 40 01 f9 90 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad70
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=87
+[37m[ 33.230157 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 33.230921 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 33.255158 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 33.255755 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=82 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 7e 40 00 40 01 f9 8e 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6f
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=88
+[37m[ 33.549730 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 33.550218 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 33.574664 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 33.575104 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=83 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 90 40 00 40 01 f9 7c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6e
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=89
+[37m[ 33.899174 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 33.899721 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 33.923410 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 33.923989 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=84 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c 94 40 00 40 01 f9 78 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6d
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=90
+[37m[ 34.135976 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 34.136451 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 34.159790 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 34.160213 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=85 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c b3 40 00 40 01 f9 59 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6c
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=91
+[37m[ 34.456813 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 34.457376 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 34.481164 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 34.481712 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=86 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2c dd 40 00 40 01 f9 2f 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6b
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=92
+[37m[ 34.712176 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 34.712921 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 34.736577 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 34.737076 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=87 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 09 40 00 40 01 f9 03 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad6a
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=93
+[37m[ 34.961739 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 34.962359 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 34.986574 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 34.987022 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=88 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 2b 40 00 40 01 f8 e1 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad69
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=94
+[37m[ 35.218715 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 35.219150 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 35.243264 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 35.243893 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=89 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 3e 40 00 40 01 f8 ce 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad68
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=95
+[37m[ 35.537156 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 35.537622 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 35.561704 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 35.562133 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=90 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 47 40 00 40 01 f8 c5 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad67
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=96
+[37m[ 35.809853 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 35.810296 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 35.834199 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 35.834752 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=91 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 5a 40 00 40 01 f8 b2 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad66
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=97
+[37m[ 36.048712 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 36.049520 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 36.073361 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 36.073808 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=92 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 7b 40 00 40 01 f8 91 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad65
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=98
+[37m[ 36.306950 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 36.307609 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 36.332549 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 36.332958 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=93 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d 86 40 00 40 01 f8 86 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad64
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=99
+[37m[ 36.583781 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 36.584267 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 36.608627 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 36.609034 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=94 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d aa 40 00 40 01 f8 62 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad63
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=100
+[37m[ 36.868155 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 36.868876 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 36.892830 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 36.893443 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=95 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2d db 40 00 40 01 f8 31 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad62
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=101
+[37m[ 37.145116 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 37.145616 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 37.169126 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 37.169569 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=96 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e 17 40 00 40 01 f7 f5 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad61
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=102
+[37m[ 37.428103 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 37.428914 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 37.452714 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 37.453139 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=97 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e 3d 40 00 40 01 f7 cf 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad60
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=103
+[37m[ 37.731644 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 37.732500 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 37.756529 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 37.757033 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=98 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e 84 40 00 40 01 f7 88 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad5f
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=104
+[37m[ 38.020849 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 38.021516 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 38.046078 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 38.046562 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=99 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e 85 40 00 40 01 f7 87 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad5e
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=105
+[37m[ 38.329183 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 38.330983 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 38.355051 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 38.355576 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=100 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e 97 40 00 40 01 f7 75 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad5d
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=106
+[37m[ 38.591165 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 38.591700 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 38.617793 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 38.618264 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=101 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e b0 40 00 40 01 f7 5c 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad5c
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=107
+[37m[ 38.888340 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 38.889189 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 38.913424 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 38.913874 2:20 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] eth_virtio_net: rx_cb len=110 total=102 buf=00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 02 02 00 00 00 00 01 08 00 45 00 00 54 2e ce 40 00 40 01 f7 3e 0a 4d 00 01 
+[VM 2] contest-ipv4: len=84 real=84 proto=1 src=0a4d0001 dst=0a4d0002
+[VM 2] contest-icmpin: type=8 code=0 chksum=0xad5b
+[VM 2] contest-icmpcs: need_calc=1 reassembled=0
+[VM 2] contest-icmpcs: calc ret=0 chksum=0000 -> OK
+[VM 2] contest-icmp: echo request from 0a4d0001 to 0a4d0002 payload_len=60
+[VM 2] eth_virtio_net: send total=108
+[37m[ 39.119667 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 39.120543 0:18 axvisor::virtio_net:408] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] TGOS_LINUX_L3_SMOKE sent=100 received=100 loss=0
+qemu-system-aarch64: terminating on signal 2 from pid 383 (python3)
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ... done (97.27s)

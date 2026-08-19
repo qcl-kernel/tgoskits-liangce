@@ -65,6 +65,8 @@ mod error;
 
 pub use error::{HyperCallError, HyperCallResult, InvalidHyperCallCode};
 
+pub mod ivc;
+
 /// Hypercall operation codes for AxVisor.
 ///
 /// Each variant represents a specific operation that a guest VM can request
@@ -74,7 +76,7 @@ pub use error::{HyperCallError, HyperCallResult, InvalidHyperCallCode};
 /// # Categories
 ///
 /// - **Hypervisor Control** (0-2): Operations to control the hypervisor lifecycle
-/// - **IVC Operations** (3-6): Inter-VM communication channel management
+/// - **IVC Operations** (3-7): Inter-VM communication channel management
 ///
 /// # Example
 ///
@@ -91,6 +93,54 @@ pub use error::{HyperCallError, HyperCallResult, InvalidHyperCallCode};
 #[repr(u32)]
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum HyperCallCode {
+    /// PSCI_VERSION.
+    PSCIVersion          = 0x8400_0000,
+
+    /// PSCI_CPU_SUSPEND.
+    PSCICpuSuspend       = 0x8400_0001,
+
+    /// PSCI_CPU_OFF.
+    PSCICpuOff           = 0x8400_0002,
+
+    /// PSCI_CPU_ON.
+    PSCICpuOn            = 0x8400_0003,
+
+    /// PSCI_AFFINITY_INFO.
+    PSCIAffinityInfo     = 0x8400_0004,
+
+    /// PSCI_MIGRATE.
+    PSCIMigrate          = 0x8400_0005,
+
+    /// PSCI_MIGRATE_INFO_TYPE.
+    PSCIMigrateInfoType  = 0x8400_0006,
+
+    /// PSCI_MIGRATE_INFO_UP_CPU.
+    PSCIMigrateInfoUpCpu = 0x8400_0007,
+
+    /// PSCI_SYSTEM_OFF.
+    PSCISystemOff        = 0x8400_0008,
+
+    /// PSCI_SYSTEM_RESET.
+    PSCISystemReset      = 0x8400_0009,
+
+    /// PSCI features.
+    PSCIFeatures         = 0x8400_000a,
+
+    /// PSCI CPU suspend, SMC64.
+    PSCICpuSuspend64     = 0xc400_0001,
+
+    /// PSCI CPU on, SMC64.
+    PSCICpuOn64          = 0xc400_0003,
+
+    /// PSCI affinity info, SMC64.
+    PSCIAffinityInfo64   = 0xc400_0004,
+
+    /// PSCI migrate, SMC64.
+    PSCIMigrate64        = 0xc400_0005,
+
+    /// PSCI migrate info up CPU, SMC64.
+    PSCIMigrateInfoUpCpu64 = 0xc400_0007,
+
     /// Disable the hypervisor.
     ///
     /// This hypercall requests the hypervisor to disable itself and return
@@ -190,6 +240,24 @@ pub enum HyperCallCode {
     /// - `Ok(0)` on success
     /// - `Err(_)` if unsubscription fails
     HIVCUnSubscribChannel = 6,
+
+    /// Notify one peer VM that an IVC channel has new work.
+    ///
+    /// This hypercall is a lightweight event path for channels whose data
+    /// plane lives in shared memory. The sender and target must both be
+    /// participants of the `(publisher_vm_id, key)` channel.
+    ///
+    /// # Arguments
+    ///
+    /// - `publisher_vm_id`: The ID of the VM that published the channel
+    /// - `key`: The key of the IVC channel
+    /// - `target_vm_id`: The peer VM to notify
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(0)` on success
+    /// - `Err(_)` if the channel or peer relationship is invalid
+    HIVCNotify           = 7,
 }
 
 impl TryFrom<u32> for HyperCallCode {
@@ -197,6 +265,23 @@ impl TryFrom<u32> for HyperCallCode {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
+            0x8400_0000 => Ok(HyperCallCode::PSCIVersion),
+            0x8400_0001 => Ok(HyperCallCode::PSCICpuSuspend),
+            0x8400_0002 => Ok(HyperCallCode::PSCICpuOff),
+            0x8400_0003 => Ok(HyperCallCode::PSCICpuOn),
+            0x8400_0004 => Ok(HyperCallCode::PSCIAffinityInfo),
+            0x8400_0005 => Ok(HyperCallCode::PSCIMigrate),
+            0x8400_0006 => Ok(HyperCallCode::PSCIMigrateInfoType),
+            0x8400_0007 => Ok(HyperCallCode::PSCIMigrateInfoUpCpu),
+            0x8400_0008 => Ok(HyperCallCode::PSCISystemOff),
+            0x8400_0009 => Ok(HyperCallCode::PSCISystemReset),
+            0x8400_000a => Ok(HyperCallCode::PSCIFeatures),
+            0xc400_0001 => Ok(HyperCallCode::PSCICpuSuspend64),
+            0xc400_0003 => Ok(HyperCallCode::PSCICpuOn64),
+            0xc400_0004 => Ok(HyperCallCode::PSCIAffinityInfo64),
+            0xc400_0005 => Ok(HyperCallCode::PSCIMigrate64),
+            0xc400_0007 => Ok(HyperCallCode::PSCIMigrateInfoUpCpu64),
+
             0 => Ok(HyperCallCode::HypervisorDisable),
             1 => Ok(HyperCallCode::HyperVisorPrepareDisable),
             2 => Ok(HyperCallCode::HyperVisorDebug),
@@ -204,6 +289,7 @@ impl TryFrom<u32> for HyperCallCode {
             4 => Ok(HyperCallCode::HIVCSubscribChannel),
             5 => Ok(HyperCallCode::HIVCUnPublishChannel),
             6 => Ok(HyperCallCode::HIVCUnSubscribChannel),
+            7 => Ok(HyperCallCode::HIVCNotify),
             _ => Err(InvalidHyperCallCode(value)),
         }
     }
@@ -213,6 +299,22 @@ impl core::fmt::Debug for HyperCallCode {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "(")?;
         match self {
+            Self::PSCIVersion => write!(f, "PSCIVersion"),
+            Self::PSCICpuSuspend => write!(f, "PSCICpuSuspend"),
+            Self::PSCICpuOff => write!(f, "PSCICpuOff"),
+            Self::PSCICpuOn => write!(f, "PSCICpuOn"),
+            Self::PSCIAffinityInfo => write!(f, "PSCIAffinityInfo"),
+            Self::PSCIMigrate => write!(f, "PSCIMigrate"),
+            Self::PSCIMigrateInfoType => write!(f, "PSCIMigrateInfoType"),
+            Self::PSCIMigrateInfoUpCpu => write!(f, "PSCIMigrateInfoUpCpu"),
+            Self::PSCISystemOff => write!(f, "PSCISystemOff"),
+            Self::PSCISystemReset => write!(f, "PSCISystemReset"),
+            Self::PSCIFeatures => write!(f, "PSCIFeatures"),
+            Self::PSCICpuSuspend64 => write!(f, "PSCICpuSuspend64"),
+            Self::PSCICpuOn64 => write!(f, "PSCICpuOn64"),
+            Self::PSCIAffinityInfo64 => write!(f, "PSCIAffinityInfo64"),
+            Self::PSCIMigrate64 => write!(f, "PSCIMigrate64"),
+            Self::PSCIMigrateInfoUpCpu64 => write!(f, "PSCIMigrateInfoUpCpu64"),
             HyperCallCode::HypervisorDisable => write!(f, "HypervisorDisable {:#x}", *self as u32),
             HyperCallCode::HyperVisorPrepareDisable => {
                 write!(f, "HyperVisorPrepareDisable {:#x}", *self as u32)
@@ -230,6 +332,7 @@ impl core::fmt::Debug for HyperCallCode {
             HyperCallCode::HIVCUnSubscribChannel => {
                 write!(f, "HIVCUnSubscribChannel {:#x}", *self as u32)
             }
+            HyperCallCode::HIVCNotify => write!(f, "HIVCNotify {:#x}", *self as u32),
         }?;
         write!(f, ")")
     }

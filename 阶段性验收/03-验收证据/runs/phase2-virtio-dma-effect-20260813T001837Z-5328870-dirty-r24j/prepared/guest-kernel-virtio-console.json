@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "preflight-only",
+  "status": "guest_kernel_virtio_console_prerequisites_verified",
+  "proofScope": "embedded-linux-ikconfig-built-in-virtio-console-prerequisites",
+  "doesNotProve": [
+    "the kernel Image was launched",
+    "the VirtIO console device was enumerated",
+    "/dev/hvc0 appeared",
+    "the GO nonce reached the Guest helper",
+    "a virtio-blk request completed",
+    "DMA isolation"
+  ],
+  "kernel": {
+    "path": "qemu-aarch64",
+    "size": 49265152,
+    "sha256": "d8127a4ce952ae9bfa539d3535260b8d67973b766e51a3de0b97b526bfd6722c"
+  },
+  "embeddedConfig": {
+    "markerOffset": 18585080,
+    "size": 315120,
+    "sha256": "7045f00f355b4a431dc19a9c3d9dedc1664957cc6d4d60535baff961d116e990",
+    "requiredBuiltIns": {
+      "CONFIG_VIRTIO": "y",
+      "CONFIG_VIRTIO_MMIO": "y",
+      "CONFIG_VIRTIO_CONSOLE": "y",
+      "CONFIG_HVC_DRIVER": "y",
+      "CONFIG_DEVTMPFS": "y",
+      "CONFIG_DEVTMPFS_MOUNT": "y"
+    }
+  }
+}

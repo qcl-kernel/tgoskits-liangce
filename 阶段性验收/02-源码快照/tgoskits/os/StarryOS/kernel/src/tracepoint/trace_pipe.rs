@@ -1,11 +1,10 @@
 use core::{future::poll_fn, task::Poll};
 
-use ax_sync::Mutex;
 use ax_task::future::{block_on, interruptible};
-use axfs_ng_vfs::VfsResult;
-use ktracepoint::TracePipeOps;
+use axfs_ng_vfs::{VfsError, VfsResult};
 
-use crate::pseudofs::DirectRwFsFileOps;
+use super::IdentityTraceBuffer;
+use crate::{pseudofs::DirectRwFsFileOps, sync::Mutex};
 
 /// File representing the trace pipe.
 ///
@@ -61,7 +60,8 @@ impl DirectRwFsFileOps for TracePipeFile {
                         Poll::Pending
                     }
                 }
-            })))?;
+            })))
+            .map_err(|_| VfsError::Interrupted)?;
         };
         Ok(read_len)
     }

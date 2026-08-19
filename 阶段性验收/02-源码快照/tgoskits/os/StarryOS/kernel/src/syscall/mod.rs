@@ -12,7 +12,6 @@ mod sys;
 mod task;
 mod time;
 
-use ax_errno::{AxError, LinuxError};
 use ax_runtime::hal::cpu::uspace::UserContext;
 use starry_signal::Signo;
 use syscalls::Sysno;
@@ -21,15 +20,40 @@ pub use self::{
     fs::*, io_mpx::*, ipc::*, mm::*, net::*, ns::*, resources::*, signal::*, sync::*, sys::*,
     task::*, time::*,
 };
-use crate::task::{AsThread, SeccompDecision, do_exit, seccomp_errno};
+use crate::{
+    Errno, StarryError,
+    task::{AsThread, SeccompDecision, do_exit, seccomp_errno},
+};
 
 pub fn syscall_allows_signal_restart(sysno: usize) -> bool {
-    // Per signal(7), only the System V message-queue blocking calls (msgsnd /
-    // msgrcv) are never restarted even with SA_RESTART. The POSIX message-queue
-    // calls (mq_send / mq_receive / mq_timedsend / mq_timedreceive) ARE in the
-    // SA_RESTART-restartable set, so they must not be listed here or a handler
-    // installed with SA_RESTART would wrongly see EINTR.
-    !matches!(Sysno::new(sysno), Some(Sysno::msgsnd | Sysno::msgrcv))
+    // Linux never restarts fd-multiplexing waits or System V message-queue
+    // blocking calls, even when the delivered handler uses SA_RESTART. Keep
+    // the classification here because signal delivery only sees the syscall
+    // number and the interrupted -EINTR result.
+    let Some(sysno) = Sysno::new(sysno) else {
+        return true;
+    };
+
+    if matches!(
+        sysno,
+        Sysno::ppoll
+            | Sysno::pselect6
+            | Sysno::epoll_pwait
+            | Sysno::epoll_pwait2
+            | Sysno::msgsnd
+            | Sysno::msgrcv
+    ) {
+        return false;
+    }
+
+    // The legacy multiplexing entry points exist in the x86_64 syscall table
+    // but not in the generic tables used by riscv64, aarch64, and loongarch64.
+    #[cfg(target_arch = "x86_64")]
+    if matches!(sysno, Sysno::poll | Sysno::select | Sysno::epoll_wait) {
+        return false;
+    }
+
+    true
 }
 
 // `#[inline(never)]` keeps `sysno` reachable as a real call target so a kprobe
@@ -49,32 +73,35 @@ pub fn sysno(id: usize) -> Option<Sysno> {
 
 pub fn handle_syscall(uctx: &mut UserContext) {
     let Some(sysno) = sysno(uctx.sysno()) else {
-        uctx.set_retval(-LinuxError::ENOSYS.code() as _);
+        uctx.set_retval(-Errno::ENOSYS.into_raw() as _);
         return;
     };
 
     trace!("Syscall {sysno:?}");
-    match ax_task::current()
-        .as_thread()
-        .seccomp_state()
-        .evaluate(uctx)
-    {
-        SeccompDecision::Allow => {}
-        SeccompDecision::Errno(errno) => {
-            uctx.set_retval(seccomp_errno(errno));
-            return;
-        }
-        SeccompDecision::KillProcess => {
-            do_exit(Signo::SIGSYS as i32, true);
-            return;
-        }
-        SeccompDecision::KillThread => {
-            do_exit(Signo::SIGSYS as i32, false);
-            return;
-        }
-        SeccompDecision::UnsupportedAction => {
-            uctx.set_retval(-LinuxError::ENOSYS.code() as usize);
-            return;
+    // Fast path: skip the seccomp lock + SeccompState clone + evaluate entirely when
+    // no filter is installed (the common case). `seccomp_active` is a lock-free
+    // one-way flag, so this can never bypass an installed filter.
+    let curr = ax_task::current();
+    let thread = curr.as_thread();
+    if thread.seccomp_active() {
+        match thread.seccomp_state().evaluate(uctx) {
+            SeccompDecision::Allow => {}
+            SeccompDecision::Errno(errno) => {
+                uctx.set_retval(seccomp_errno(errno));
+                return;
+            }
+            SeccompDecision::KillProcess => {
+                do_exit(Signo::SIGSYS as i32, true);
+                return;
+            }
+            SeccompDecision::KillThread => {
+                do_exit(Signo::SIGSYS as i32, false);
+                return;
+            }
+            SeccompDecision::UnsupportedAction => {
+                uctx.set_retval(-Errno::ENOSYS.into_raw() as usize);
+                return;
+            }
         }
     }
 
@@ -161,6 +188,14 @@ pub fn handle_syscall(uctx: &mut UserContext) {
             uctx.arg2() as _,
             uctx.arg3() as _,
         ),
+        Sysno::getxattrat => sys_getxattrat(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4() as _,
+            uctx.arg5() as _,
+        ),
         Sysno::setxattr => sys_setxattr(
             uctx.arg0() as _,
             uctx.arg1() as _,
@@ -181,6 +216,14 @@ pub fn handle_syscall(uctx: &mut UserContext) {
             uctx.arg2() as _,
             uctx.arg3() as _,
             uctx.arg4() as _,
+        ),
+        Sysno::setxattrat => sys_setxattrat(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4() as _,
+            uctx.arg5() as _,
         ),
         Sysno::removexattr => sys_removexattr(uctx.arg0() as _, uctx.arg1() as _),
         Sysno::lremovexattr => sys_lremovexattr(uctx.arg0() as _, uctx.arg1() as _),
@@ -470,6 +513,29 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         ) as _,
         Sysno::umount2 => sys_umount2(uctx.arg0() as _, uctx.arg1() as _) as _,
         Sysno::pivot_root => sys_pivot_root(uctx.arg0() as _, uctx.arg1() as _) as _,
+        Sysno::fsopen => sys_fsopen(uctx.arg0() as _, uctx.arg1() as _),
+        Sysno::fsconfig => sys_fsconfig(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4() as _,
+        ),
+        Sysno::fsmount => sys_fsmount(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _),
+        Sysno::move_mount => sys_move_mount(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4() as _,
+        ),
+        Sysno::mount_setattr => sys_mount_setattr(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4() as _,
+        ),
 
         // pipe
         Sysno::pipe2 => sys_pipe2(uctx.arg0() as _, uctx.arg1() as _),
@@ -554,7 +620,7 @@ pub fn handle_syscall(uctx: &mut UserContext) {
             uctx.arg3() as _,
             uctx.arg4() as _,
         ),
-        Sysno::open_by_handle_at => Err(AxError::OperationNotSupported),
+        Sysno::open_by_handle_at => Err(StarryError::OperationNotSupported),
 
         // mm
         Sysno::brk => sys_brk(uctx.arg0() as _),
@@ -817,6 +883,8 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         // time
         #[cfg(target_arch = "x86_64")]
         Sysno::time => sys_time(uctx.arg0() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::alarm => sys_alarm(uctx.arg0() as _),
         Sysno::gettimeofday => sys_gettimeofday(uctx.arg0() as _, uctx.arg1() as _),
         Sysno::times => sys_times(uctx.arg0() as _),
         Sysno::clock_gettime => sys_clock_gettime(uctx.arg0() as _, uctx.arg1() as _),
@@ -953,13 +1021,9 @@ pub fn handle_syscall(uctx: &mut UserContext) {
             uctx.arg3() as _,
         ),
 
-        // The new mount API (fsopen/fsconfig/fsmount/move_mount, plus
-        // fspick/open_tree) is not implemented. Report ENOSYS instead of
-        // handing back a dummy fd: systemd probes this API and only falls back
-        // to the classic mount(2) — which we do support — when the entry point
-        // reports "not supported". A fake fd traps it into the new path, where
-        // the follow-up fsconfig then hard-fails and aborts the mount.
-        Sysno::fsopen | Sysno::fspick | Sysno::open_tree => Err(AxError::Unsupported),
+        // fspick/open_tree remain unsupported. Report ENOSYS instead of a
+        // dummy fd so callers can select their classic-mount fallback.
+        Sysno::fspick | Sysno::open_tree => Err(StarryError::Unsupported),
 
         // dummy fds
         Sysno::userfaultfd | Sysno::memfd_secret => sys_dummy_fd(sysno),
@@ -980,7 +1044,7 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         }
         Sysno::delete_module => kmod::sys_delete_module(uctx.arg0() as _, uctx.arg1() as _),
 
-        Sysno::fanotify_init => Err(AxError::Unsupported),
+        Sysno::fanotify_init => Err(StarryError::Unsupported),
 
         Sysno::timer_create => {
             sys_timer_create(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _)
@@ -997,13 +1061,71 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         _ => {
             let tid = ax_task::current().as_thread().tid();
             warn!("Unimplemented syscall: {sysno} (tid={tid})");
-            Err(AxError::Unsupported)
+            Err(StarryError::Unsupported)
         }
     };
     debug!("Syscall {sysno} return {result:?}");
-    let new_retval = result.unwrap_or_else(|err| -LinuxError::from(err).code() as _) as _;
+    let new_retval = result.unwrap_or_else(|err| -err.linux_errno().into_raw() as _) as _;
 
     if uctx.ip() == prev_ip {
         uctx.set_retval(new_retval);
     }
 }
+
+#[cfg(axtest)]
+pub(crate) fn task_clone_validation_rules_hold_for_test() -> bool {
+    task::clone_validation_rules_hold_for_test()
+}
+
+#[cfg(axtest)]
+pub(crate) fn capability_data_conversion_rules_hold_for_test() -> bool {
+    task::capability_data_conversion_rules_hold_for_test()
+}
+
+#[cfg(axtest)]
+pub(crate) fn pipe_size_rounding_and_rejection_rules_hold_for_test() -> bool {
+    // fd_ops is re-exported via `pub use self::fs::*`, so the helper is
+    // accessible directly through the fs module.
+    fs::pipe_size_rounding_and_rejection_rules_hold_for_test()
+}
+
+#[cfg(axtest)]
+pub(crate) fn membarrier_validation_rules_hold_for_test() -> bool {
+    sync::membarrier_validation_rules_hold_for_test()
+}
+
+#[cfg(axtest)]
+pub(crate) fn syscall_signal_restart_rules_hold_for_test() -> bool {
+    use syscalls::Sysno;
+
+    assert!(syscall_allows_signal_restart(Sysno::read as usize));
+    assert!(syscall_allows_signal_restart(Sysno::write as usize));
+    for sysno in [
+        Sysno::ppoll,
+        Sysno::pselect6,
+        Sysno::epoll_pwait,
+        Sysno::epoll_pwait2,
+        Sysno::msgsnd,
+        Sysno::msgrcv,
+    ] {
+        assert!(!syscall_allows_signal_restart(sysno as usize));
+    }
+    #[cfg(target_arch = "x86_64")]
+    for sysno in [Sysno::poll, Sysno::select, Sysno::epoll_wait] {
+        assert!(!syscall_allows_signal_restart(sysno as usize));
+    }
+    true
+}
+
+#[cfg(axtest)]
+pub(crate) use self::ipc::ipc_permission_and_constants_rules_hold_for_test;
+#[cfg(axtest)]
+pub(crate) use self::kmod::kmod_flags_validation_rules_hold_for_test;
+#[cfg(axtest)]
+pub(crate) use self::resources::resources_rlimit_validation_rules_hold_for_test;
+#[cfg(axtest)]
+pub(crate) use self::signal::signal_sigset_and_signo_validation_rules_hold_for_test;
+#[cfg(axtest)]
+pub(crate) use self::sys::sys_constants_and_validation_rules_hold_for_test;
+#[cfg(axtest)]
+pub(crate) use self::time::time_clock_id_validation_rules_hold_for_test;

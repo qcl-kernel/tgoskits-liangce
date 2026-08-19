@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** replace blocking `cpu_on()` with a non-blocking, typed
+  `start_secondary_cpu()`/`status()`/`release()` lifecycle, keeping transport ownership claimed
+  across dropped handles, timeouts, and possibly partial architecture errors.
+
+## [0.3.8](https://github.com/rcore-os/tgoskits/compare/someboot-v0.3.7...someboot-v0.3.8) - 2026-08-09
+
+### Fixed
+
+- *(ax-plat)* add corrected scheduler clock source ([#1900](https://github.com/rcore-os/tgoskits/pull/1900))
+
+### Other
+
+- *(memory)* unify page-table execution on page-table-generic ([#1911](https://github.com/rcore-os/tgoskits/pull/1911))
+- *(repo)* unify workspace dependencies ([#1860](https://github.com/rcore-os/tgoskits/pull/1860))
+
+## [0.3.7](https://github.com/rcore-os/tgoskits/compare/someboot-v0.3.6...someboot-v0.3.7) - 2026-08-03
+
+### Fixed
+
+- *(someboot)* clamp x86 LAPIC timer delta ([#1794](https://github.com/rcore-os/tgoskits/pull/1794))
+- *(someboot)* repair AArch64 EFI handoff ([#1782](https://github.com/rcore-os/tgoskits/pull/1782))
+- *(someboot)* use 64-bit AArch64 timer deadlines ([#1720](https://github.com/rcore-os/tgoskits/pull/1720))
+- *(someboot)* establish runtime CPU topology mapping ([#1710](https://github.com/rcore-os/tgoskits/pull/1710))
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
+## [0.3.6](https://github.com/rcore-os/tgoskits/compare/someboot-v0.3.5...someboot-v0.3.6) - 2026-07-23
+
+### Other
+
+- *(ax-runtime)* centralize UART scheduling ([#1675](https://github.com/rcore-os/tgoskits/pull/1675))
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+
+### Changed
+
 - *(cpu-local)* allocate one runtime CPU area per discovered CPU from the single ELF template and
   publish the layout only after typed initialization completes; the final-image handoff is the
   unversioned scalar `__percpu_initialize_layout(base, stride, count)` entry.

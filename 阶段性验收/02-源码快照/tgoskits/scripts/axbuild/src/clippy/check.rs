@@ -1,9 +1,12 @@
-use super::{AXSTD_STD_CLIPPY_FEATURES, AXSTD_STD_DEFAULT_FEATURE, AXSTD_STD_PACKAGE};
+use super::{
+    AXSTD_STD_CLIPPY_FEATURES, AXSTD_STD_DEFAULT_FEATURE, AXSTD_STD_PACKAGE, HOST_TEST_FEATURE,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) enum ClippyCheckKind {
     Base,
     Feature(String),
+    Configuration { name: String, features: Vec<String> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,14 +28,25 @@ impl ClippyCheck {
     pub(super) fn cargo_args(&self) -> Vec<String> {
         let mut args = match &self.kind {
             ClippyCheckKind::Base => vec!["clippy".into(), "-p".into(), self.package.clone()],
-            ClippyCheckKind::Feature(feature) => vec![
-                "clippy".into(),
-                "-p".into(),
-                self.package.clone(),
-                "--no-default-features".into(),
-                "--features".into(),
-                feature.clone(),
-            ],
+            ClippyCheckKind::Feature(feature) => {
+                let mut args = vec!["clippy".into(), "-p".into(), self.package.clone()];
+                if feature == HOST_TEST_FEATURE {
+                    args.push("--tests".into());
+                }
+                args.extend([
+                    "--no-default-features".into(),
+                    "--features".into(),
+                    feature.clone(),
+                ]);
+                args
+            }
+            ClippyCheckKind::Configuration { features, .. } => {
+                let mut args = vec!["clippy".into(), "-p".into(), self.package.clone()];
+                if !features.is_empty() {
+                    args.extend(["--features".into(), features.join(",")]);
+                }
+                args
+            }
         };
         if self.package == AXSTD_STD_PACKAGE
             && matches!(&self.kind, ClippyCheckKind::Feature(feature) if feature == AXSTD_STD_DEFAULT_FEATURE)
@@ -62,6 +76,12 @@ impl ClippyCheck {
             ClippyCheckKind::Feature(feature) => {
                 format!("{} (feature: {}", self.package, feature)
             }
+            ClippyCheckKind::Configuration { name, features } => format!(
+                "{} (configuration: {}, features: {}",
+                self.package,
+                name,
+                features.join(",")
+            ),
         };
 
         match &self.target {

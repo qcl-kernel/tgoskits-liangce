@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "prepared-rootfs-only",
+  "status": "disposable_virtio_dma_effect_guest_rootfs_prepared",
+  "proofScope": "one-new-ext4-copy-with-helper-and-init-injection",
+  "doesNotProve": [
+    "the disposable rootfs was booted",
+    "the helper ran or completed",
+    "a virtio-blk request was submitted or completed",
+    "DMA was executed",
+    "DMA isolation",
+    "dual-Guest execution",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "sessionNonce": "567630cdd99a14c067186bd7539295af",
+  "sourceRootfs": {
+    "path": "rootfs.img",
+    "size": 33554432,
+    "sha256": "178f81bf40c1a0723a75e0b0f18b70e09b09ceae2b91ce1a990e5f7a792a224c"
+  },
+  "outputRootfs": {
+    "path": "linux-dma-effect-rootfs.ext4",
+    "size": 33554432,
+    "sha256": "acf9fcffd78ec85fde7d826af3d8f5df11eab2e09bfe7e074f5f7240b6a1b9ec",
+    "copyOnly": true
+  },
+  "helper": {
+    "guestPath": "/tgos-dma-effect-helper",
+    "size": 123848,
+    "sha256": "cfc2d5b6c6f69632c26e289879376b49bc62409ca895ae756af3eff8d968d966",
+    "format": "ELF64/AArch64 ET_EXEC",
+    "requires": [
+      "no-PT_INTERP",
+      "PT_DYNAMIC-permitted-only-with-DT_NULL-and-no-DT_NEEDED"
+    ],
+    "sourceRead": "nofollow-single-fd-copy-to-staged-helper"
+  },
+  "init": {
+    "guestPath": "/init",
+    "size": 1425,
+    "sha256": "768248dc5bd8cd9e8c6a06a1797ef0a88082f4fcc23819c9ee4464f343f7a39e",
+    "mode": "0755"
+  },
+  "bootContract": {
+    "kernelAppend": "init=/init",
+    "device": "/dev/vdb",
+    "controlDevice": "/dev/hvc0",
+    "sector": 0,
+    "deviceWait": {
+      "blockDevice": "/dev/vdb",
+      "controlDevice": "/dev/hvc0",
+      "maxSeconds": 60,
+      "pollSeconds": 1,
+      "timeoutAction": "exit-1"
+    },
+    "helperInvocation": "/tgos-dma-effect-helper --nonce 567630cdd99a14c067186bd7539295af --device /dev/vdb --control-device /dev/hvc0 --sector 0 --hold-ms 300000",
+    "helperForeground": true,
+    "guestConsoleOwnsControl": true,
+    "competingShell": false
+  },
+  "controlledTool": {
+    "name": "debugfs",
+    "operations": [
+      "rm-disposable-path",
+      "write",
+      "set-inode-mode",
+      "dump-verify"
+    ],
+    "e2fsck": {
+      "operations": [
+        "pre-inject-journal-replay",
+        "post-inject-structural-verify"
+      ]
+    }
+  }
+}

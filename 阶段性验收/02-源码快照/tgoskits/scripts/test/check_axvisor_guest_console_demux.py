@@ -488,10 +488,78 @@ def check_publication(
         errors.append("failed manifest-last publication leaves partial evidence")
 
 
+def check_trailing_truncation(errors: list[str], demux: ModuleType) -> None:
+    """A payload-short final frame is a shutdown artifact: rejected by default,
+    tolerated and recorded only when explicitly allowed."""
+
+    from check_axvisor_guest_console_demux import frame  # noqa: F401 - re-export
+
+    good = b"complete frame payload"
+    truncated = b"partial"
+    source = (
+        frame(
+            vm=2,
+            name="zephyr",
+            generation=0,
+            sequence=0,
+            payload=good,
+            total=len(good),
+        )
+        + b"\n"
+        + b"AXVISOR_GUEST_CONSOLE_FRAME v=1 vm=2 name=zephyr gen=0 seq=1 len=%d total=%d dropped=0 dma=0 hex=%s"
+        % (len(good) + len(truncated), len(good) + len(truncated), truncated.hex().encode())
+        + b"\n"
+    )
+    try:
+        demux.demux_host_log(source, {2: "zephyr"})
+    except demux.GuestConsoleDemuxError:
+        pass
+    else:
+        errors.append("trailing truncated frame is accepted without the explicit opt-in")
+
+    try:
+        result = demux.demux_host_log(
+            source, {2: "zephyr"}, allow_trailing_truncation=True
+        )
+    except Exception as error:  # noqa: BLE001 - aggregate diagnostics.
+        errors.append(f"explicit trailing-truncation opt-in is rejected: {error}")
+        return
+    if result.frame_count != 1:
+        errors.append("truncated trailing frame still counted as a frame")
+    if not result.trailing_truncated or result.trailing_truncated.get("line") != 2:
+        errors.append("trailing truncation is not recorded in the demux result")
+
+    # An empty hex field on the final frame (cut mid-line at shutdown) is also
+    # a trailing truncation, not a mid-log corruption.
+    empty_hex = (
+        frame(vm=2, name="zephyr", generation=0, sequence=0, payload=good, total=len(good))
+        + b"\nAXVISOR_GUEST_CONSOLE_FRAME v=1 vm=2 name=zephyr gen=0 seq=1 len=15 total=30 dropped=0 dma=0 hex="
+        + b"\n"
+    )
+    try:
+        demux.demux_host_log(empty_hex, {2: "zephyr"})
+    except demux.GuestConsoleDemuxError:
+        pass
+    else:
+        errors.append("empty-hex trailing frame is accepted without the explicit opt-in")
+    try:
+        result = demux.demux_host_log(
+            empty_hex, {2: "zephyr"}, allow_trailing_truncation=True
+        )
+    except Exception as error:  # noqa: BLE001 - aggregate diagnostics.
+        errors.append(f"empty-hex trailing truncation opt-in is rejected: {error}")
+        return
+    if result.frame_count != 1 or not result.trailing_truncated:
+        errors.append("empty-hex trailing truncation is not recorded")
+
+
+
 def check_filesystem_contract(errors: list[str], demux: ModuleType) -> None:
     source, expected_bytes = valid_host_log()
+    contract_root = WORKSPACE_ROOT / "target" / "contract-tests"
+    contract_root.mkdir(parents=True, exist_ok=True)
     directory = (
-        WORKSPACE_ROOT
+        contract_root
         / f".axvisor-console-demux-test-{os.getpid()}-{uuid.uuid4().hex}"
     ).resolve()
     directory.mkdir()
@@ -586,6 +654,7 @@ def main() -> int:
                     )
                 if result is not None:
                     check_publication(errors, demux, result)
+                check_trailing_truncation(errors, demux)
                 check_filesystem_contract(errors, demux)
 
     if not errors:

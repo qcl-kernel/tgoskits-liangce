@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5](https://github.com/rcore-os/tgoskits/compare/scope-local-v0.4.4...scope-local-v0.4.5) - 2026-08-09
+
+### Other
+
+- updated the following local packages: ax-crate-interface, axtest, ax-kernel-guard, ax-kernel-guard, ax-percpu, ax-percpu
+
+## [0.4.4](https://github.com/rcore-os/tgoskits/compare/scope-local-v0.4.3...scope-local-v0.4.4) - 2026-08-03
+
+### Fixed
+
+- *(scope-local)* eagerly initialize scope items ([#1682](https://github.com/rcore-os/tgoskits/pull/1682))
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
+## [0.4.3](https://github.com/rcore-os/tgoskits/compare/scope-local-v0.4.2...scope-local-v0.4.3) - 2026-07-23
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+
 ## [0.4.2](https://github.com/rcore-os/tgoskits/compare/scope-local-v0.4.1...scope-local-v0.4.2) - 2026-07-07
 
 ### Other

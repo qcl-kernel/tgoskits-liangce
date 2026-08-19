@@ -1,0 +1,1108 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.62s
+     Running `/mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/debug/xtask qemu --config os/axvisor/configs/board/qemu-aarch64-contest-network.toml --qemu-config results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/qemu.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/linux.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/zephyr.resolved.toml`
+[2026-08-19T10:35:04Z INFO  axbuild::context] Workspace root: /mnt/f/project/泉城实验室/tgoskits-upstream-integration
+[2026-08-19T10:35:17Z INFO  axbuild::context] Workspace member dir for axvisor: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor
+Using build config: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml
+[2026-08-19T10:35:30Z INFO  ostool::run::qemu] Using QEMU config file: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/qemu.resolved.toml
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ...
+sh -c /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/prebuild/prebuild-aarch64-unknown-linux-musl-9ee3857e53a3a7ca.sh
+AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar
+AXVISOR_VM_CONFIGS=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/linux.resolved.toml:/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test015-20260819T103442Z-icpc2/configs/zephyr.resolved.toml
+AX_ARCH=aarch64
+AX_LOG=info
+AX_TARGET=aarch64-unknown-none-softfloat
+CARGO_UNSTABLE_JSON_TARGET_SPEC=true
+CC_aarch64_unknown_linux_musl=aarch64-linux-musl-cc
+CFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+CXXFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+cargo build --config /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/config-aarch64-unknown-linux-musl-dynamic.toml -p axvisor --target scripts/targets/std/pie/aarch64-unknown-linux-musl.json -Z unstable-options --target-dir /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target --features log/release_max_level_info -Z json-target-spec --bin axvisor --release --message-format json-render-diagnostics
+   Compiling axvisor v0.5.24 (/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor)
+warning: associated function `after_external_interrupt` is never used
+   --> virtualization/axvm/src/architecture/ops.rs:113:8
+    |
+ 12 | pub(crate) trait ArchOps {
+    |                  ------- associated function in this trait
+...
+113 |     fn after_external_interrupt(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `host_console_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:92:15
+   |
+92 | pub(crate) fn host_console_irq() -> Option<modules::ax_hal::irq::IrqId> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `dispatch_host_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:96:15
+   |
+96 | pub(crate) fn dispatch_host_irq(vector: usize) {
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `with_vm` is never used
+  --> virtualization/axvm/src/manager.rs:56:15
+   |
+56 | pub(crate) fn with_vm<F, R>(vm_id: VMId, f: F) -> Option<R>
+   |               ^^^^^^^
+
+warning: function `active_vcpu_mask` is never used
+  --> virtualization/axvm/src/manager.rs:65:15
+   |
+65 | pub(crate) fn active_vcpu_mask(vm_id: VMId) -> Option<usize> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `inject_interrupt` is never used
+  --> virtualization/axvm/src/manager.rs:77:15
+   |
+77 | pub(crate) fn inject_interrupt(vm_id: VMId, vcpu_id: usize, vector: usize) -> AxVmResult {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: variant `Generic` is never constructed
+  --> virtualization/axvm/src/runtime/hvc.rs:26:5
+   |
+25 | pub(crate) enum HyperCallAbi {
+   |                 ------------ variant in this enum
+26 |     Generic,
+   |     ^^^^^^^
+   |
+   = note: `HyperCallAbi` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `handle` is never used
+   --> virtualization/axvm/src/timer.rs:169:8
+    |
+124 | impl TimerWheels {
+    | ---------------- method in this implementation
+...
+169 |     fn handle(&self, token: usize) -> Option<VmTimerHandle> {
+    |        ^^^^^^
+
+warning: function `cancel_timer` is never used
+   --> virtualization/axvm/src/timer.rs:247:15
+    |
+247 | pub(crate) fn cancel_timer(token: usize) {
+    |               ^^^^^^^^^^^^
+
+warning: associated items `try_handle_port_write`, `handle_nested_page_fault`, and `debug_nested_page_fault` are never used
+    --> virtualization/axvm/src/vm/mod.rs:1522:19
+     |
+1042 | impl AxVM {
+     | --------- associated items in this implementation
+...
+1522 |     pub(crate) fn try_handle_port_write(
+     |                   ^^^^^^^^^^^^^^^^^^^^^
+...
+1535 |     pub(crate) fn handle_nested_page_fault(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1550 |     fn debug_nested_page_fault(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SimpleVmPlan` is never constructed
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:65:19
+   |
+65 | pub(crate) struct SimpleVmPlan(VmDevicePlan);
+   |                   ^^^^^^^^^^^^
+
+warning: associated function `new` is never used
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:68:25
+   |
+67 | impl SimpleVmPlan {
+   | ----------------- associated function in this implementation
+68 |     pub(crate) const fn new(devices: VmDevicePlan) -> Self {
+   |                         ^^^
+
+warning: `axvm` (lib) generated 12 warnings
+warning: unused import: `collections::VecDeque`
+ --> os/axvisor/src/virtio_blk.rs:3:13
+  |
+3 | use alloc::{collections::VecDeque, format, string::String, sync::Arc, vec, vec::Vec};
+  |             ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `AtomicUsize`
+ --> os/axvisor/src/virtio_blk.rs:4:38
+  |
+4 | use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+  |                                      ^^^^^^^^^^^
+
+warning: associated functions `create_vm_from_toml` and `start_vm` are never used
+  --> os/axvisor/src/manager.rs:50:12
+   |
+24 | impl AxvmManager {
+   | ---------------- associated functions in this implementation
+...
+50 |     pub fn create_vm_from_toml(raw_cfg: &str) -> Result<VMId> {
+   |            ^^^^^^^^^^^^^^^^^^^
+...
+55 |     pub fn start_vm(vm_id: VMId) -> Result<()> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `can_start_vm` is never used
+  --> os/axvisor/src/shell/command/vm.rs:32:4
+   |
+32 | fn can_start_vm(status: VmStatus) -> Result<(), &'static str> {
+   |    ^^^^^^^^^^^^
+
+warning: function `start_single_vm` is never used
+   --> os/axvisor/src/shell/command/vm.rs:243:4
+    |
+243 | fn start_single_vm(vm: axvm::AxVMRef) -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `start_vm_by_id` is never used
+   --> os/axvisor/src/shell/command/vm.rs:254:4
+    |
+254 | fn start_vm_by_id(vm_id: usize, attach_console: bool) {
+    |    ^^^^^^^^^^^^^^
+
+warning: `axvisor` (bin "axvisor") generated 6 warnings (run `cargo fix --bin "axvisor" -p axvisor` to apply 2 suggestions)
+    Finished `release` profile [optimized] target(s) in 38.71s
+warning: the following packages contain code that will be rejected by a future version of Rust: core v0.0.0 (/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core), memchr v2.8.3
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+Converting ELF to BIN format...
+  elf: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor
+  bin: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-objcopy --strip-all -O binary /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+qemu-system-aarch64 -nographic -nic none -cpu cortex-a72 -machine virt,virtualization=on,gic-version=3 -smp 4 -m 4g -qmp unix:/tmp/axp4-40168fbcc3f91c74a2a45c5639e4b222/qmp.sock,server=on,wait=off -pidfile /tmp/axp4-40168fbcc3f91c74a2a45c5639e4b222/qemu.pid -name axvisor-dual-smoke-40168fbcc3f91c74a2a45c5639e4b222 -kernel /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+Boot entropy source: FDT /chosen/rng-seed
+VM Load @PA:0x40200000
+VM Load Offset: 0xffff0000c0200000
+Memory Map:
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Free   0x00000044000000 - 0x00000140000000 (3.94 GiB)
+Initialize RAM allocator: 0x44000000..0x140000000
+Reserving CPU-local areas
+CPU-local area stride: 0x45000 bytes
+Total CPU-local allocation: 0x114000 bytes (4 CPUs)
+Flushed RAM used range to memory map: 0x44000000..0x44100000, current: 0x44100000
+Flushed RAM used range to memory map: 0x44100000..0x44214000, current: 0x44214000
+CPU-local areas allocated at 0x44100000 - 0x44214000
+EL: 2
+Mapping early memory regions...
+Ram                 : [0x0000000040000000, 0x0000000140000000) -> [0x0000000040000000, 0x0000000140000000) (4 GiB)
+KImage              : [0x0000ffff80000000, 0x0000ffff83e00000) -> [0x0000000040200000, 0x0000000044000000) (62 MiB)
+PerCpu              : [0x0000ff0044100000, 0x0000ff0044214000) -> [0x0000000044100000, 0x0000000044214000) (1.08 MiB)
+Debug serial        : [0x0000000009000000, 0x0000000009001000) -> [0x0000000009000000, 0x0000000009001000) (4 KiB)
+Boot page table at physical address: PA:0x44214000
+Setting up table registers...
+MMU Entry point at physical address: 0x403c5ec8
+Trap vector at 0xffff801b9800
+Memory Map:
+  MMIO   0x00000009000000 - 0x00000009001000 (4 KiB)
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Rsv    0x00000044000000 - 0x00000044100000 (1 MiB)
+  PerCPU 0x00000044100000 - 0x00000044214000 (1.08 MiB)
+  Rsv    0x00000044214000 - 0x0000004421e000 (40 KiB)
+  Free   0x0000004421e000 - 0x00000140000000 (3.94 GiB)
+Jumping to main entry point at 0xffff801a3ed4 with SP 0x0000ff0044145000
+
+       d8888                            .d88888b.   .d8888b.
+      d88888                           d88P" "Y88b d88P  Y88b
+     d88P888                           888     888 Y88b.
+    d88P 888 888d888  .d8888b  .d88b.  888     888  "Y888b.
+   d88P  888 888P"   d88P"    d8P  Y8b 888     888     "Y88b.
+  d88P   888 888     888      88888888 888     888       "888
+ d8888888888 888     Y88b.    Y8b.     Y88b. .d88P Y88b  d88P
+d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
+
+arch = aarch64
+platform = linux,dummy-virt
+target = aarch64-unknown-none-softfloat
+build_mode = 
+log_level = info
+backtrace = false
+smp = 4
+
+[37m[  0.088215 ax_runtime:222] [32mLogging is enabled.[m
+[m[37m[  0.088852 ax_runtime:223] [32mPrimary CPU 0 started, arg = 0x44000000.[m
+[m[37m[  0.089017 ax_runtime:225] [32mFound physcial memory regions:[m
+[m[37m[  0.091384 ax_runtime:227] [32m  [PA:0x9000000, PA:0x9001000) mmio (READ | WRITE | DEVICE | RESERVED)[m
+[m[37m[  0.091721 ax_runtime:227] [32m  [PA:0x40000000, PA:0x40200000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.091912 ax_runtime:227] [32m  [PA:0x40200000, PA:0x44000000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.092072 ax_runtime:227] [32m  [PA:0x44000000, PA:0x44100000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.092239 ax_runtime:227] [32m  [PA:0x44100000, PA:0x44214000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.092428 ax_runtime:227] [32m  [PA:0x44214000, PA:0x4421e000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37m[  0.092642 ax_runtime:227] [32m  [PA:0x4421e000, PA:0x140000000) free memory (READ | WRITE | FREE)[m
+[m[37m[  0.092865 ax_runtime:375] [32mInitialize global memory allocator...[m
+[m[37m[  0.093057 ax_runtime:376] [32m  use buddy-slab-allocator allocator.[m
+[m[37m[  0.093443 ax_alloc::buddy_slab:158] [32mInitialize global memory allocator, start_vaddr: 0x4421e000, size: 0xfbde2000[m
+[m[37m[  0.103719 ax_alloc::buddy_slab:424] [32mglobal allocator initialized[m
+[m[37m[  0.104001 ax_alloc::buddy_slab:168] [32mAdd memory region, start_vaddr: 0x40000000, size: 0x200000[m
+[m[37m[  0.104274 buddy_slab_allocator::global:151] [32mGlobalAllocator: skip region 0x40000000+0x200000, no allocator-visible memory after 2097152 alignment[m
+[m[37m[  0.104778 ax_runtime:262] [32mkernel aspace: [VA:0x0, VA:0xffffffffffffffff)[m
+[m[37m[  0.104992 ax_mm:107] [32mInitialize virtual memory management...[m
+[m[37m[  0.521679 ax_runtime:274] [32mInitialize platform devices...[m
+[m[37m[  0.531298 someboot::arch::power:23] [32mPower management method : SMC[m
+[m[37m[  0.531595 somehal::driver:5] [32mInitializing rdrive with FDT at 0x44000000[m
+[m[37m[  0.551030 somehal::arch::gic::v3:274] [32mGICv3 CPU 0 EOI mode: two_step=true[m
+[m[37m[  0.563443 ax_task::api:137] [32mInitialize scheduling...[m
+[m[37m[  0.565264 ax_task::api:145] [32m  use FIFO scheduler.[m
+[m[37m[  0.565737 ax_runtime:300] [32mInitialize interrupt handlers...[m
+[m[37m[  0.569074 ax_runtime::devices:2] [32mProbe platform devices...[m
+[m[37m[  0.591923 somehal::arch::gic::v3:274] [32mGICv3 CPU 1 EOI mode: two_step=true[m
+[m[37m[  0.592396 ax_runtime::mp:79] [32mSecondary CPU 1 started.[m
+[m[37m[  0.593330 ax_runtime::mp:110] [32mSecondary CPU 1 init OK.[m
+[m[37m[  0.605873 somehal::arch::gic::v3:274] [32mGICv3 CPU 2 EOI mode: two_step=true[m
+[m[37m[  0.606049 ax_runtime::mp:79] [32mSecondary CPU 2 started.[m
+[m[37m[  0.606331 ax_runtime::mp:110] [32mSecondary CPU 2 init OK.[m
+[m[37m[  0.619039 somehal::arch::gic::v3:274] [32mGICv3 CPU 3 EOI mode: two_step=true[m
+[m[37m[  0.619201 ax_runtime::mp:79] [32mSecondary CPU 3 started.[m
+[m[37m[  0.619306 ax_runtime:348] [32mPrimary CPU 0 init OK.[m
+[m[37m[  0.620513 ax_runtime::mp:110] [32mSecondary CPU 3 init OK.[m
+[m
+
+       d8888            888     888  d8b
+      d88888            888     888  Y8P
+     d88P888            888     888
+    d88P 888  888  888  Y88b   d88P  888  .d8888b    .d88b.   888d888
+   d88P  888  `Y8bd8P'   Y88b d88P   888  88K       d88""88b  888P"
+  d88P   888    X88K      Y88o88P    888  "Y8888b.  888  888  888
+ d8888888888  .d8""8b.     Y888P     888       X88  Y88..88P  888
+d88P     888  888  888      Y8P      888   88888P'   "Y88P"   888
+
+
+by AxVisor Team
+
+[37m[  0.624433 0:2 axvisor:74] [32mStarting virtualization...[m
+[m[37m[  0.624682 0:2 axvm::host::arceos:352] [32mEnabling hardware virtualization support on all cores...[m
+[m[37m[  0.624927 0:2 axvm::host::arceos:358] [32mCore 0 is initializing hardware virtualization support...[m
+[m[37m[  0.625142 0:2 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.634726 0:2 axvm::host::arceos:360] [32mHardware virtualization support enabled on core 0[m
+[m[37m[  0.636123 0:2 axvm::host::arceos:386] [32mWaiting for all cores to enable hardware virtualization...[m
+[m[37m[  0.636707 3:13 axvm::host::arceos:370] [32mCore 3 is initializing hardware virtualization support...[m
+[m[37m[  0.636735 2:12 axvm::host::arceos:370] [32mCore 2 is initializing hardware virtualization support...[m
+[m[37m[  0.636919 3:13 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.637266 2:12 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.636774 1:11 axvm::host::arceos:370] [32mCore 1 is initializing hardware virtualization support...[m
+[m[37m[  0.638210 3:13 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 3[m
+[m[37m[  0.638444 1:11 axvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37m[  0.638251 2:12 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 2[m
+[m[37m[  0.639015 1:11 axvm::host::arceos:373] [32mHardware virtualization support enabled on core 1[m
+[m[37m[  0.639408 0:2 axvm::host::arceos:402] [32mAll cores have enabled hardware virtualization support.[m
+[m[37m[  0.639674 0:2 axvisor::config:90] [32mUsing static VM configs.[m
+[m[37m[  0.664313 0:2 axvm::arch::aarch64::fdt::core:78] [32mVM[1] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37m[  0.668234 0:2 axvm::arch::aarch64::fdt::core:92] [32mVM[1] architectural timer follows host firmware PPIs[m
+[m[37m[  0.674582 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37m[  0.674943 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37m[  0.675205 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37m[  0.675397 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37m[  0.675683 0:2 axvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37m[  0.676378 0:2 axvm::arch::aarch64::fdt::core:143] [32mVM[1] DTB not found, generating from the VM configuration[m
+[m[37m[  0.693591 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  0.705257 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  0.706994 0:2 axvisor::config:137] [32mCreating VM[1] "linux-qemu-smp2-dual"[m
+[m[37m[  0.733786 0:2 axvm::vm:1064] [32mVM created: id=1[m
+[m[37m[  1.252857 0:2 axvisor::config:149] [32mVM[1] created success, loading images...[m
+[m[37m[  1.416273 0:2 axvm::boot::images:137] [32mLoading ramdisk image from memory (10388036 bytes) into GPA @0x88000000[m
+[m[37m[  1.473418 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=0[m
+[m[37m[  1.474317 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=1[m
+[m[37m[  1.474588 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=2[m
+[m[37m[  1.478071 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=3[m
+[m[37m[  1.479487 0:2 axvisor::virtio_net:140] [32mvirtio-net vm=1 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37m[  1.481096 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=4[m
+[m[37m[  1.486129 0:2 axvm::vm::prepare:82] [32mVM setup: id=1[m
+[m[37m[  1.490139 0:2 axvm::arch::aarch64::fdt::core:78] [32mVM[2] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37m[  1.491153 0:2 axvm::arch::aarch64::fdt::core:92] [32mVM[2] architectural timer follows host firmware PPIs[m
+[m[37m[  1.495807 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37m[  1.496042 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37m[  1.496248 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37m[  1.496448 0:2 axvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37m[  1.496933 0:2 axvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37m[  1.497081 0:2 axvm::arch::aarch64::fdt::core:143] [32mVM[2] DTB not found, generating from the VM configuration[m
+[m[37m[  1.506721 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  1.512902 0:2 axvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37m[  1.513745 0:2 axvisor::config:137] [32mCreating VM[2] "zephyr-qemu-dual"[m
+[m[37m[  1.515896 0:2 axvm::vm:1064] [32mVM created: id=2[m
+[m[37m[  1.762823 0:2 axvisor::config:149] [32mVM[2] created success, loading images...[m
+[m[37m[  1.768158 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=0[m
+[m[37m[  1.768306 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=1[m
+[m[37m[  1.768425 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=2[m
+[m[37m[  1.768753 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=3[m
+[m[37m[  1.768974 0:2 axvisor::virtio_net:140] [32mvirtio-net vm=2 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37m[  1.769693 0:2 axdevice::device:1229] [32mDeviceRuntime: registered device id=4[m
+[m[37m[  1.770009 0:2 axvm::vm::prepare:82] [32mVM setup: id=2[m
+[m[37m[  1.770488 0:2 axvm::runtime:42] [32mInitializing VMM...[m
+[m[37m[  1.773201 3:2 axvm::runtime:53] [32mVMM starting, booting VMs...[m
+[m[37m[  1.773514 3:2 axvm::vm:1279] [32mStarting VM[1][m
+[m[37m[  1.773824 3:2 axvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[0][m
+[m[37m[  1.774450 3:2 axvm::runtime::vcpus:386] [32mVCpu task Task(18, "VM[1]-VCpu[0]") created cpumask: [0, ][m
+[m[37m[  1.779132 3:2 axvm::runtime:61] [32mVM[1] boot success[m
+[m[37m[  1.779328 0:18 axvm::runtime::vcpus:440] [32mVM[1] VCpu[0] waiting for running[m
+[m[37m[  1.779415 3:2 axvm::vm:1279] [32mStarting VM[2][m
+[m[37m[  1.779729 3:2 axvm::runtime::vcpus:369] [32mSpawning task for VM[2] VCpu[0][m
+[m[37m[  1.779959 3:2 axvm::runtime::vcpus:386] [32mVCpu task Task(20, "VM[2]-VCpu[0]") created cpumask: [2, ][m
+[m[37m[  1.780133 0:18 axvm::runtime::vcpus:478] [32mVM[1] VCpu[0] running...[m
+[m[37m[  1.780435 3:2 axvm::runtime:61] [32mVM[2] boot success[m
+[m[37m[  1.780454 2:20 axvm::runtime::vcpus:440] [32mVM[2] VCpu[0] waiting for running[m
+[m[37m[  1.780861 2:20 axvm::runtime::vcpus:478] [32mVM[2] VCpu[0] running...[m
+[m[37m[  1.783517 3:2 axvisor:90] [32m[OK] Default guest initialized[m
+[m[37m[  1.842196 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[37m[  1.853282 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[37m[  1.855822 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=78 dst=33:33:ff:00:00:02 src=02:00:00:00:00:02[m
+[m[37m[  1.856675 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37m[  1.857275 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37m[  1.857624 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37m[  1.858945 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=62 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[VM 1] [    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[37m[  1.878830 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 2] *** Booting Zephyr OS build v4.4.0 ***
+[VM 1] [    0.000000] Linux version 6.18.0-rc6-gfd95357fd8c6-dirty (runner@s1lqc) (aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #25 SMP PREEMPT Fri Mar 20 11:22:05 CST 2026
+[VM 1] [    0.000000] KASLR disabled due to lack of seed
+[VM 1] [    0.000000] Machine model: linux,dummy-virt
+[VM 1] [    0.000000] earlycon: pl11 at MMIO32 0x0000000009000000 (options '')
+[VM 1] [    0.000000] printk: legacy bootconsole [pl11] enabled
+[VM 1] [    0.000000] efi: UEFI not found.
+[VM 1] [    0.000000] OF: reserved mem: Reserved memory: No reserved-memory node in the DT
+[VM 2] AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=zt15 iface=device mac=02:00:00:00:00:02 ipv4=10.77.0.2 prefix=24 route=10.77.0.0/24 mtu=1500
+[VM 1] [    0.000000] NUMA: Faking a node at [mem 0x0000000080000000-0x000000008fffffff]
+[VM 2] TGOS_ZEPHYR_UDP_ECHO_READY port=46000
+[VM 1] [    0.000000] NODE_DATA(0) allocated [mem 0x8ff86f40-0x8ff895bf]
+[VM 1] [    0.000000] Zone ranges:
+[VM 1] [    0.000000]   DMA      [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000]   DMA32    empty
+[VM 1] [    0.000000]   Normal   empty
+[VM 1] [    0.000000] Movable zone start for each node
+[VM 1] [    0.000000] Early memory node ranges
+[VM 1] [    0.000000]   node   0: [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] Initmem setup node 0 [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] cma: Reserved 32 MiB at 0x000000008da00000
+[VM 1] [    0.000000] psci: probing for conduit method from DT.
+[VM 1] [    0.000000] psci: PSCIv1.1 detected in firmware.
+[VM 1] [    0.000000] psci: Using standard PSCI v0.2 function IDs
+[VM 1] [    0.000000] psci: Trusted OS migration not required
+[37m[  2.719132 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0x80000000[m
+[m[VM 1] [    0.000000] psci: SMC Calling Convention v65535.65535
+[37m[  2.761091 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000001[m
+[m[37m[  2.761590 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc400000e[m
+[m[37m[  2.761936 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000012[m
+[m[37m[  2.768951 0:18 axvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000015[m
+[m[VM 1] [    0.000000] percpu: Embedded 25 pages/cpu s62488 r8192 d31720 u102400
+[VM 1] [    0.000000] Detected PIPT I-cache on CPU0
+[37m[  2.871987 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[VM 1] [    0.000000] CPU features: detected: GICv3 CPU interface
+[37m[  2.891519 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] CPU features: detected: Spectre-v2
+[VM 1] [    0.000000] CPU features: detected: Spectre-v3a
+[VM 1] [    0.000000] CPU features: detected: Spectre-v4
+[VM 1] [    0.000000] CPU features: detected: Spectre-BHB
+[VM 1] [    0.000000] CPU features: detected: ARM erratum 1742098
+[VM 1] [    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[VM 1] [    0.000000] alternatives: applying boot alternatives
+[VM 1] [    0.000000] Kernel command line: console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000
+[VM 1] [    0.000000] printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+[VM 1] [    0.000000] Dentry cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[VM 1] [    0.000000] Inode-cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size adjusted to 0MB
+[VM 1] [    0.000000] software IO TLB: area num 2.
+[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size roundup to 0MB
+[VM 1] [    0.000000] software IO TLB: mapped [mem 0x000000008fe5e000-0x000000008fede000] (0MB)
+[VM 1] [    0.000000] Fallback order for Node 0: 0 
+[VM 1] [    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 65536
+[VM 1] [    0.000000] Policy zone: DMA
+[VM 1] [    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[VM 1] [    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[VM 1] [    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[VM 1] [    0.000000] rcu: 	RCU event tracing is enabled.
+[VM 1] [    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=2.
+[VM 1] [    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[VM 1] [    0.000000] 	Tracing variant of Tasks RCU enabled.
+[VM 1] [    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[VM 1] [    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[37m[  3.879370 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37m[  3.880183 0:18 axvisor::virtio_net:444] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] RCU Tasks: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] RCU Tasks Trace: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[VM 1] [    0.000000] GICv3: 256 SPIs implemented
+[VM 1] [    0.000000] GICv3: 0 Extended SPIs implemented
+[VM 1] [    0.000000] Root IRQ handler: gic_handle_irq
+[VM 1] [    0.000000] GICv3: GICv3 features: 16 PPIs, RSS
+[VM 1] [    0.000000] GICv3: GICD_CTLR.DS=0, SCR_EL3.FIQ=0
+[VM 1] [    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x00000000080a0000
+[VM 1] [    0.000000] ITS [mem 0x08080000-0x0809ffff]
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Devices @83450000 (indirect, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Interrupt Collections @83460000 (flat, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] GICv3: using LPI property table @0x0000000083470000
+[VM 1] [    0.000000] GICv3: CPU0: using allocated LPI pending table @0x0000000083480000
+[VM 1] [    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[VM 1] [    0.000000] arch_timer: cp15 timer running at 62.50MHz (virt).
+[VM 1] [    0.000000] clocksource: arch_sys_counter: mask: 0x1ffffffffffffff max_cycles: 0x1cd42e208c, max_idle_ns: 881590405314 ns
+[VM 1] [    0.000090] sched_clock: 57 bits at 63MHz, resolution 16ns, wraps every 4398046511096ns
+[VM 1] [    0.069421] Console: colour dummy device 80x25
+[VM 1] [    0.112326] Calibrating delay loop (skipped), value calculated using timer frequency.. 125.00 BogoMIPS (lpj=250000)
+[VM 1] [    0.178540] pid_max: default: 32768 minimum: 301
+[VM 1] [    0.212344] LSM: initializing lsm=capability
+[VM 1] [    0.244155] Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.289682] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.383581] /cpus/cpu-map/socket0/cluster0/core2: Can't get CPU for leaf core
+[VM 1] [    0.423818] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[VM 1] [    0.492358] rcu: Hierarchical SRCU implementation.
+[VM 1] [    0.520973] rcu: 	Max phase no-delay instances is 1000.
+[VM 1] [    0.552274] Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+[VM 1] [    0.599220] fsl-mc MSI: its@8080000 domain created
+[VM 1] [    0.634087] EFI services will not be available.
+[VM 1] [    0.657639] smp: Bringing up secondary CPUs ...
+[37m[  5.348351 0:18 axvm::runtime::hvc:272] [32mVM[1] PSCI_CPU_ON target=0x1 entry=0x8203f570 context=0x0[m
+[m[37m[  5.349353 0:18 axvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[1][m
+[m[37m[  5.349559 0:18 axvm::runtime::vcpus:386] [32mVCpu task Task(23, "VM[1]-VCpu[1]") created cpumask: [1, ][m
+[m[37m[  5.350162 1:23 axvm::runtime::vcpus:440] [32mVM[1] VCpu[1] waiting for running[m
+[m[37m[  5.351022 1:23 axvm::runtime::vcpus:478] [32mVM[1] VCpu[1] running...[m
+[m[VM 1] [    0.699234] Detected PIPT I-cache on CPU1
+[VM 1] [    0.701352] GICv3: CPU1: found redistributor 1 region 0:0x00000000080c0000
+[VM 1] [    0.704780] GICv3: CPU1: using allocated LPI pending table @0x0000000083490000
+[VM 1] [    0.707989] CPU1: Booted secondary processor 0x0000000001 [0x410fd083]
+[VM 1] [    0.716299] smp: Brought up 1 node, 2 CPUs
+[VM 1] [    0.873724] SMP: Total of 2 processors activated.
+[VM 1] [    0.899127] CPU: All CPU(s) started at EL1
+[VM 1] [    0.926501] CPU features: detected: 32-bit EL0 Support
+[VM 1] [    0.953138] CPU features: detected: 32-bit EL1 Support
+[VM 1] [    0.981200] CPU features: detected: CRC32 instructions
+[VM 1] [    1.011457] CPU features: detected: PMUv3
+[VM 1] [    1.044679] alternatives: applying system-wide alternatives
+[VM 1] [    1.120776] Memory: 162436K/262144K available (17920K kernel code, 5422K rwdata, 12940K rodata, 11648K init, 690K bss, 64816K reserved, 32768K cma-reserved)
+[VM 1] [    1.233179] devtmpfs: initialized
+[VM 1] [    1.298421] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[VM 1] [    1.364330] posixtimers hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[VM 1] [    1.413371] futex hash table entries: 512 (32768 bytes on 1 NUMA nodes, total 32 KiB, linear).
+[VM 1] [    1.463660] 20544 pages in range for non-PLT usage
+[VM 1] [    1.463741] 512064 pages in range for PLT usage
+[VM 1] [    1.495798] pinctrl core: initialized pinctrl subsystem
+[VM 1] [    1.571974] DMI not present or invalid.
+[VM 1] [    1.669110] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[VM 1] [    1.724558] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[VM 1] [    1.777546] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[VM 1] [    1.827664] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[VM 1] [    1.871606] audit: initializing netlink subsys (disabled)
+[VM 1] [    1.915992] audit: type=2000 audit(0.812:1): state=initialized audit_enabled=0 res=1
+[VM 1] [    1.928454] thermal_sys: Registered thermal governor 'step_wise'
+[VM 1] [    1.960416] thermal_sys: Registered thermal governor 'power_allocator'
+[VM 1] [    1.996393] cpuidle: using governor menu
+[VM 1] [    2.068322] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[VM 1] [    2.106306] ASID allocator initialised with 65536 entries
+[VM 1] [    2.147668] Serial: AMBA PL011 UART driver
+[VM 1] [    2.204775] 9000000.pl011: ttyAMA0 at MMIO 0x9000000 (irq = 13, base_baud = 0) is a PL011 rev1
+[VM 1] [    2.256339] printk: console [ttyAMA0] enabled
+[VM 1] [    2.256339] printk: console [ttyAMA0] enabled
+[VM 1] [    2.303599] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.303599] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.384068] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[VM 1] [    2.386220] HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+[VM 1] [    2.386291] HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.386298] HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+[VM 1] [    2.386305] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.386309] HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+[VM 1] [    2.386315] HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+[VM 1] [    2.386354] HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+[VM 1] [    2.565306] ACPI: Interpreter disabled.
+[VM 1] [    2.576267] iommu: Default domain type: Translated
+[VM 1] [    2.576325] iommu: DMA domain TLB invalidation policy: strict mode
+[VM 1] [    2.605103] SCSI subsystem initialized
+[VM 1] [    2.610072] usbcore: registered new interface driver usbfs
+[VM 1] [    2.610357] usbcore: registered new interface driver hub
+[VM 1] [    2.610644] usbcore: registered new device driver usb
+[VM 1] [    2.611851] pps_core: LinuxPPS API ver. 1 registered
+[VM 1] [    2.611867] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[VM 1] [    2.611925] PTP clock support registered
+[VM 1] [    2.613376] EDAC MC: Ver: 3.0.0
+[VM 1] [    2.615437] scmi_core: SCMI protocol bus registered
+[VM 1] [    2.620128] FPGA manager framework
+[VM 1] [    2.638152] vgaarb: loaded
+[VM 1] [    2.686401] clocksource: Switched to clocksource arch_sys_counter
+[VM 1] [    2.729234] VFS: Disk quotas dquot_6.6.0
+[VM 1] [    2.729351] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[VM 1] [    2.740205] pnp: PnP ACPI: disabled
+[VM 1] [    2.780202] NET: Registered PF_INET protocol family
+[VM 1] [    2.783893] IP idents hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[VM 1] [    2.795335] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[VM 1] [    2.795547] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[VM 1] [    2.795626] TCP established hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.796242] TCP bind hash table entries: 2048 (order: 4, 65536 bytes, linear)
+[VM 1] [    2.796441] TCP: Hash tables configured (established 2048 bind 2048)
+[VM 1] [    2.799613] UDP hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.799995] UDP-Lite hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.801292] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[VM 1] [    2.809665] RPC: Registered named UNIX socket transport module.
+[VM 1] [    2.809759] RPC: Registered udp transport module.
+[VM 1] [    2.810717] RPC: Registered tcp transport module.
+[VM 1] [    2.810740] RPC: Registered tcp-with-tls transport module.
+[VM 1] [    2.810749] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[VM 1] [    2.810869] PCI: CLS 0 bytes, default 64
+[VM 1] [    2.819675] Unpacking initramfs...
+[VM 1] [    2.842877] kvm [1]: HYP mode not available
+[VM 1] [    2.851729] Initialise system trusted keyrings
+[VM 1] [    2.879505] workingset: timestamp_bits=42 max_order=16 bucket_order=0
+[VM 1] [    2.891492] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[VM 1] [    2.919246] NFS: Registering the id_resolver key type
+[VM 1] [    2.919859] Key type id_resolver registered
+[VM 1] [    2.919952] Key type id_legacy registered
+[VM 1] [    2.920316] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[VM 1] [    2.920404] nfs4flexfilelayout_init: NFSv4 Flexfile Layout Driver Registering...
+[VM 1] [    2.930959] 9p: Installing v9fs 9p2000 file system support
+[VM 1] [    3.084150] Key type asymmetric registered
+[VM 1] [    3.084225] Asymmetric key parser 'x509' registered
+[VM 1] [    3.084571] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 244)
+[VM 1] [    3.084738] io scheduler mq-deadline registered
+[VM 1] [    3.084881] io scheduler kyber registered
+[VM 1] [    3.085315] io scheduler bfq registered
+[VM 1] [    3.158586] ledtrig-cpu: registered to indicate activity on CPUs
+[VM 1] [    3.322969] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[VM 1] [    3.351862] msm_serial: driver initialized
+[VM 1] [    3.352376] SuperH (H)SCI(F) driver initialized
+[VM 1] AXVISOR_LINUX_INIT_ENTER vm=1 boot_id=p4net-test015-20260819T103435Z[    3.352503] STM32 USART driver initialized
+[VM 1] [    3.424064] loop: module loaded
+[VM 1] [    3.431710] megasas: 07.734.00.00-rc1
+[VM 1] [    3.469157] tun: Universal TUN/TAP device driver, 1.6
+[VM 1] [    3.555287] thunder_xcv, ver 1.0
+[VM 1] 
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=p4net-test015-20260819T103435Z[    3.555451] thunder_bgx, ver 1.0
+[VM 1] [    3.555625] nicpf, ver 1.0
+[VM 1] 
+[VM 1] [    3.564634] e1000: Intel(R) PRO/1000 Network Driver
+[VM 1] [    3.564661] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[VM 1] [    3.564802] e1000e: Intel(R) PRO/1000 Network Driver
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=<boot-id> iface=eth0 mac=02:00:00:00:00:01 ipv4=10.77.0.1 prefix=24 route=10.77.0.0/24 mtu=1500[    3.564812] e1000e: Copyright(c) 1999 - 2015 Intel Corporation.
+[VM 1] [    3.564917] igb: Intel(R) Gigabit Ethernet Network Driver
+[VM 1] 
+[VM 1] [    3.564929] igb: Copyright (c) 2007-2014 Intel Corporation.
+[37m[  9.542365 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=42 dst=ff:ff:ff:ff:ff:ff src=02:00:00:00:00:01[m
+[m[37m[  9.543831 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[  9.547135 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=42 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[  9.548325 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[  9.558853 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[  9.559487 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m[VM 1] [    3.565025] igbvf: Intel(R) Gigabit Virtual Function Network Driver
+
+[m[37m[  9.564154 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[  9.564633 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] [    3.565037] igbvf: Copyright (c) 2009 - 2012 Intel Corporation.
+[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[VM 1] [    3.565565] sky2: driver version 1.30
+[VM 1] [    3.607170] VFIO - User Level meta-driver version: 0.3
+[VM 1] [    3.624267] usbcore: registered new interface driver usb-storage
+[VM 1] [    3.640807] i2c_dev: i2c /dev entries driver
+[VM 1] [    3.671672] sdhci: Secure Digital Host Controller Interface driver
+[VM 1] [    3.671758] sdhci: Copyright(c) Pierre Ossman
+[VM 1] [    3.672561] Synopsys Designware Multimedia Card Interface Driver
+[VM 1] [    3.673633] sdhci-pltfm: SDHCI platform and OF driver helper
+[VM 1] [    3.689410] SMCCC: SOC_ID: ARCH_SOC_ID not implemented, skipping ....
+[VM 1] [    3.706833] usbcore: registered new interface driver usbhid
+[VM 1] [    3.706883] usbhid: USB HID core driver
+[VM 1] [    3.748580] NET: Registered PF_PACKET protocol family
+[VM 1] [    3.754765] 9pnet: Installing 9P2000 support
+[VM 1] [    3.755193] Key type dns_resolver registered
+[VM 1] [    3.769734] Freeing initrd memory: 10144K
+[VM 1] [    3.803490] registered taskstats version 1
+[VM 1] [    3.808843] Loading compiled-in X.509 certificates
+[VM 1] [    3.857579] Demotion targets for Node 0: null
+[VM 1] [    3.870309] clk: Disabling unused clocks
+[VM 1] [    3.870580] PM: genpd: Disabling unused power domains
+[VM 1] [    4.190704] Freeing unused kernel memory: 11648K
+[VM 1] [    4.193330] Run /init as init process
+[37m[ 10.177405 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.177852 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.179862 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.180351 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.237503 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.237953 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.239761 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.240323 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.294194 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.295046 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.297809 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.298686 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.352109 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.352560 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.354409 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.354882 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.409248 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.409675 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.411050 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.411567 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.465300 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.465928 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.467502 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.467948 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.521707 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.522128 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.523578 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.524003 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.577595 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.578050 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.579761 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.580279 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.634372 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.634771 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.636232 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.637341 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.692361 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.692830 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.694289 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.694744 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.748475 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.749059 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.750559 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.751569 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.805157 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.805619 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.807406 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.807888 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.861796 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.862231 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.864029 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.864639 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.918148 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.918903 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.920395 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.923106 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 10.977579 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 10.978146 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 10.979825 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 10.980308 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.034832 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.035393 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.036963 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.037525 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.091570 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.092119 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.093822 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.094328 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.147809 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.148250 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.149566 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.150047 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.204757 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.205202 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.206501 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.207417 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.260668 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.261778 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.263196 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.263709 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.316355 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.317049 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.318385 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.319146 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.372685 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.373126 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.374587 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.375326 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.428189 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.428904 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.430326 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.430953 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.483882 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.484315 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.485683 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.486187 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.540418 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.540917 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.542395 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.542898 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.595969 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.596691 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.598167 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.598856 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 11.651639 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.658106 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.663077 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.663518 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.717536 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.718030 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.719571 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.720143 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.772883 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.773361 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.774819 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.775371 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.828073 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.828470 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.829876 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.830579 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.883574 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.884024 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.885553 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.886175 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.939867 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.940324 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.941603 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.942100 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 11.995904 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 11.996333 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 11.997797 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 11.998253 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.051538 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.052115 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.053666 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.054118 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.107045 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.107516 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.108959 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.109561 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.162413 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.162848 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.164754 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.165305 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.218040 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.218558 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.221178 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.221633 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.276033 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.276621 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.277986 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.278788 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.331395 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.331904 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.333403 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.334249 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.387899 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.388340 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.390043 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.390588 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.443371 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.443970 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.445341 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.446211 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.499561 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.499987 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.501350 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.501879 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.555933 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.556373 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.558200 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.558786 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.611745 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.612277 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.613708 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.614180 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.667253 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.667752 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.669356 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.669863 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.722598 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.723090 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.724988 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.725456 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.779147 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.779650 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.781063 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.781826 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.834647 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.835069 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.837282 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.837801 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.891775 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.892195 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.893608 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.894840 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 12.947920 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 12.948352 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 12.950093 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 12.950677 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.003965 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.004406 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.005815 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.006421 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.060013 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.060485 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.061873 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.062476 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.115617 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.116084 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.118197 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.118781 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.171767 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.172385 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.173972 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.174473 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.227735 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.228381 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.229915 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.230453 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.285885 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.286408 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.289122 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.289631 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.342501 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.342958 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.344944 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.345414 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.399350 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.399787 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.401212 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.401720 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.454825 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.455321 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.457076 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.458138 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.511142 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.511592 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.512876 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.513570 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.566415 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.566954 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.568918 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.569485 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.622313 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.622836 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.625115 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.625562 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.679294 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.679747 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.681319 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.681948 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.734855 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.735352 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.737106 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.737720 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.790943 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.791945 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.793119 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.794589 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.849219 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.849646 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.851084 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.851792 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.904677 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.905130 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.906502 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.907231 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 13.960398 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 13.961024 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 13.962465 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 13.963019 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.016269 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.017061 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.018473 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.019257 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.072710 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.073160 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.074593 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.075263 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.128603 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.129143 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.130744 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.131216 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.184369 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.184919 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.186256 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.186971 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.239929 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.240384 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.242132 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.242745 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.295750 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.296260 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.297819 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.298331 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.351606 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.352034 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.353265 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.353752 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.409149 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.409713 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.411361 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.411941 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.464687 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.465170 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.466730 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.467315 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.521483 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.522205 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.523785 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.524466 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.577209 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.577643 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.579109 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.579575 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.632610 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.633173 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.634741 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.635216 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.688421 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.688940 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.690345 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.690818 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.744257 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.744709 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.746135 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.746736 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.799408 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.799802 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.801651 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.802199 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.854955 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.855418 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.857008 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 14.857497 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 14.910485 0:18 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 14.911239 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 14.913261 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.075194 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37m[ 15.129879 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.130330 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.132284 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.133068 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.186193 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.186719 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.188338 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.189218 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.243884 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.244295 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.245478 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.246180 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.300303 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.300882 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.302212 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.303041 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.357368 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.357820 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.359593 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.360102 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.415652 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.416112 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.417816 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.418326 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.472005 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.472484 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.473923 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.474588 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.528072 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.528564 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.530201 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.530637 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.584564 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.585026 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.586584 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.587099 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.641691 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.642203 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.644031 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.644510 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.697954 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.698454 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.700016 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.700668 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.754346 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.754876 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.757165 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.757851 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.812303 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.812772 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.814480 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.815079 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.868276 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.868918 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.870351 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.871086 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[37m[ 15.924617 1:23 axvisor::virtio_net:214] [32mvirtio-net TX from vm=0 len=102 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37m[ 15.925156 2:20 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37m[ 15.927422 2:20 axvisor::virtio_net:214] [32mvirtio-net TX from vm=1 len=102 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37m[ 15.928169 0:18 axvisor::virtio_net:419] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 2] TGOS_ZEPHYR_UDP_ECHO peer=10.77.0.1 bytes=60
+[VM 1] TGOS_LINUX_ICPC_PASS sent=100 verified=100 loss=0
+qemu-system-aarch64: terminating on signal 2 from pid 445 (python3)
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ... done (85.43s)

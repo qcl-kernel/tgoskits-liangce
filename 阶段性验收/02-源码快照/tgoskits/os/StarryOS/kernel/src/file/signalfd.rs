@@ -5,8 +5,6 @@ use core::{
     task::Context,
 };
 
-use ax_errno::{AxError, AxResult};
-use ax_kspin::SpinNoIrq;
 use ax_task::{
     current,
     future::{block_on, poll_io},
@@ -16,7 +14,9 @@ use starry_signal::{SignalInfo, SignalSet};
 use zerocopy::{Immutable, IntoBytes};
 
 use crate::{
+    StarryError, StarryResult,
     file::{FileLike, IoDst, IoSrc},
+    sync::IrqMutex,
     task::AsThread,
 };
 
@@ -82,7 +82,7 @@ impl SignalfdSiginfo {
 pub struct Signalfd {
     // SignalSet is a single Copy bitset, so a short project-visible spin lock
     // is enough for now. Revisit this when a lockdep-aware project RwLock exists.
-    mask: SpinNoIrq<SignalSet>,
+    mask: IrqMutex<SignalSet>,
     non_blocking: AtomicBool,
     poll_rx: PollSet,
 }
@@ -90,7 +90,7 @@ pub struct Signalfd {
 impl Signalfd {
     pub fn new(mask: SignalSet) -> Arc<Self> {
         Arc::new(Self {
-            mask: SpinNoIrq::new(mask),
+            mask: IrqMutex::new(mask),
             non_blocking: AtomicBool::new(false),
             poll_rx: PollSet::new(),
         })
@@ -127,9 +127,9 @@ impl Signalfd {
 }
 
 impl FileLike for Signalfd {
-    fn read(&self, dst: &mut IoDst) -> AxResult<usize> {
+    fn read(&self, dst: &mut IoDst) -> StarryResult<usize> {
         if dst.remaining_mut() < SIGNALFD_SIGINFO_SIZE {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         }
 
         block_on(poll_io(self, IoEvents::IN, self.nonblocking(), || {
@@ -149,21 +149,21 @@ impl FileLike for Signalfd {
 
                 Ok(SIGNALFD_SIGINFO_SIZE)
             } else {
-                Err(AxError::WouldBlock)
+                Err(StarryError::WouldBlock)
             }
         }))
     }
 
-    fn write(&self, _src: &mut IoSrc) -> AxResult<usize> {
+    fn write(&self, _src: &mut IoSrc) -> StarryResult<usize> {
         // signalfd is read-only
-        Err(AxError::BadFileDescriptor)
+        Err(StarryError::BadFileDescriptor)
     }
 
     fn nonblocking(&self) -> bool {
         self.non_blocking.load(Ordering::Acquire)
     }
 
-    fn set_nonblocking(&self, non_blocking: bool) -> AxResult {
+    fn set_nonblocking(&self, non_blocking: bool) -> StarryResult {
         self.non_blocking.store(non_blocking, Ordering::Release);
         Ok(())
     }
@@ -182,8 +182,17 @@ impl Pollable for Signalfd {
 
     fn register(&self, context: &mut Context<'_>, events: IoEvents) {
         if events.contains(IoEvents::IN) {
-            // Registration happens from file poll task context.
-            unsafe { self.poll_rx.register(context.waker(), IoEvents::IN) };
+            // The private poll set covers mask updates and additional queued
+            // signals. New signal delivery wakes the current thread's shared
+            // signalfd poll set, so an already-blocked epoll waiter must be
+            // registered with both sources.
+            unsafe {
+                self.poll_rx.register(context.waker(), IoEvents::IN);
+                current()
+                    .as_thread()
+                    .signalfd_waker
+                    .register(context.waker(), IoEvents::IN);
+            }
         }
     }
 }

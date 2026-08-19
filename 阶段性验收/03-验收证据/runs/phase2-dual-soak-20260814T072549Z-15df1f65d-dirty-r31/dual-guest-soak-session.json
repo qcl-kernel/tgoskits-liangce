@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "dual_guest_soak_session_completed",
+  "proofScope": "one-identity-bound-qemu-dual-guest-1800-second-coexistence-session",
+  "identity": {
+    "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+    "qemuPid": 1390,
+    "qemuStartMonotonicNs": 8277858911590,
+    "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+    "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4"
+  },
+  "cpuSets": {
+    "linux": [
+      0,
+      1
+    ],
+    "zephyr": [
+      2
+    ]
+  },
+  "startMonotonicNs": 8590525563298,
+  "endMonotonicNs": 10391045408450,
+  "guests": [
+    {
+      "vmId": 1,
+      "guest": "linux",
+      "vmConfig": {
+        "path": "linux.resolved.toml",
+        "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21",
+        "size": 852
+      },
+      "guestDtbMarker": "AXVISOR_GUEST_DTB_READY vm=1 gpa=0x234e00000 size=2060 hpa_segments=0x234e00000:2060",
+      "readyMarker": "AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea"
+    },
+    {
+      "vmId": 2,
+      "guest": "zephyr",
+      "vmConfig": {
+        "path": "zephyr.resolved.toml",
+        "sha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb",
+        "size": 1520
+      },
+      "guestDtbMarker": "AXVISOR_GUEST_DTB_READY vm=2 gpa=0x47e00000 size=1620 hpa_segments=0x23ce00000:1620",
+      "readyMarker": "AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea"
+    }
+  ],
+  "healthMarkers": [
+    {
+      "phase": "start",
+      "monotonicNs": 8590525563298,
+      "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+      "qemuPid": 1390,
+      "qemuStartMonotonicNs": 8277858911590,
+      "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+      "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4",
+      "marker": "AXVISOR_DUAL_GUEST_HEALTH phase=start monotonic_ns=8590525563298 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea qemu_pid=1390 qemu_start_ns=8277858911590 qemu_name=axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4 nonce=0c924b826c08f09f3fe8919e760fe3b4 linux_vm=1 zephyr_vm=2"
+    },
+    {
+      "phase": "end",
+      "monotonicNs": 10391045408450,
+      "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+      "qemuPid": 1390,
+      "qemuStartMonotonicNs": 8277858911590,
+      "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+      "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4",
+      "marker": "AXVISOR_DUAL_GUEST_HEALTH phase=end monotonic_ns=10391045408450 boot_id=dual-20260814T072549Z-d4b3c5c744e28eea qemu_pid=1390 qemu_start_ns=8277858911590 qemu_name=axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4 nonce=0c924b826c08f09f3fe8919e760fe3b4 linux_vm=1 zephyr_vm=2"
+    }
+  ],
+  "events": []
+}

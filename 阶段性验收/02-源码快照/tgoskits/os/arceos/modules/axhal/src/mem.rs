@@ -1,18 +1,18 @@
 //! Physical memory management.
 
+use ax_lazyinit::LazyLock;
 pub use ax_memory_addr::{
     MemoryAddr, PAGE_SIZE_4K, PhysAddr, PhysAddrRange, VirtAddr, VirtAddrRange, pa, va,
 };
 pub use ax_plat::mem::{
-    DCacheOp, DmaGuard, IomapAttrs, IomapDecision, IomapError, MemRegionFlags, PhysMemRegion,
-    VmCarveout, dcache_range, dma_coherent_after_mapping_update, dma_coherent_before_make_uncached,
-    dma_coherent_before_restore_cached, dma_guards, kernel_aspace, mmio_ranges, phys_ram_ranges,
-    phys_to_virt, prepare_iomap, reserved_phys_ram_ranges, total_ram_size,
-    user_aspace_needs_kernel_mappings, virt_to_phys, vm_carveouts,
+    DCacheOp, IomapAttrs, IomapDecision, IomapError, MemRegionFlags, PhysMemRegion, dcache_range,
+    dma_coherent_after_mapping_update, dma_coherent_before_make_uncached,
+    dma_coherent_before_restore_cached, kernel_aspace, mmio_ranges, phys_ram_ranges, phys_to_virt,
+    prepare_iomap, reserved_phys_ram_ranges, total_ram_size, user_aspace_needs_kernel_mappings,
+    virt_to_phys,
 };
 use ax_plat::mem::{check_sorted_ranges_overlap, ranges_difference};
 use heapless::Vec;
-use spin::LazyLock;
 
 #[allow(unused_imports)]
 const MAX_REGIONS: usize = 128;
@@ -120,19 +120,4 @@ unsafe extern "C" {
     fn _ekernel();
     fn boot_stack();
     fn boot_stack_top();
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn dummy_platform_exposes_empty_vm_carveout_manifest() {
-        let manifest: &'static [super::VmCarveout] = super::vm_carveouts();
-        assert!(manifest.is_empty());
-    }
-
-    #[test]
-    fn dummy_platform_exposes_empty_dma_guard_manifest() {
-        let manifest: &'static [super::DmaGuard] = super::dma_guards();
-        assert!(manifest.is_empty());
-    }
 }

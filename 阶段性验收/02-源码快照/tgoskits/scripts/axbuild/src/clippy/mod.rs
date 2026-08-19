@@ -4,6 +4,7 @@ use anyhow::{Context, bail};
 use chrono::Local;
 
 mod check;
+mod configurations;
 mod env;
 mod expand;
 mod report;
@@ -25,6 +26,7 @@ use selection::{
 use timing::print_clippy_timing;
 
 pub(super) const DEFAULT_FEATURE: &str = "default";
+pub(super) const HOST_TEST_FEATURE: &str = "host-test";
 pub(super) const AXSTD_STD_PACKAGE: &str = "ax-std";
 pub(super) const AXSTD_STD_DEFAULT_FEATURE: &str = "default";
 pub(super) const AXSTD_STD_CLIPPY_FEATURES: &str = "std-compat,fs,multitask,irq,net";

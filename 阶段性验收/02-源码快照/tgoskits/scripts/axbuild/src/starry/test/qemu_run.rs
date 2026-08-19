@@ -426,6 +426,7 @@ impl Starry {
                 suppress_terminal_raw_blocks: false,
                 write_log_during_capture: keep_qemu_log,
                 captured_blocks: Arc::new(std::sync::Mutex::new(Vec::new())),
+                success_output: None,
             })
         } else {
             None
@@ -494,16 +495,12 @@ impl Starry {
         rootfs::patch_rootfs(
             &mut qemu,
             &prepared_assets.rootfs_path,
-            rootfs::RootfsPatchMode::EnsureDiskBootNet,
-        );
+            rootfs::RootfsPatchOptions {
+                mode: rootfs::RootfsPatchMode::EnsureDiskBootNet,
+                write_policy: rootfs::RootfsWritePolicy::Discard,
+            },
+        )?;
         timing_stage.finish();
-        qemu.args.extend(prepared_assets.extra_qemu_args.clone());
-        // UEFI uses a writable ESP for the kernel image. A global `-snapshot`
-        // makes QEMU treat the VVFAT drive as read-only, so keep snapshot
-        // isolation on each ordinary disk instead.
-        if qemu.uefi {
-            qemu_test::apply_drive_snapshot_without_global_snapshot(&mut qemu);
-        }
         let timing_stage = timing::TimingStage::new(
             "qemu-case",
             [

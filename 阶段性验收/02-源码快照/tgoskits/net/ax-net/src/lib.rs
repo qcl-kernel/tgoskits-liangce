@@ -42,6 +42,7 @@ mod config;
 mod consts;
 mod device;
 mod dhcp_server;
+mod error;
 mod general;
 mod ip_tos;
 mod listen_table;
@@ -66,6 +67,9 @@ pub mod unix;
 pub mod vsock;
 mod wrapper;
 
+#[cfg(all(axtest, feature = "axtest"))]
+mod axtest;
+
 use alloc::{
     borrow::ToOwned, boxed::Box, format, string::String, sync::Arc, task::Wake, vec, vec::Vec,
 };
@@ -76,15 +80,15 @@ use core::{
     time::Duration,
 };
 
-use ax_errno::{AxError, AxResult, ax_err_type};
+use ax_lazyinit::{LazyLock, OnceLock};
 use ax_sync::Mutex;
 use ax_task::{IrqNotify, WaitQueue};
 use axpoll::{IoEvents, PollSet};
+pub use error::{NetError, NetResult};
 use smoltcp::{
     socket::dns::{self, GetQueryResultError, StartQueryError},
     wire::{DnsQueryType, EthernetAddress, IpAddress, Ipv4Address, Ipv4Cidr},
 };
-use spin::{LazyLock, Once};
 
 #[cfg(feature = "vsock")]
 pub use self::device::{VsockDevice, VsockDeviceList};
@@ -110,15 +114,15 @@ pub use self::{
     router::NetDevStats,
     socket::{
         CMsgData, IpCmsg, RecvFlags, RecvOptions, SendFlags, SendOptions, Shutdown, Socket,
-        SocketAddrEx, SocketOps,
+        SocketAddrEx, SocketCmsg, SocketOps,
     },
 };
 
 static LISTEN_TABLE: LazyLock<ListenTable> = LazyLock::new(ListenTable::new);
 static SOCKET_SET: LazyLock<SocketSetWrapper> = LazyLock::new(SocketSetWrapper::new);
 
-static SERVICE: Once<Mutex<Service>> = Once::new();
-static NET_CONTROL: Once<Arc<NetControl>> = Once::new();
+static SERVICE: OnceLock<Mutex<Service>> = OnceLock::new();
+static NET_CONTROL: OnceLock<Arc<NetControl>> = OnceLock::new();
 static POLLING_INTERFACES: AtomicBool = AtomicBool::new(false);
 static POLL_AGAIN: AtomicBool = AtomicBool::new(false);
 static NET_POLL_REQUESTED: AtomicBool = AtomicBool::new(false);
@@ -190,7 +194,7 @@ pub fn init_network(mut net_devs: EthernetDeviceList, config: NetworkConfig) {
 
     validate_config(&config);
 
-    let routes: SharedRouteTable = Arc::new(ax_kspin::SpinRwLock::new(RouteTable::new()));
+    let routes: SharedRouteTable = Arc::new(ax_sync::SpinRwLock::new(RouteTable::new()));
     let mut router = Router::new(routes.clone());
     let mut interfaces = Vec::new();
     let mut dns = Vec::new();
@@ -448,13 +452,35 @@ pub fn init_vsock(mut vsock_devs: device::VsockDeviceList) {
     }
 }
 
-fn poll_until_idle() {
+#[derive(Clone, Copy)]
+enum PollOwnership {
+    Opportunistic,
+    Required,
+}
+
+fn acquire_poll_ownership(
+    polling: &AtomicBool,
+    ownership: PollOwnership,
+    mut wait: impl FnMut(),
+) -> bool {
+    loop {
+        if polling
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Acquire)
+            .is_ok()
+        {
+            return true;
+        }
+        match ownership {
+            PollOwnership::Opportunistic => return false,
+            PollOwnership::Required => wait(),
+        }
+    }
+}
+
+fn poll_until_idle(ownership: PollOwnership) {
     POLL_AGAIN.store(true, Ordering::Release);
     loop {
-        if POLLING_INTERFACES
-            .compare_exchange(false, true, Ordering::Acquire, Ordering::Acquire)
-            .is_err()
-        {
+        if !acquire_poll_ownership(&POLLING_INTERFACES, ownership, ax_task::yield_now) {
             return;
         }
 
@@ -486,7 +512,7 @@ pub fn request_poll() {
 /// datagram already sits in the peer's receive buffer and `close()` cannot
 /// unsend it. Must not be called while holding `SOCKET_SET.inner`.
 pub(crate) fn flush_egress() {
-    poll_until_idle();
+    poll_until_idle(PollOwnership::Required);
 }
 
 fn publish_poll_request(requested: &AtomicBool, wake: impl FnOnce()) {
@@ -551,7 +577,7 @@ pub fn ipv4_config(name: &str) -> Option<Ipv4InterfaceConfig> {
 }
 
 /// Assigns a static IPv4 address to an interface at runtime.
-pub fn set_interface_ipv4(interface_id: InterfaceId, ip: Ipv4Addr, prefix_len: u8) -> AxResult {
+pub fn set_interface_ipv4(interface_id: InterfaceId, ip: Ipv4Addr, prefix_len: u8) -> NetResult {
     {
         let mut service = get_service();
         service.configure_static_ipv4(interface_id, Ipv4Address::from(ip.octets()), prefix_len)?;
@@ -561,7 +587,7 @@ pub fn set_interface_ipv4(interface_id: InterfaceId, ip: Ipv4Addr, prefix_len: u
 }
 
 /// Removes a configured IPv4 address from an interface at runtime.
-pub fn remove_interface_ipv4(interface_id: InterfaceId, ip: Ipv4Addr, prefix_len: u8) -> AxResult {
+pub fn remove_interface_ipv4(interface_id: InterfaceId, ip: Ipv4Addr, prefix_len: u8) -> NetResult {
     {
         let mut service = get_service();
         service.remove_static_ipv4(interface_id, Ipv4Address::from(ip.octets()), prefix_len)?;
@@ -665,9 +691,9 @@ pub enum WifiMode<'a> {
 /// Both halves run from the caller's task context, never from the RX poll
 /// task, so the blocking firmware command path cannot deadlock the stack.
 ///
-/// Returns [`AxError::NoSuchDevice`] if `name` has no registered wireless
-/// control plane, or [`AxError::Unsupported`] if the link-layer switch fails.
-pub fn reconfigure_wifi(name: &str, mode: WifiMode<'_>) -> AxResult<()> {
+/// Returns [`NetError::NoSuchDevice`] if `name` has no registered wireless
+/// control plane, or [`NetError::Unsupported`] if the link-layer switch fails.
+pub fn reconfigure_wifi(name: &str, mode: WifiMode<'_>) -> NetResult<()> {
     // 1. Link-layer switch through the device control plane, plus the device's
     //    (possibly new) MAC. The registry lock is released before touching the
     //    stack service to avoid holding two locks across the blocking path.
@@ -678,16 +704,16 @@ pub fn reconfigure_wifi(name: &str, mode: WifiMode<'_>) -> AxResult<()> {
                 .iter()
                 .find(|(n, _)| n == name)
                 .map(|(_, handle)| handle.clone())
-                .ok_or(AxError::NoSuchDevice)?
+                .ok_or(NetError::NoSuchDevice)?
         };
-        let ctrl = handle.wifi_control().ok_or(AxError::NoSuchDevice)?;
+        let ctrl = handle.wifi_control().ok_or(NetError::NoSuchDevice)?;
         match &mode {
             WifiMode::Station { ssid, password } => ctrl
                 .connect(ssid, password)
-                .map_err(|_| ax_err_type!(Unsupported, "wifi STA connect failed"))?,
+                .map_err(|_| NetError::Unsupported)?,
             WifiMode::AccessPoint { ssid, channel, .. } => ctrl
                 .start_ap_open(ssid, *channel)
-                .map_err(|_| ax_err_type!(Unsupported, "wifi SoftAP start failed"))?,
+                .map_err(|_| NetError::Unsupported)?,
         }
         EthernetAddress(handle.mac_address())
     };
@@ -695,7 +721,7 @@ pub fn reconfigure_wifi(name: &str, mode: WifiMode<'_>) -> AxResult<()> {
     // 2. Reconfigure the stack's IPv4 / DHCP role for this interface.
     {
         let mut service = get_service();
-        let dev = service.device_index(name).ok_or(AxError::NoSuchDevice)?;
+        let dev = service.device_index(name).ok_or(NetError::NoSuchDevice)?;
         match mode {
             WifiMode::Station { .. } => service.reconfigure_as_sta(dev, mac),
             WifiMode::AccessPoint {
@@ -774,7 +800,7 @@ fn net_poll_worker() {
             get_service().wake_all_devices();
         }
         drain_deferred_poll_wakes();
-        poll_until_idle();
+        poll_until_idle(PollOwnership::Opportunistic);
         drain_deferred_poll_wakes();
     }
 }
@@ -799,7 +825,10 @@ mod tests {
         time::Duration,
     };
 
-    use super::{device_poll_fallback_due, publish_poll_request, take_poll_request};
+    use super::{
+        PollOwnership, acquire_poll_ownership, device_poll_fallback_due, publish_poll_request,
+        take_poll_request,
+    };
 
     #[test]
     fn poll_request_after_worker_drain_stays_pending() {
@@ -828,6 +857,21 @@ mod tests {
         assert!(!device_poll_fallback_due(true, false, Duration::ZERO));
         assert!(device_poll_fallback_due(false, true, Duration::ZERO));
     }
+
+    #[test]
+    fn synchronous_flush_waits_for_active_poll_owner() {
+        let polling = AtomicBool::new(true);
+        let mut waits = 0;
+
+        let acquired = acquire_poll_ownership(&polling, PollOwnership::Required, || {
+            waits += 1;
+            polling.store(false, Ordering::Release);
+        });
+
+        assert!(acquired);
+        assert_eq!(waits, 1);
+        assert!(polling.load(Ordering::Acquire));
+    }
 }
 
 /// Returns the list of configured DNS servers.
@@ -841,15 +885,15 @@ pub fn dns_servers() -> Vec<Ipv4Address> {
 const DNS_DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Resolves an A record using the default DNS timeout.
-pub fn dns_query(name: &str) -> AxResult<Vec<IpAddr>> {
+pub fn dns_query(name: &str) -> NetResult<Vec<IpAddr>> {
     dns_query_timeout(name, DNS_DEFAULT_TIMEOUT)
 }
 
 /// Resolves an A record using the configured DNS servers and timeout.
-pub fn dns_query_timeout(name: &str, timeout: Duration) -> AxResult<Vec<IpAddr>> {
+pub fn dns_query_timeout(name: &str, timeout: Duration) -> NetResult<Vec<IpAddr>> {
     let servers = dns_servers();
     if servers.is_empty() {
-        return Err(ax_err_type!(NotFound, "no DNS server configured"));
+        return Err(NetError::NotFound);
     }
 
     let servers = servers
@@ -862,10 +906,7 @@ pub fn dns_query_timeout(name: &str, timeout: Duration) -> AxResult<Vec<IpAddr>>
         .map(IpAddress::Ipv4)
         .collect::<Vec<_>>();
     if servers.is_empty() {
-        return Err(ax_err_type!(
-            NoSuchDeviceOrAddress,
-            "no routable DNS server configured"
-        ));
+        return Err(NetError::NoSuchDeviceOrAddress);
     }
     let handle = SOCKET_SET.add(dns::Socket::new(&servers, vec![]));
     DnsSocketGuard(handle).query_timeout(name, DnsQueryType::A, timeout)
@@ -879,7 +920,7 @@ impl DnsSocketGuard {
         name: &str,
         query_type: DnsQueryType,
         timeout: Duration,
-    ) -> AxResult<Vec<IpAddr>> {
+    ) -> NetResult<Vec<IpAddr>> {
         let query_handle = {
             let mut service = get_service();
             let mut sockets = SOCKET_SET.inner.lock();
@@ -890,15 +931,9 @@ impl DnsSocketGuard {
             )
         }
         .map_err(|err| match err {
-            StartQueryError::NoFreeSlot => {
-                ax_err_type!(ResourceBusy, "DNS query failed: no free slot")
-            }
-            StartQueryError::InvalidName => {
-                ax_err_type!(InvalidInput, "DNS query failed: invalid name")
-            }
-            StartQueryError::NameTooLong => {
-                ax_err_type!(InvalidInput, "DNS query failed: name too long")
-            }
+            StartQueryError::NoFreeSlot => NetError::ResourceBusy,
+            StartQueryError::InvalidName => NetError::InvalidInput,
+            StartQueryError::NameTooLong => NetError::InvalidInput,
         })?;
 
         let start_time = ax_hal::time::monotonic_time_nanos();
@@ -911,18 +946,16 @@ impl DnsSocketGuard {
                 socket
                     .get_query_result(query_handle)
                     .map_err(|err| match err {
-                        GetQueryResultError::Pending => AxError::WouldBlock,
-                        GetQueryResultError::Failed => {
-                            ax_err_type!(ConnectionRefused, "DNS query failed")
-                        }
+                        GetQueryResultError::Pending => NetError::WouldBlock,
+                        GetQueryResultError::Failed => NetError::ConnectionRefused,
                     })
             }) {
                 Ok(addrs) => {
                     return Ok(addrs.into_iter().map(IpAddr::from).collect());
                 }
-                Err(AxError::WouldBlock) => {
+                Err(NetError::WouldBlock) => {
                     if ax_hal::time::monotonic_time_nanos() >= deadline {
-                        return Err(ax_err_type!(TimedOut, "DNS query timed out"));
+                        return Err(NetError::TimedOut);
                     }
                     ax_task::yield_now();
                 }
@@ -981,7 +1014,7 @@ pub(crate) mod test_support {
         static INIT: Once = Once::new();
 
         INIT.call_once(|| {
-            let routes: SharedRouteTable = Arc::new(ax_kspin::SpinRwLock::new(RouteTable::new()));
+            let routes: SharedRouteTable = Arc::new(ax_sync::SpinRwLock::new(RouteTable::new()));
             let mut router = Router::new(routes.clone());
             let local_dev = router.add_device(LOCAL_IF, Box::new(LoopbackDevice::new()));
             let peer_dev = router.add_device(PEER_IF, Box::new(LoopbackDevice::new()));

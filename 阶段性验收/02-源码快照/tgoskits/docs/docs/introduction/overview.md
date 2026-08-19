@@ -174,12 +174,11 @@ flowchart LR
         arceos_api["arceos_api"]
         posix_api["arceos_posix_api"]
     end
-    subgraph mods["内核模块 (12)"]
+    subgraph mods["内核模块"]
         hal["axhal"]
         task["axtask"]
         mm["axmm"]
         fs["axfs-ng"]
-        dma["axdma"]
         sync["axsync"]
         other["..."]
     end
@@ -191,7 +190,7 @@ flowchart LR
 
 | 层次 | 内容 | 职责 |
 |------|------|------|
-| 内核模块 (`modules/`) | `axhal`, `axtask`, `axmm`, `axfs-ng`, `axdma`, `axsync`, `axlog`, `axruntime` 等 | 硬件抽象、调度、内存管理、DMA、文件系统、同步原语与运行时初始化 |
+| 内核模块 (`modules/`) | `axhal`, `axtask`, `axmm`, `axfs-ng`, `axsync`, `axlog`, `axruntime` 等 | 硬件抽象、调度、内存管理、文件系统、同步原语与运行时初始化；DMA 能力由 `dma-api` 与 `axklib` 提供 |
 | API 聚合层 (`api/`) | `arceos_api`, `arceos_posix_api` | 向上提供统一 API 接口与 POSIX 兼容层 |
 | 用户态库 (`ulib/`) | `axstd`, `axlibc` | Rust 标准库子集与 C 库兼容层 |
 
@@ -201,8 +200,7 @@ StarryOS 建立在 ArceOS 基础设施之上，通过组件化方式实现 Linux
 
 ```mermaid
 flowchart TD
-    subgraph starry_components["Starry 专用组件"]
-        proc["starry-process<br/>进程抽象"]
+    subgraph starry_components["StarryOS 领域 crate"]
         sig["starry-signal<br/>信号框架"]
         vm["starry-vm<br/>地址空间"]
     end
@@ -220,12 +218,12 @@ flowchart TD
     kernel --> rootfs["rootfs 用户态"]
 ```
 
-图中的 Starry 专用组件负责提供进程、信号和地址空间等领域抽象，Kernel 层则组合这些抽象并实现 Linux syscall 语义。下表按用户可见能力归纳对应的维护重点。
+图中的 StarryOS 领域 crate 提供信号和地址空间抽象，Kernel 层组合这些抽象并实现 Linux syscall 语义。它们位于 `os/StarryOS/{signal,vm}`，并保留独立发布能力。进程拓扑与 PID namespace 由 `kernel/src/task` 和 `kernel/src/namespace` 统一管理。下表按用户可见能力归纳对应的维护重点。
 
 | 能力域 | 实现要点 |
 |--------|---------|
 | Syscall 兼容 | Linux syscall 语义等价实现（`kernel/src/syscall/`，覆盖进程、文件、内存、信号、网络、IPC） |
-| 进程模型 | 多进程地址空间、进程树、`/proc` 伪文件系统（`starry-process`） |
+| 进程模型 | 稳定 PID identity、进程树、PID namespace 与 `/proc` 伪文件系统（`kernel/src/task`） |
 | 线程与信号 | POSIX 线程、信号传递与处理（`starry-signal`） |
 | 用户态验证 | 基于 Alpine rootfs 的完整用户态执行链路 |
 
@@ -265,7 +263,7 @@ Axvisor Runtime 通过虚拟化组件管理 Guest 生命周期，并通过平台
 |--------|---------|
 | 虚拟化抽象 | `axvm`（VM 与 vCPU wrapper/run loop）、`axvm-types`（共享 vCPU/exit 协议）、`axdevice`（虚拟设备） |
 | 架构支持 | ARM vCPU/VGIC、RISC-V vCPU/vPLIC、x86 vCPU/vLAPIC |
-| Guest 支持 | Linux（AArch64 / RISC-V）、ArceOS、RT-Thread、Nimbos |
+| Guest 支持 | Linux（AArch64 / RISC-V）、ArceOS、RT-Thread |
 | 配置体系 | 板级配置（`configs/board/*.toml`）+ VM 配置（`configs/vms/**/*.toml`）双层结构 |
 
 ## 4. 构建与配置

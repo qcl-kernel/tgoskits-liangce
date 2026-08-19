@@ -11,11 +11,10 @@ use core::{
     task::Context,
 };
 
-use ax_errno::{AxError, AxResult};
 use ax_net::{
     InterfaceFlags, InterfaceId, InterfaceInfo, InterfaceKind, RecvOptions, SendOptions,
     Socket as SocketInner, SocketOps,
-    options::{Configurable, GetSocketOption, SetSocketOption},
+    options::{Configurable, GetSocketOption, SetSocketOption, UnixCredentials},
 };
 use ax_task::current;
 use axpoll::{IoEvents, Pollable};
@@ -24,7 +23,7 @@ use linux_raw_sys::{
     ioctl::{
         FIONREAD, SIOCGIFADDR, SIOCGIFBRDADDR, SIOCGIFCONF, SIOCGIFDSTADDR, SIOCGIFFLAGS,
         SIOCGIFHWADDR, SIOCGIFINDEX, SIOCGIFMAP, SIOCGIFMETRIC, SIOCGIFMTU, SIOCGIFNETMASK,
-        SIOCGIFTXQLEN, SIOCSIFFLAGS,
+        SIOCGIFSLAVE, SIOCGIFTXQLEN, SIOCSIFFLAGS,
     },
     net::{AF_INET, ifreq},
 };
@@ -32,9 +31,10 @@ use starry_vm::{VmMutPtr, vm_read_slice, vm_write_slice};
 
 use super::{FileLike, Kstat};
 use crate::{
+    StarryError, StarryResult,
     file::{IoDst, IoSrc, get_file_like},
     syscall::in_root_net_ns,
-    task::AsThread,
+    task::{AsThread, current_pid_view},
 };
 
 pub(super) const ARPHRD_ETHER: u16 = 1;
@@ -49,6 +49,9 @@ const IFREQ_DATA_OFFSET: usize = 16;
 const IFREQ_COMPAT_LEN: usize = 40;
 // ethtool ioctl; not exported by linux-raw-sys. The value is arch-independent.
 const SIOCETHTOOL: u32 = 0x8946;
+// Map an interface index to its name (Linux net/core/dev_ioctl.c dev_ifname).
+// Arch-independent; the inverse of SIOCGIFINDEX.
+const SIOCGIFNAME: u32 = 0x8910;
 const IFCONF_LEN_OFFSET: usize = 0;
 const IFCONF_BUF_OFFSET: usize = 8;
 
@@ -72,6 +75,39 @@ impl Socket {
     pub fn ip_domain(&self) -> u32 {
         self.ip_domain
     }
+
+    /// Captures the current process generation for Unix socket ownership.
+    pub(crate) fn current_unix_credentials() -> UnixCredentials {
+        let current = current();
+        let thread = current.as_thread();
+        let credentials = thread.cred();
+        let process_identity = thread.proc_data.identity();
+        let pid = current_pid_view()
+            .visible_number(&process_identity)
+            .expect("Unix socket owner is visible in its active PID namespace")
+            .get();
+        UnixCredentials::from_parts(pid, credentials.uid, credentials.gid)
+            .with_identity(process_identity)
+    }
+
+    /// Projects a transport-owned process generation into the caller's active
+    /// PID namespace while retaining numeric credentials for generic users.
+    pub(crate) fn project_unix_credentials(credentials: &UnixCredentials) -> UnixCredentials {
+        let pid = credentials.identity::<crate::task::PidIdentity>().map_or(
+            credentials.pid,
+            |identity| {
+                current_pid_view()
+                    .visible_number(identity)
+                    .map_or(0, |number| number.get())
+            },
+        );
+        UnixCredentials::from_parts(pid, credentials.uid, credentials.gid)
+    }
+
+    pub(crate) fn with_current_sender_credentials(mut options: SendOptions) -> SendOptions {
+        options.sender_credentials = Some(Self::current_unix_credentials());
+        options
+    }
 }
 
 pub(super) fn visible_interfaces() -> impl Iterator<Item = InterfaceInfo> {
@@ -80,47 +116,182 @@ pub(super) fn visible_interfaces() -> impl Iterator<Item = InterfaceInfo> {
         .filter(|info| in_root_net_ns() || info.kind == InterfaceKind::Loopback)
 }
 
-pub(super) fn visible_interface_by_id(id: InterfaceId) -> AxResult<InterfaceInfo> {
+pub(super) fn visible_interface_by_id(id: InterfaceId) -> StarryResult<InterfaceInfo> {
     ax_net::interface_by_id(id)
         .filter(|info| in_root_net_ns() || info.kind == InterfaceKind::Loopback)
-        .ok_or(AxError::NoSuchDevice)
+        .ok_or(StarryError::NoSuchDevice)
 }
 
-pub(super) fn first_visible_ethernet() -> AxResult<InterfaceInfo> {
+pub(super) fn first_visible_ethernet() -> StarryResult<InterfaceInfo> {
     visible_interfaces()
         .find(|info| info.kind == InterfaceKind::Ethernet)
-        .ok_or(AxError::NoSuchDevice)
+        .ok_or(StarryError::NoSuchDevice)
 }
 
-fn read_user_bytes<const N: usize>(ptr: *const u8) -> AxResult<[u8; N]> {
+fn read_user_bytes<const N: usize>(ptr: *const u8) -> StarryResult<[u8; N]> {
     let mut buf = [core::mem::MaybeUninit::<u8>::uninit(); N];
     vm_read_slice(ptr, &mut buf)?;
     Ok(buf.map(|v| unsafe { v.assume_init() }))
 }
 
-fn read_ifreq_name(arg: usize) -> AxResult<alloc::string::String> {
+fn read_ifreq_name(arg: usize) -> StarryResult<alloc::string::String> {
     let name = read_user_bytes::<IFREQ_NAME_LEN>(arg as *const u8)?;
     let end = name.iter().position(|&b| b == 0).unwrap_or(name.len());
     core::str::from_utf8(&name[..end])
         .map(str::to_owned)
-        .map_err(|_| AxError::InvalidInput)
+        .map_err(|_| StarryError::InvalidInput)
 }
 
-fn read_ifreq_interface(arg: usize) -> AxResult<InterfaceInfo> {
+fn read_ifreq_interface(arg: usize) -> StarryResult<InterfaceInfo> {
     let name = read_ifreq_name(arg)?;
     ax_net::interface_by_name(&name)
         .filter(|info| in_root_net_ns() || info.kind == InterfaceKind::Loopback)
-        .ok_or(AxError::NoSuchDevice)
+        .ok_or(StarryError::NoSuchDevice)
 }
 
-fn write_ifreq_data(arg: usize, data: &[u8]) -> AxResult<()> {
+fn write_ifreq_data(arg: usize, data: &[u8]) -> StarryResult<()> {
     Ok(vm_write_slice((arg + IFREQ_DATA_OFFSET) as *mut u8, data)?)
 }
 
-fn read_ifreq_flags(arg: usize) -> AxResult<i16> {
+fn read_ifreq_flags(arg: usize) -> StarryResult<i16> {
     Ok(i16::from_ne_bytes(read_user_bytes::<2>(
         (arg + IFREQ_DATA_OFFSET) as *const u8,
     )?))
+}
+
+// Writes an interface name into `ifr_name` (offset 0), NUL-padded to IFNAMSIZ.
+fn write_ifreq_name(arg: usize, name: &str) -> StarryResult<()> {
+    let mut buf = [0u8; IFREQ_NAME_LEN];
+    let bytes = name.as_bytes();
+    let n = bytes.len().min(IFREQ_NAME_LEN - 1);
+    buf[..n].copy_from_slice(&bytes[..n]);
+    Ok(vm_write_slice(arg as *mut u8, &buf)?)
+}
+
+/// Device-level socket ioctls (`SIOCGIF*`), shared across every socket family.
+///
+/// Linux routes these through `sock_ioctl` -> `dev_ioctl` regardless of the
+/// socket's address family (net/socket.c), so `AF_UNIX`/`AF_NETLINK` sockets
+/// answer them too - `if_indextoname(3)` in musl issues `SIOCGIFNAME` on an
+/// `AF_UNIX` socket, which must resolve rather than return `ENOTTY`. Returns
+/// `Some(result)` when `cmd` is a device ioctl this layer owns, `None` otherwise
+/// so the caller can try family-specific commands or fall back to `ENOTTY`.
+pub(super) fn device_ioctl(cmd: u32, arg: usize) -> Option<StarryResult<usize>> {
+    let result = (|| -> StarryResult<usize> {
+        match cmd {
+            SIOCGIFCONF => write_ifconf(arg)?,
+            SIOCGIFNAME => {
+                // Map ifr_ifindex -> ifr_name (Linux dev_ifname); inverse of
+                // SIOCGIFINDEX. The index arrives in the ifr_ifru union.
+                let idx = i32::from_ne_bytes(read_user_bytes::<4>(
+                    (arg + IFREQ_DATA_OFFSET) as *const u8,
+                )?);
+                let info = visible_interface_by_id(InterfaceId::new(idx as u32))?;
+                write_ifreq_name(arg, &info.name)?;
+            }
+            SIOCGIFFLAGS => {
+                let info = read_ifreq_interface(arg)?;
+                write_ifreq_data(arg, &linux_flags(&info).to_ne_bytes())?;
+            }
+            SIOCSIFFLAGS => {
+                let info = read_ifreq_interface(arg)?;
+                if !current().as_thread().cred().has_cap(CAP_NET_ADMIN) {
+                    return Err(StarryError::OperationNotPermitted);
+                }
+                if read_ifreq_flags(arg)? != linux_flags(&info) {
+                    return Err(StarryError::OperationNotSupported);
+                }
+            }
+            SIOCGIFADDR => {
+                let info = read_ifreq_interface(arg)?;
+                write_ifreq_sockaddr(arg, interface_ipv4(&info)?.address.address().octets())?;
+            }
+            SIOCGIFDSTADDR => {
+                let info = read_ifreq_interface(arg)?;
+                let addr = if info.kind == InterfaceKind::Loopback {
+                    interface_ipv4(&info)?.address.address().octets()
+                } else {
+                    [0, 0, 0, 0]
+                };
+                write_ifreq_sockaddr(arg, addr)?;
+            }
+            SIOCGIFBRDADDR => {
+                let info = read_ifreq_interface(arg)?;
+                let addr = if info.kind == InterfaceKind::Loopback {
+                    interface_ipv4(&info)?.address.address().octets()
+                } else {
+                    ipv4_broadcast(interface_ipv4(&info)?)
+                };
+                write_ifreq_sockaddr(arg, addr)?;
+            }
+            SIOCGIFNETMASK => {
+                let info = read_ifreq_interface(arg)?;
+                write_ifreq_sockaddr(
+                    arg,
+                    ipv4_netmask(interface_ipv4(&info)?.address.prefix_len()),
+                )?;
+            }
+            SIOCGIFHWADDR => {
+                let info = read_ifreq_interface(arg)?;
+                match info.kind {
+                    InterfaceKind::Ethernet => {
+                        let mac = info.mac.ok_or(StarryError::NoSuchDevice)?;
+                        write_ifreq_hwaddr(arg, ARPHRD_ETHER, &mac.0)?
+                    }
+                    InterfaceKind::Loopback => write_ifreq_hwaddr(arg, ARPHRD_LOOPBACK, &[])?,
+                }
+            }
+            SIOCGIFMTU => {
+                let mtu = read_ifreq_interface(arg)?.mtu as i32;
+                write_ifreq_data(arg, &mtu.to_ne_bytes())?;
+            }
+            SIOCGIFMETRIC => {
+                read_ifreq_interface(arg)?;
+                write_ifreq_data(arg, &0i32.to_ne_bytes())?;
+            }
+            SIOCGIFMAP => {
+                read_ifreq_interface(arg)?;
+                write_ifreq_data(arg, &[0; 24])?;
+            }
+            // In the "can be done by all, return a value" read-only group with the
+            // other SIOCGIF* getters, but dev_ifsioc_locked has no bonding master to
+            // report: an unknown name is ENODEV (read_ifreq_interface) and a resolved
+            // interface is EINVAL (Linux net/core/dev_ioctl.c dev_ifsioc_locked).
+            SIOCGIFSLAVE => {
+                read_ifreq_interface(arg)?;
+                return Err(StarryError::InvalidInput);
+            }
+            SIOCGIFTXQLEN => {
+                read_ifreq_interface(arg)?;
+                let qlen_ptr = (arg + offset_of!(ifreq, ifr_ifru)) as *mut i32;
+                qlen_ptr.vm_write(1000)?;
+            }
+            SIOCGIFINDEX => {
+                let idx = read_ifreq_interface(arg)?.id.get() as i32;
+                write_ifreq_data(arg, &idx.to_ne_bytes())?;
+            }
+            // Link speed/duplex query. No PHY is emulated, so report "not supported" the way a
+            // virtual NIC (loopback, tun/tap) does. Tools like psutil's net_if_stats() treat
+            // EOPNOTSUPP as "no ethtool" and degrade gracefully; any other errno makes them abort
+            // the whole interface-status probe. Resolve the interface first so an unknown name
+            // yields ENODEV, then fault on a bad ifr_data pointer, keeping Linux's error priority
+            // (ENODEV, then EFAULT, then EOPNOTSUPP) and parity with the sibling SIOC*IF* arms.
+            SIOCETHTOOL => {
+                read_ifreq_interface(arg)?;
+                let data_ptr = usize::from_ne_bytes(read_user_bytes::<8>(
+                    (arg + IFREQ_DATA_OFFSET) as *const u8,
+                )?);
+                read_user_bytes::<4>(data_ptr as *const u8)?;
+                return Err(StarryError::OperationNotSupported);
+            }
+            _ => return Err(StarryError::NotATty),
+        }
+        Ok(0)
+    })();
+    match result {
+        Err(StarryError::NotATty) => None,
+        other => Some(other),
+    }
 }
 
 fn sockaddr_in_bytes(ip: [u8; 4]) -> [u8; 16] {
@@ -130,18 +301,18 @@ fn sockaddr_in_bytes(ip: [u8; 4]) -> [u8; 16] {
     addr
 }
 
-fn write_ifreq_sockaddr(arg: usize, ip: [u8; 4]) -> AxResult<()> {
+fn write_ifreq_sockaddr(arg: usize, ip: [u8; 4]) -> StarryResult<()> {
     write_ifreq_data(arg, &sockaddr_in_bytes(ip))
 }
 
-fn write_ifreq_hwaddr(arg: usize, hw_type: u16, hwaddr: &[u8]) -> AxResult<()> {
+fn write_ifreq_hwaddr(arg: usize, hw_type: u16, hwaddr: &[u8]) -> StarryResult<()> {
     let mut addr = [0; 16];
     addr[..2].copy_from_slice(&hw_type.to_ne_bytes());
     addr[2..2 + hwaddr.len()].copy_from_slice(hwaddr);
     write_ifreq_data(arg, &addr)
 }
 
-fn write_ifconf_entry(buf: usize, offset: usize, name: &str, ip: [u8; 4]) -> AxResult<()> {
+fn write_ifconf_entry(buf: usize, offset: usize, name: &str, ip: [u8; 4]) -> StarryResult<()> {
     let mut ifreq = [0; IFREQ_COMPAT_LEN];
     let name = name.as_bytes();
     let name_len = name.len().min(IFREQ_NAME_LEN - 1);
@@ -150,8 +321,8 @@ fn write_ifconf_entry(buf: usize, offset: usize, name: &str, ip: [u8; 4]) -> AxR
     Ok(vm_write_slice((buf + offset) as *mut u8, &ifreq)?)
 }
 
-fn interface_ipv4(info: &InterfaceInfo) -> AxResult<ax_net::Ipv4InterfaceConfig> {
-    info.ipv4.ok_or(AxError::NoSuchDeviceOrAddress)
+fn interface_ipv4(info: &InterfaceInfo) -> StarryResult<ax_net::Ipv4InterfaceConfig> {
+    info.ipv4.ok_or(StarryError::NoSuchDeviceOrAddress)
 }
 
 fn ipv4_netmask(prefix_len: u8) -> [u8; 4] {
@@ -187,7 +358,7 @@ fn linux_flags(info: &InterfaceInfo) -> i16 {
     flags
 }
 
-fn write_ifconf(arg: usize) -> AxResult<()> {
+fn write_ifconf(arg: usize) -> StarryResult<()> {
     let mut len = read_user_bytes::<4>((arg + IFCONF_LEN_OFFSET) as *const u8)?;
     let ifc_len = i32::from_ne_bytes(len);
     let buf = usize::from_ne_bytes(read_user_bytes::<{ core::mem::size_of::<usize>() }>(
@@ -226,15 +397,18 @@ impl Deref for Socket {
 }
 
 impl FileLike for Socket {
-    fn read(&self, dst: &mut IoDst) -> AxResult<usize> {
-        self.recv(dst, RecvOptions::default())
+    fn read(&self, dst: &mut IoDst) -> StarryResult<usize> {
+        Ok(self.recv(dst, RecvOptions::default())?)
     }
 
-    fn write(&self, src: &mut IoSrc) -> AxResult<usize> {
-        self.send(src, SendOptions::default())
+    fn write(&self, src: &mut IoSrc) -> StarryResult<usize> {
+        Ok(self.send(
+            src,
+            Self::with_current_sender_credentials(SendOptions::default()),
+        )?)
     }
 
-    fn stat(&self) -> AxResult<Kstat> {
+    fn stat(&self) -> StarryResult<Kstat> {
         Ok(Kstat {
             mode: S_IFSOCK | 0o777u32,
             blksize: 4096,
@@ -249,9 +423,10 @@ impl FileLike for Socket {
         result
     }
 
-    fn set_nonblocking(&self, nonblocking: bool) -> AxResult<()> {
-        self.inner
-            .set_option(SetSocketOption::NonBlocking(&nonblocking))
+    fn set_nonblocking(&self, nonblocking: bool) -> StarryResult<()> {
+        Ok(self
+            .inner
+            .set_option(SetSocketOption::NonBlocking(&nonblocking))?)
     }
 
     fn async_mode(&self) -> bool {
@@ -262,16 +437,16 @@ impl FileLike for Socket {
         true
     }
 
-    fn set_async_mode(&self, async_mode: bool) -> AxResult {
+    fn set_async_mode(&self, async_mode: bool) -> StarryResult {
         self.async_mode.store(async_mode, Ordering::Release);
         Ok(())
     }
 
-    fn owner(&self) -> AxResult<i32> {
+    fn owner(&self) -> StarryResult<i32> {
         Ok(self.owner.load(Ordering::Acquire))
     }
 
-    fn set_owner(&self, owner: i32) -> AxResult {
+    fn set_owner(&self, owner: i32) -> StarryResult {
         self.owner.store(owner, Ordering::Release);
         Ok(())
     }
@@ -284,117 +459,30 @@ impl FileLike for Socket {
         O_RDWR
     }
 
-    fn ioctl(&self, cmd: u32, arg: usize) -> AxResult<usize> {
-        match cmd {
-            FIONREAD => {
-                let available = self.inner.recv_available()?.min(c_int::MAX as usize) as c_int;
-                (arg as *mut c_int).vm_write(available)?;
-            }
-            SIOCGIFCONF => write_ifconf(arg)?,
-            SIOCGIFFLAGS => {
-                let info = read_ifreq_interface(arg)?;
-                write_ifreq_data(arg, &linux_flags(&info).to_ne_bytes())?;
-            }
-            SIOCSIFFLAGS => {
-                let info = read_ifreq_interface(arg)?;
-                if !current().as_thread().cred().has_cap(CAP_NET_ADMIN) {
-                    return Err(AxError::OperationNotPermitted);
-                }
-                if read_ifreq_flags(arg)? != linux_flags(&info) {
-                    return Err(AxError::OperationNotSupported);
-                }
-            }
-            SIOCGIFADDR => {
-                let info = read_ifreq_interface(arg)?;
-                write_ifreq_sockaddr(arg, interface_ipv4(&info)?.address.address().octets())?;
-            }
-            SIOCGIFDSTADDR => {
-                let info = read_ifreq_interface(arg)?;
-                let addr = if info.kind == InterfaceKind::Loopback {
-                    interface_ipv4(&info)?.address.address().octets()
-                } else {
-                    [0, 0, 0, 0]
-                };
-                write_ifreq_sockaddr(arg, addr)?;
-            }
-            SIOCGIFBRDADDR => {
-                let info = read_ifreq_interface(arg)?;
-                let addr = if info.kind == InterfaceKind::Loopback {
-                    interface_ipv4(&info)?.address.address().octets()
-                } else {
-                    ipv4_broadcast(interface_ipv4(&info)?)
-                };
-                write_ifreq_sockaddr(arg, addr)?;
-            }
-            SIOCGIFNETMASK => {
-                let info = read_ifreq_interface(arg)?;
-                write_ifreq_sockaddr(
-                    arg,
-                    ipv4_netmask(interface_ipv4(&info)?.address.prefix_len()),
-                )?;
-            }
-            SIOCGIFHWADDR => {
-                let info = read_ifreq_interface(arg)?;
-                match info.kind {
-                    InterfaceKind::Ethernet => {
-                        let mac = info.mac.ok_or(AxError::NoSuchDevice)?;
-                        write_ifreq_hwaddr(arg, ARPHRD_ETHER, &mac.0)?
-                    }
-                    InterfaceKind::Loopback => write_ifreq_hwaddr(arg, ARPHRD_LOOPBACK, &[])?,
-                }
-            }
-            SIOCGIFMTU => {
-                let mtu = read_ifreq_interface(arg)?.mtu as i32;
-                write_ifreq_data(arg, &mtu.to_ne_bytes())?;
-            }
-            SIOCGIFMETRIC => {
-                read_ifreq_interface(arg)?;
-                write_ifreq_data(arg, &0i32.to_ne_bytes())?;
-            }
-            SIOCGIFMAP => {
-                read_ifreq_interface(arg)?;
-                write_ifreq_data(arg, &[0; 24])?;
-            }
-            SIOCGIFTXQLEN => {
-                read_ifreq_interface(arg)?;
-                let qlen_ptr = (arg + offset_of!(ifreq, ifr_ifru)) as *mut i32;
-                qlen_ptr.vm_write(1000)?;
-            }
-            SIOCGIFINDEX => {
-                let idx = read_ifreq_interface(arg)?.id.get() as i32;
-                write_ifreq_data(arg, &idx.to_ne_bytes())?;
-            }
-            // Link speed/duplex query. No PHY is emulated, so report "not supported" the way a
-            // virtual NIC (loopback, tun/tap) does. Tools like psutil's net_if_stats() treat
-            // EOPNOTSUPP as "no ethtool" and degrade gracefully; any other errno makes them abort
-            // the whole interface-status probe. Resolve the interface first so an unknown name
-            // yields ENODEV, then fault on a bad ifr_data pointer, keeping Linux's error priority
-            // (ENODEV, then EFAULT, then EOPNOTSUPP) and parity with the sibling SIOC*IF* arms.
-            SIOCETHTOOL => {
-                read_ifreq_interface(arg)?;
-                let data_ptr = usize::from_ne_bytes(read_user_bytes::<8>(
-                    (arg + IFREQ_DATA_OFFSET) as *const u8,
-                )?);
-                read_user_bytes::<4>(data_ptr as *const u8)?;
-                return Err(AxError::OperationNotSupported);
-            }
-            _ => {
-                if super::wext::is_wext_ioctl(cmd) {
-                    return super::wext::handle(cmd, arg);
-                }
-                return Err(AxError::NotATty);
-            }
+    fn ioctl(&self, cmd: u32, arg: usize) -> StarryResult<usize> {
+        // Socket-specific query first, then the family-agnostic device ioctls
+        // (SIOCGIF*), mirroring Linux sock_ioctl dispatching to dev_ioctl.
+        if cmd == FIONREAD {
+            let available = self.inner.recv_available()?.min(c_int::MAX as usize) as c_int;
+            (arg as *mut c_int).vm_write(available)?;
+            return Ok(0);
         }
-        Ok(0)
+        if let Some(result) = device_ioctl(cmd, arg) {
+            return result;
+        }
+        if super::wext::is_wext_ioctl(cmd) {
+            return super::wext::handle(cmd, arg);
+        }
+        Err(StarryError::NotATty)
     }
 
-    fn from_fd(fd: c_int) -> AxResult<Arc<Self>>
+    fn from_fd(fd: c_int) -> StarryResult<Arc<Self>>
     where
         Self: Sized + 'static,
     {
         get_file_like(fd)?
             .downcast_arc()
-            .map_err(|_| AxError::NotASocket)
+            .map_err(|_| StarryError::NotASocket)
     }
 }
 

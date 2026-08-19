@@ -1,0 +1,43 @@
+[base]
+id = 1
+name = "linux-qemu-smp2-dual"
+vm_type = 1
+cpu_num = 2
+phys_cpu_ids = [0, 1]
+
+[kernel]
+entry_point = 2149580800
+image_location = "memory"
+kernel_path = "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/qemu-aarch64"
+kernel_load_addr = 2149580800
+dtb_load_addr = 2147483648
+
+memory_regions = [
+  [0x80000000, 0x10000000, 0x7, 1],
+]
+
+[devices]
+interrupt_mode = "passthrough"
+
+passthrough_devices = [
+  ["/chosen"],
+  ["/psci"],
+  ["/timer"],
+  ["/intc@8000000"],
+  ["/virtio_mmio@a000000"],
+]
+
+passthrough_addresses = []
+
+excluded_devices = [
+  ["/intc@8000000/its@8080000"],
+  ["/pl011@9000000"],
+  ["/virtio_mmio@a000200"],
+  ["/virtio_mmio@a000400"],
+]
+
+emu_devices = [
+  ["gppt-gicd", 0x8000000, 0x10000, 0, 0x21, []],
+  ["gppt-gicr", 0x80a0000, 0x20000, 0, 0x20, [0x2, 0x20000, 0]],
+  ["linux", 0x9000000, 0x1000, 0, 0x2, []],
+]

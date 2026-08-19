@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5](https://github.com/rcore-os/tgoskits/compare/rdif-base-v0.8.4...rdif-base-v0.8.5) - 2026-08-09
+
+### Other
+
+- updated the following local packages: axtest, rdif-def
+
+## [0.8.4](https://github.com/rcore-os/tgoskits/compare/rdif-base-v0.8.3...rdif-base-v0.8.4) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
 ## [0.8.3](https://github.com/rcore-os/tgoskits/compare/rdif-base-v0.8.2...rdif-base-v0.8.3) - 2026-06-12
 
 ### Other

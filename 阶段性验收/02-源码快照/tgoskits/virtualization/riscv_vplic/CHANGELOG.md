@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.23](https://github.com/rcore-os/tgoskits/compare/riscv_vplic-v0.4.22...riscv_vplic-v0.4.23) - 2026-08-09
+
+### Other
+
+- *(axvm)* unify guest devices and AArch64 timer ownership ([#1717](https://github.com/rcore-os/tgoskits/pull/1717))
+
+## [0.4.22](https://github.com/rcore-os/tgoskits/compare/riscv_vplic-v0.4.21...riscv_vplic-v0.4.22) - 2026-08-03
+
+### Other
+
+- *(axvisor)* implement unified emulated device framework ([#1722](https://github.com/rcore-os/tgoskits/pull/1722))
+
+## [0.4.21](https://github.com/rcore-os/tgoskits/compare/riscv_vplic-v0.4.20...riscv_vplic-v0.4.21) - 2026-07-23
+
+### Other
+
+- *(axdevice)* replace errno contracts ([#1595](https://github.com/rcore-os/tgoskits/pull/1595))
+
 ## [0.4.20](https://github.com/rcore-os/tgoskits/compare/riscv_vplic-v0.4.19...riscv_vplic-v0.4.20) - 2026-07-08
 
 ### Other

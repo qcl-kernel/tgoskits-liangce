@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "prepared-rootfs-only",
+  "status": "dual_guest_linux_rootfs_prepared",
+  "proofScope": "one-new-ext4-copy-with-framed-console-init-injection",
+  "doesNotProve": [
+    "the disposable rootfs was booted",
+    "the console gate markers were observed",
+    "a second guest booted",
+    "DMA isolation",
+    "dual-Guest execution",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "bootId": "dual-20260814T043015Z-ac2efac0071f6973",
+  "sourceRootfs": {
+    "path": "rootfs.img",
+    "size": 33554432,
+    "sha256": "178f81bf40c1a0723a75e0b0f18b70e09b09ceae2b91ce1a990e5f7a792a224c"
+  },
+  "outputRootfs": {
+    "path": "linux-console-rootfs.ext4",
+    "size": 33554432,
+    "sha256": "aed86e1ef2b8da41ff1c60876d92413649312fe64153bb918b06afe5215986e6",
+    "copyOnly": true
+  },
+  "init": {
+    "guestPath": "/init",
+    "size": 1285,
+    "sha256": "6805a7c49e35c1bb0316a3044b3ee449c6c8acf992526fee129ede46d621c7ee",
+    "mode": "0755"
+  },
+  "bootContract": {
+    "kernelAppend": "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+    "markers": [
+      "AXVISOR_LINUX_INIT_ENTER vm=1 boot_id=<boot-id>",
+      "AXVISOR_LINUX_DEV_CONSOLE_READY vm=1 boot_id=<boot-id> device=/dev/console cpus=2",
+      "AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=<boot-id>"
+    ],
+    "failMarker": "AXVISOR_LINUX_CONSOLE_FAIL",
+    "cpuCount": 2,
+    "stdin": "disabled"
+  },
+  "controlledTool": {
+    "name": "debugfs",
+    "operations": [
+      "rm-disposable-path",
+      "write",
+      "set-inode-mode",
+      "dump-verify"
+    ],
+    "e2fsck": {
+      "operations": [
+        "pre-inject-journal-replay",
+        "post-inject-structural-verify"
+      ]
+    }
+  }
+}

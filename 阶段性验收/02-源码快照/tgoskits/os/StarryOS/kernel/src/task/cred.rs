@@ -14,6 +14,8 @@ use linux_raw_sys::general::{
 };
 
 const CAP_MASK: u64 = (1u64 << (CAP_LAST_CAP + 1)) - 1;
+const SECBIT_NO_SETUID_FIXUP: u32 = 1 << 2;
+const SECBIT_KEEP_CAPS: u32 = 1 << 4;
 
 /// Return the bit mask for a single Linux capability number.
 fn cap_bit(cap: u32) -> u64 {
@@ -55,6 +57,10 @@ pub struct Cred {
     pub cap_bounding: u64,
     /// Ambient Linux capabilities.
     pub cap_ambient: u64,
+    /// Linux securebits flags controlled through `prctl(2)`.
+    /// Preserve permitted capabilities when all root UIDs become nonzero.
+    pub securebits: u32,
+    keep_capabilities: bool,
 }
 
 impl Cred {
@@ -80,6 +86,8 @@ impl Cred {
             cap_effective: CAP_MASK,
             cap_bounding: CAP_MASK,
             cap_ambient: 0,
+            securebits: 0,
+            keep_capabilities: false,
         }
     }
 
@@ -104,6 +112,8 @@ impl Cred {
             cap_effective: 0,
             cap_bounding: CAP_MASK,
             cap_ambient: 0,
+            securebits: 0,
+            keep_capabilities: false,
         }
     }
 
@@ -118,11 +128,18 @@ impl Cred {
     /// state drops permitted/effective/ambient caps, losing euid 0 clears the
     /// effective set, and regaining euid 0 restores effective from permitted.
     pub fn apply_id_change_capability_rules(&mut self, old: &Self) {
+        if old.securebits & SECBIT_NO_SETUID_FIXUP != 0 {
+            self.sanitize_capabilities();
+            return;
+        }
+
         let old_all_root = old.uid == 0 && old.euid == 0 && old.suid == 0;
         let new_all_nonroot = self.uid != 0 && self.euid != 0 && self.suid != 0;
 
         if old_all_root && new_all_nonroot {
-            self.cap_permitted = 0;
+            if old.securebits & SECBIT_KEEP_CAPS == 0 && !old.keep_capabilities {
+                self.cap_permitted = 0;
+            }
             self.cap_effective = 0;
             self.cap_ambient = 0;
         } else if old.euid == 0 && self.euid != 0 {
@@ -241,10 +258,114 @@ impl Cred {
     pub fn in_group(&self, gid: u32) -> bool {
         self.fsgid == gid || self.groups.contains(&gid)
     }
+
+    /// Return the per-credential `PR_SET_KEEPCAPS` state.
+    pub fn keep_capabilities(&self) -> bool {
+        self.keep_capabilities
+    }
+
+    /// Update the per-credential `PR_SET_KEEPCAPS` state.
+    pub fn set_keep_capabilities(&mut self, enabled: bool) {
+        self.keep_capabilities = enabled;
+    }
 }
 
 impl Default for Cred {
     fn default() -> Self {
         Self::root()
     }
+}
+
+#[cfg(axtest)]
+pub(crate) fn credential_capability_rules_hold_for_test() -> bool {
+    let root = Cred::root();
+    let mut unprivileged = Cred::unprivileged(1000, 100);
+    let old_root = root.clone();
+    let mut dropped = root.clone();
+    dropped.uid = 1000;
+    dropped.euid = 1000;
+    dropped.suid = 1000;
+    dropped.cap_inheritable = Cred::cap_mask();
+    dropped.cap_ambient = Cred::cap_mask();
+    dropped.apply_id_change_capability_rules(&old_root);
+
+    let mut keepcaps_root = root.clone();
+    keepcaps_root.set_keep_capabilities(true);
+    let mut kept = keepcaps_root.clone();
+    kept.uid = 1000;
+    kept.euid = 1000;
+    kept.suid = 1000;
+    kept.cap_ambient = Cred::cap_mask();
+    kept.apply_id_change_capability_rules(&keepcaps_root);
+
+    let old_user = Cred::unprivileged(1000, 100);
+    let mut regained_effective = old_user.clone();
+    regained_effective.euid = 0;
+    regained_effective.cap_permitted = cap_bit(CAP_SETUID) | cap_bit(CAP_SETPCAP);
+    regained_effective.apply_id_change_capability_rules(&old_user);
+
+    unprivileged.fsgid = 200;
+    unprivileged.groups = Arc::from([10, 20].as_slice());
+    unprivileged.cap_permitted = cap_bit(CAP_SETUID);
+    unprivileged.cap_effective = cap_bit(CAP_SETUID) | cap_bit(CAP_SETPCAP);
+    unprivileged.cap_inheritable = !0;
+    unprivileged.cap_ambient = !0;
+    unprivileged.sanitize_capabilities();
+
+    // Exercise every has_cap_* helper at least once on a root credential so
+    // the bit checks are covered. All of these must be true for root.
+    let root_capability_helpers = root.has_cap_setuid()
+        && root.has_cap_setgid()
+        && root.has_cap_net_raw()
+        && root.has_cap_sys_nice()
+        && root.has_cap_sys_resource()
+        && root.has_cap_sys_admin()
+        && root.has_cap_sys_boot()
+        && root.has_cap_sys_rawio()
+        && root.has_cap_sys_module()
+        && root.has_cap_chown()
+        && root.has_cap_dac_override()
+        && root.has_cap_fowner()
+        && root.has_cap_setpcap();
+
+    // euid == 0 grants CAP_SYS_PTRACE under the StarryOS approximation.
+    let root_ptrace = root.has_cap_sys_ptrace();
+
+    // Build a credential with only CAP_NET_RAW effective to confirm the
+    // remaining capability helpers report false for non-root.
+    let mut net_raw_only = Cred::unprivileged(1000, 100);
+    net_raw_only.cap_effective = cap_bit(CAP_NET_RAW);
+    let selective_capability_helpers = net_raw_only.has_cap_net_raw()
+        && !net_raw_only.has_cap_setuid()
+        && !net_raw_only.has_cap_setgid()
+        && !net_raw_only.has_cap_sys_admin()
+        && !net_raw_only.has_cap_sys_boot()
+        && !net_raw_only.has_cap_sys_rawio()
+        && !net_raw_only.has_cap_sys_module()
+        && !net_raw_only.has_cap_sys_nice()
+        && !net_raw_only.has_cap_sys_resource()
+        && !net_raw_only.has_cap_chown()
+        && !net_raw_only.has_cap_dac_override()
+        && !net_raw_only.has_cap_fowner()
+        && !net_raw_only.has_cap_setpcap()
+        && !net_raw_only.has_cap_sys_ptrace();
+
+    // The original root/unprivileged rules must still hold.
+    root_capability_helpers
+        && root_ptrace
+        && !Cred::unprivileged(1000, 100).has_cap_setuid()
+        && selective_capability_helpers
+        && dropped.cap_permitted == 0
+        && dropped.cap_effective == 0
+        && dropped.cap_ambient == 0
+        && kept.cap_permitted == Cred::cap_mask()
+        && kept.cap_effective == 0
+        && kept.cap_ambient == 0
+        && kept.keep_capabilities()
+        && regained_effective.cap_effective == regained_effective.cap_permitted
+        && unprivileged.cap_effective == cap_bit(CAP_SETUID)
+        && unprivileged.cap_ambient == unprivileged.cap_permitted & unprivileged.cap_inheritable
+        && unprivileged.in_group(200)
+        && unprivileged.in_group(10)
+        && !unprivileged.in_group(30)
 }

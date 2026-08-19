@@ -1,9 +1,13 @@
 mod context;
 mod gdt;
 mod idt;
+#[cfg(feature = "uspace")]
+mod local_state;
 
 pub mod asm;
 pub mod init;
+
+pub(crate) mod paging;
 
 mod trap;
 

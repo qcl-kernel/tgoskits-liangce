@@ -14,50 +14,39 @@
 
 //! Virtual machine state, resources, and lifecycle entry points.
 
-use alloc::{boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
-use core::{
+use std::{
     alloc::Layout,
-    sync::atomic::{AtomicUsize, Ordering},
+    boxed::Box,
+    collections::{BTreeMap, BTreeSet},
+    format,
+    string::String,
+    sync::{
+        Arc, Mutex as StdMutex,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
+    vec::Vec,
 };
 
 use ax_cpumask::CpuMask;
-use ax_kspin::SpinNoIrq as Mutex;
 use ax_memory_addr::align_up_4k;
-use axaddrspace::AddrSpace;
-#[allow(
-    unused_imports,
-    reason = "some architecture page tables expose query as an inherent method"
-)]
-use axaddrspace::NestedPageTableOps;
-use axdevice::{AxVmDevices, DeviceManagerError, FwCfg, FwCfgPlatformConfig};
-use axdevice_base::AccessWidth;
-use axvm_types::{
-    GuestPhysAddr, HostPhysAddr, HostVirtAddr, MappingFlags, NestedPagingConfig, VmVcpuState,
-};
+use ax_std::os::arceos::sync::IrqSafeMutex as Mutex;
+use axaddrspace::{AddrSpace, NestedPageTableOps};
+use axdevice::*;
+use axdevice_base::*;
+use axvm_types::*;
 
 use crate::{
-    AxVmError, AxVmResult,
-    arch::ArchNestedPageTable,
-    ax_err, ax_err_type,
-    boot::{GuestBootDescription, GuestFdtBuilder},
-    config::{AxVMConfig, PhysCpuList, VMInterruptMode},
-    host::{self, HostMemory, paging::virt_to_phys},
-    irq::InterruptFabric,
-    layout::VmAddressLayout,
-    lifecycle::{Machine, StopReason, VmStatus},
-    resource_claim::PhysicalResourceLease,
-    vcpu::AxVCpu,
+    arch::*, boot::*, config::*, host::paging::*, irq::model::*, layout::*, lifecycle::*,
+    runtime::*, sync::MutexExt, vcpu::*, *,
 };
 
 pub(crate) mod boot;
 pub(crate) mod memory;
 pub(crate) mod prepare;
-#[cfg(feature = "stage2-hpa-evidence")]
-pub(crate) mod stage2_evidence;
 pub use memory::PreparedMemoryLayout;
 
-pub(crate) const VM_ASPACE_BASE: usize = 0x0;
-pub(crate) const VM_ASPACE_SIZE: usize = 0x7fff_ffff_f000;
+const VM_ASPACE_BASE: usize = 0x0;
+const VM_ASPACE_SIZE: usize = 0x7fff_ffff_f000;
 
 /// A vCPU with architecture-independent interface.
 type VCpu = AxVCpu<crate::arch::ArchVCpu>;
@@ -65,6 +54,48 @@ type VCpu = AxVCpu<crate::arch::ArchVCpu>;
 pub(crate) type AxVCpuRef<A = crate::arch::ArchVCpu> = Arc<AxVCpu<A>>;
 /// A reference to a VM.
 pub type AxVMRef = Arc<AxVM>;
+
+pub(crate) struct VmDmaAccess<'a> {
+    vm: &'a AxVM,
+}
+
+impl<'a> VmDmaAccess<'a> {
+    pub(crate) const fn new(vm: &'a AxVM) -> Self {
+        Self { vm }
+    }
+}
+
+impl DeviceAccess for VmDmaAccess<'_> {
+    fn device_id(&self) -> DeviceId {
+        DeviceId::new(0)
+    }
+    fn read_guest_memory(
+        &mut self,
+        _grant: &DmaGrant,
+        addr: GuestPhysAddr,
+        data: &mut [u8],
+    ) -> DeviceResult {
+        self.vm
+            .read_from_guest(addr, data)
+            .map_err(|error| axdevice_base::DeviceError::Backend {
+                operation: "read guest memory for DMA",
+                detail: std::format!("{error}"),
+            })
+    }
+    fn write_guest_memory(
+        &mut self,
+        _grant: &DmaGrant,
+        addr: GuestPhysAddr,
+        data: &[u8],
+    ) -> DeviceResult {
+        self.vm
+            .write_to_guest(addr, data)
+            .map_err(|error| axdevice_base::DeviceError::Backend {
+                operation: "write guest memory for DMA",
+                detail: std::format!("{error}"),
+            })
+    }
+}
 
 /// Architecture-independent vCPU runtime metadata.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -128,10 +159,11 @@ pub(crate) struct AxVMResources {
     config: AxVMConfig,
     phys_cpu_ls: PhysCpuList,
     vcpu_list: Option<Box<[AxVCpuRef]>>,
-    devices: Option<Arc<AxVmDevices>>,
-    interrupt_fabric: Option<InterruptFabric>,
+    devices: Option<Arc<DeviceRuntime>>,
+    interrupt_controller: Option<Arc<dyn axdevice_base::VirtualInterruptController>>,
     address_layout: Option<VmAddressLayout>,
     boot_description: GuestBootDescription,
+    device_plan: crate::arch::ArchVmPlan,
 }
 
 unsafe impl Send for AxVMResources {}
@@ -147,50 +179,145 @@ pub(crate) enum PendingInterrupt {
 /// Runtime-only resources owned by Running/Paused/Stopping lifecycle states.
 pub(crate) struct VmRuntimeHandle {
     wait_queue: crate::WaitQueue,
+    notification_generation: AtomicUsize,
     vcpu_task_list: Mutex<BTreeMap<usize, crate::AxTaskRef>>,
+    cpu_on_start_acks: StdMutex<BTreeMap<usize, Arc<crate::runtime::vcpus::CpuOnStartAck>>>,
+    cpu_off_exit_reservations: StdMutex<BTreeSet<usize>>,
     pending_interrupts: Mutex<BTreeMap<usize, Vec<PendingInterrupt>>>,
+    irq_dispatcher: crate::runtime::VcpuIrqDispatcher,
+    device_poll_requested: AtomicBool,
     running_halting_vcpu_count: AtomicUsize,
+    lifecycle_error: StdMutex<Option<AxVmError>>,
+    deferred_reset_requested: AtomicBool,
+}
+
+#[cfg(any(target_arch = "aarch64", test))]
+pub(crate) struct VcpuEventWaitSnapshot {
+    notification_generation: usize,
+}
+
+#[cfg(any(target_arch = "aarch64", test))]
+pub(crate) fn wait_for_vcpu_event_if_idle(
+    runtime: &VmRuntimeHandle,
+    wait_snapshot: &VcpuEventWaitSnapshot,
+    vm_running: impl Fn() -> bool,
+    wait_until: impl FnOnce(&dyn Fn() -> bool),
+) {
+    let wake_condition = || !vm_running() || wait_snapshot.has_pending_event(runtime);
+    if wake_condition() {
+        return;
+    }
+    wait_until(&wake_condition);
+}
+
+pub(crate) fn dispatch_vcpu_interrupt_with(
+    enqueue: impl FnOnce() -> AxVmResult<usize>,
+    notify: impl FnOnce(),
+    send_ipi: impl FnOnce(usize),
+) -> AxVmResult {
+    let pcpu_id = enqueue()?;
+    notify();
+    send_ipi(pcpu_id);
+    Ok(())
+}
+
+fn pulse_interrupt_with_snapshot(
+    snapshot: impl FnOnce() -> AxVmResult<Arc<dyn axdevice_base::VirtualInterruptController>>,
+    irq_id: usize,
+) -> AxVmResult {
+    use axdevice_base::{ControllerInputId, InterruptTriggerMode};
+
+    snapshot()?
+        .wired_input(
+            ControllerInputId::new(irq_id),
+            InterruptTriggerMode::EdgeTriggered,
+        )?
+        .connect()?
+        .pulse()?;
+    Ok(())
 }
 
 impl VmRuntimeHandle {
     pub(crate) fn new() -> Self {
         Self {
             wait_queue: crate::WaitQueue::new(),
+            notification_generation: AtomicUsize::new(0),
             vcpu_task_list: Mutex::new(BTreeMap::new()),
+            cpu_on_start_acks: StdMutex::new(BTreeMap::new()),
+            cpu_off_exit_reservations: StdMutex::new(BTreeSet::new()),
             pending_interrupts: Mutex::new(BTreeMap::new()),
+            irq_dispatcher: crate::runtime::VcpuIrqDispatcher::new(),
+            device_poll_requested: AtomicBool::new(false),
             running_halting_vcpu_count: AtomicUsize::new(0),
+            lifecycle_error: StdMutex::new(None),
+            deferred_reset_requested: AtomicBool::new(false),
         }
     }
 
-    pub(crate) fn add_vcpu_task(&self, vcpu_id: usize, vcpu_task: crate::AxTaskRef) {
-        self.vcpu_task_list.lock().insert(vcpu_id, vcpu_task);
+    #[allow(dead_code)]
+    pub(crate) fn has_vcpu_task(&self, vcpu_id: usize) -> bool {
+        self.vcpu_task_list.lock().contains_key(&vcpu_id)
+    }
+
+    pub(crate) fn add_vcpu_task(&self, vcpu_id: usize, vcpu_task: crate::AxTaskRef) -> AxVmResult {
+        let mut vcpu_task_list = self.vcpu_task_list.lock();
+        if vcpu_task_list.contains_key(&vcpu_id) {
+            return ax_err!(BadState, format!("vCPU {vcpu_id} task already exists"));
+        }
+
+        self.irq_dispatcher
+            .register_vcpu_task(vcpu_id, vcpu_task.clone());
+        vcpu_task_list.insert(vcpu_id, vcpu_task);
+        drop(vcpu_task_list);
+
         self.pending_interrupts.lock().entry(vcpu_id).or_default();
+        Ok(())
     }
 
-    pub(crate) fn queue_interrupt(&self, vcpu_id: usize, vector: usize) -> AxVmResult<usize> {
-        let task = self
-            .vcpu_task_list
-            .lock()
-            .get(&vcpu_id)
-            .cloned()
-            .ok_or_else(|| ax_err_type!(NotFound, format!("vCPU {vcpu_id} task not found")))?;
-        self.pending_interrupts
-            .lock()
-            .entry(vcpu_id)
-            .or_default()
-            .push(PendingInterrupt::Normal(vector));
-        Ok(task.cpu_id() as usize)
-    }
-
-    #[expect(
-        dead_code,
-        reason = "only the LoongArch IRQ backend queues physical interrupts"
-    )]
-    pub(crate) fn queue_external_interrupt(
+    pub(crate) fn remove_cpu_on_start_ack(
         &self,
         vcpu_id: usize,
-        vector: usize,
-        physical_irq: usize,
+    ) -> Option<Arc<crate::runtime::vcpus::CpuOnStartAck>> {
+        self.cpu_on_start_acks.lock_unpoisoned().remove(&vcpu_id)
+    }
+
+    pub(crate) fn remove_vcpu_task(&self, vcpu_id: usize) -> Option<crate::AxTaskRef> {
+        self.pending_interrupts.lock().remove(&vcpu_id);
+        self.irq_dispatcher.unregister_vcpu_task(vcpu_id);
+        self.vcpu_task_list.lock().remove(&vcpu_id)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn insert_cpu_on_start_ack(
+        &self,
+        vcpu_id: usize,
+        ack: Arc<crate::runtime::vcpus::CpuOnStartAck>,
+    ) -> AxVmResult {
+        let mut acks = self.cpu_on_start_acks.lock_unpoisoned();
+        if acks.contains_key(&vcpu_id) {
+            return ax_err!(
+                AlreadyExists,
+                format!("vCPU {vcpu_id} CPU_ON ack already exists")
+            );
+        }
+        acks.insert(vcpu_id, ack);
+        Ok(())
+    }
+
+    pub(crate) fn cpu_on_start_ack(
+        &self,
+        vcpu_id: usize,
+    ) -> Option<Arc<crate::runtime::vcpus::CpuOnStartAck>> {
+        self.cpu_on_start_acks
+            .lock_unpoisoned()
+            .get(&vcpu_id)
+            .cloned()
+    }
+
+    pub(crate) fn queue_pending_interrupt(
+        &self,
+        vcpu_id: usize,
+        interrupt: PendingInterrupt,
     ) -> AxVmResult<usize> {
         let task = self
             .vcpu_task_list
@@ -198,22 +325,62 @@ impl VmRuntimeHandle {
             .get(&vcpu_id)
             .cloned()
             .ok_or_else(|| ax_err_type!(NotFound, format!("vCPU {vcpu_id} task not found")))?;
+        self.queue_pending_interrupt_for_cpu(vcpu_id, task.cpu_id() as usize, interrupt)
+    }
+
+    pub(crate) fn queue_pending_interrupt_for_cpu(
+        &self,
+        vcpu_id: usize,
+        cpu_id: usize,
+        interrupt: PendingInterrupt,
+    ) -> AxVmResult<usize> {
         self.pending_interrupts
             .lock()
             .entry(vcpu_id)
             .or_default()
-            .push(PendingInterrupt::External {
-                vector,
-                physical_irq,
-            });
-        Ok(task.cpu_id() as usize)
+            .push(interrupt);
+        Ok(cpu_id)
+    }
+
+    pub(crate) fn vcpu_cpu_id(&self, vcpu_id: usize) -> AxVmResult<usize> {
+        self.vcpu_task_list
+            .lock()
+            .get(&vcpu_id)
+            .map(|task| task.cpu_id() as usize)
+            .ok_or_else(|| ax_err_type!(NotFound, format!("vCPU {vcpu_id} task not found")))
+    }
+
+    /// New delivery path: enqueue → notify → host IPI.
+    ///
+    /// The dispatcher releases its queue lock before this method notifies
+    /// waiters or invokes the host IPI boundary.
+    #[cfg_attr(
+        not(target_arch = "riscv64"),
+        expect(dead_code, reason = "currently consumed by the RISC-V IPI router")
+    )]
+    pub(crate) fn dispatch_vcpu_interrupt(
+        &self,
+        vcpu_id: usize,
+        interrupt: PendingVcpuInterrupt,
+    ) -> AxVmResult {
+        dispatch_vcpu_interrupt_with(
+            || self.irq_dispatcher.enqueue(vcpu_id, interrupt),
+            || self.notify_all(),
+            crate::host::task::send_ipi,
+        )
+    }
+
+    /// Called by the vCPU run loop to drain pending interrupts before
+    /// entering the guest.
+    pub(crate) fn irq_dispatcher(&self) -> &VcpuIrqDispatcher {
+        &self.irq_dispatcher
     }
 
     pub(crate) fn drain_pending_interrupts(&self, vcpu_id: usize) -> Vec<PendingInterrupt> {
         self.pending_interrupts
             .lock()
             .get_mut(&vcpu_id)
-            .map(core::mem::take)
+            .map(std::mem::take)
             .unwrap_or_default()
     }
 
@@ -225,17 +392,51 @@ impl VmRuntimeHandle {
         self.wait_queue.wait_until(condition);
     }
 
+    #[cfg(any(target_arch = "aarch64", test))]
+    pub(crate) fn notification_generation(&self) -> usize {
+        self.notification_generation.load(Ordering::Acquire)
+    }
+
+    #[cfg(any(target_arch = "aarch64", test))]
+    pub(crate) fn vcpu_event_wait_snapshot(&self) -> VcpuEventWaitSnapshot {
+        VcpuEventWaitSnapshot {
+            notification_generation: self.notification_generation(),
+        }
+    }
+
     pub(crate) fn notify_one(&self) {
+        self.notification_generation.fetch_add(1, Ordering::Release);
         self.wait_queue.notify_one(false);
     }
 
     pub(crate) fn notify_all(&self) {
+        self.notification_generation.fetch_add(1, Ordering::Release);
         self.wait_queue.notify_all(false);
+    }
+
+    /// Publishes pending device work before waking the primary vCPU.
+    pub(crate) fn notify_device_poll(&self) {
+        self.device_poll_requested.store(true, Ordering::Release);
+        self.notify_one();
+    }
+
+    #[cfg(any(target_arch = "aarch64", test))]
+    pub(crate) fn device_poll_requested(&self) -> bool {
+        self.device_poll_requested.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn take_device_poll_request(&self) -> bool {
+        self.device_poll_requested.swap(false, Ordering::AcqRel)
     }
 
     pub(crate) fn mark_vcpu_running(&self) {
         self.running_halting_vcpu_count
             .fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn publish_cpu_on_start_success(&self, ack: &crate::runtime::vcpus::CpuOnStartAck) {
+        self.mark_vcpu_running();
+        ack.complete(Ok(()));
     }
 
     pub(crate) fn mark_vcpu_exiting(&self) -> bool {
@@ -246,7 +447,51 @@ impl VmRuntimeHandle {
             == Ok(1)
     }
 
-    pub(crate) fn join_all_vcpu_tasks(&self, vm_id: usize) {
+    pub(crate) fn record_lifecycle_error(&self, error: AxVmError) {
+        let mut recorded = self.lifecycle_error.lock_unpoisoned();
+        if recorded.is_none() {
+            *recorded = Some(error);
+        }
+    }
+
+    fn take_lifecycle_error(&self) -> Option<AxVmError> {
+        self.lifecycle_error.lock_unpoisoned().take()
+    }
+
+    pub(crate) fn request_deferred_reset(&self) -> bool {
+        !self.deferred_reset_requested.swap(true, Ordering::AcqRel)
+    }
+
+    pub(crate) fn take_deferred_reset_request(&self) -> bool {
+        self.deferred_reset_requested.swap(false, Ordering::AcqRel)
+    }
+
+    pub(crate) fn try_reserve_cpu_off(&self, vcpu_id: usize) -> bool {
+        let reserved = self
+            .running_halting_vcpu_count
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |count| {
+                (count > 1).then_some(count - 1)
+            })
+            .is_ok();
+
+        if reserved {
+            self.cpu_off_exit_reservations
+                .lock_unpoisoned()
+                .insert(vcpu_id);
+        }
+        reserved
+    }
+
+    pub(crate) fn consume_cpu_off_reservation(&self, vcpu_id: usize) -> bool {
+        self.cpu_off_exit_reservations
+            .lock_unpoisoned()
+            .remove(&vcpu_id)
+    }
+
+    pub(crate) fn join_all_vcpu_tasks(&self, vm_id: usize) -> AxVmResult {
+        if self.vcpu_task_list.lock().is_empty() {
+            return self.take_lifecycle_error().map_or(Ok(()), Err);
+        }
         let current = crate::host::task::current_task();
         let tasks: Vec<_> = self
             .vcpu_task_list
@@ -268,6 +513,99 @@ impl VmRuntimeHandle {
             debug!("VM[{vm_id}] VCpu task[{idx}] exited with code: {exit_code}");
         }
         info!("VM[{vm_id}] VCpu resources cleaned up, {task_count} VCpu tasks joined");
+        self.take_lifecycle_error().map_or(Ok(()), Err)
+    }
+}
+
+#[cfg(any(target_arch = "aarch64", test))]
+impl VcpuEventWaitSnapshot {
+    pub(crate) fn has_pending_event(&self, runtime: &VmRuntimeHandle) -> bool {
+        runtime.device_poll_requested()
+            || runtime.notification_generation() != self.notification_generation
+    }
+}
+
+#[cfg(all(test, feature = "host-test"))]
+mod runtime_handle_tests {
+
+    #[test]
+    fn runtime_cpu_on_success_publishes_online_count_before_ack() {
+        let runtime = VmRuntimeHandle::new();
+        let ack = crate::runtime::vcpus::CpuOnStartAck::new();
+
+        runtime.mark_vcpu_running();
+        assert!(ack.begin_startup());
+
+        runtime.publish_cpu_on_start_success(&ack);
+
+        assert!(ack.is_complete());
+        assert!(runtime.try_reserve_cpu_off(0));
+    }
+
+    #[test]
+    fn runtime_cpu_on_ack_rejects_duplicate_and_can_be_removed() {
+        let runtime = VmRuntimeHandle::new();
+        let first = Arc::new(crate::runtime::vcpus::CpuOnStartAck::new());
+        let second = Arc::new(crate::runtime::vcpus::CpuOnStartAck::new());
+
+        assert!(runtime.insert_cpu_on_start_ack(1, first.clone()).is_ok());
+        assert!(runtime.insert_cpu_on_start_ack(1, second).is_err());
+
+        let stored = runtime.cpu_on_start_ack(1).unwrap();
+        assert!(Arc::ptr_eq(&stored, &first));
+
+        assert!(runtime.remove_cpu_on_start_ack(1).is_some());
+        assert!(runtime.cpu_on_start_ack(1).is_none());
+    }
+
+    #[test]
+    fn runtime_deferred_reset_request_is_single_consumer() {
+        let runtime = VmRuntimeHandle::new();
+
+        assert!(!runtime.take_deferred_reset_request());
+        assert!(runtime.request_deferred_reset());
+        assert!(!runtime.request_deferred_reset());
+        assert!(runtime.take_deferred_reset_request());
+        assert!(!runtime.take_deferred_reset_request());
+        assert!(runtime.request_deferred_reset());
+    }
+
+    #[test]
+    fn runtime_cpu_off_reservation_rejects_second_parallel_last_vcpu() {
+        let runtime = VmRuntimeHandle::new();
+
+        runtime.mark_vcpu_running();
+        runtime.mark_vcpu_running();
+
+        assert!(runtime.try_reserve_cpu_off(0));
+        assert!(!runtime.try_reserve_cpu_off(1));
+
+        assert!(runtime.consume_cpu_off_reservation(0));
+        assert!(!runtime.consume_cpu_off_reservation(0));
+
+        assert!(runtime.mark_vcpu_exiting());
+    }
+
+    use super::*;
+
+    #[test]
+    fn remove_vcpu_task_clears_pending_interrupts_and_dispatcher_registration() {
+        let runtime = VmRuntimeHandle::new();
+
+        runtime.pending_interrupts.lock().entry(3).or_default();
+        runtime.irq_dispatcher.register_test_vcpu(3, 11);
+
+        assert!(runtime.pending_interrupts.lock().contains_key(&3));
+        assert_eq!(runtime.irq_dispatcher.test_lookup_cpu_id(3).unwrap(), 11);
+
+        runtime.remove_vcpu_task(3);
+
+        assert!(!runtime.pending_interrupts.lock().contains_key(&3));
+        assert!(runtime.irq_dispatcher.test_lookup_cpu_id(3).is_err());
+
+        runtime.remove_vcpu_task(3);
+        assert!(!runtime.pending_interrupts.lock().contains_key(&3));
+        assert!(runtime.irq_dispatcher.test_lookup_cpu_id(3).is_err());
     }
 }
 
@@ -275,6 +613,7 @@ impl AxVMResources {
     pub(crate) fn from_page_table(
         config: AxVMConfig,
         page_table: ArchNestedPageTable,
+        device_plan: crate::arch::ArchVmPlan,
         build_nested_paging: impl FnOnce(HostPhysAddr) -> AxVmResult<NestedPagingConfig>,
     ) -> AxVmResult<Self> {
         let address_space = AddrSpace::new_empty(
@@ -292,14 +631,27 @@ impl AxVMResources {
             phys_cpu_ls: PhysCpuList::default(),
             vcpu_list: None,
             devices: None,
-            interrupt_fabric: None,
+            interrupt_controller: None,
             address_layout: None,
             boot_description: GuestBootDescription::none(),
+            device_plan,
         })
     }
 
+    #[cfg(not(target_arch = "x86_64"))]
     pub(crate) const fn config(&self) -> &AxVMConfig {
         &self.config
+    }
+
+    pub(crate) fn planned_devices(&self) -> &crate::vm::prepare::device_plan::VmDevicePlan {
+        use crate::vm::prepare::device_plan::ArchitectureVmPlan;
+
+        self.device_plan.devices()
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    pub(crate) const fn architecture_plan(&self) -> &crate::arch::ArchVmPlan {
+        &self.device_plan
     }
 
     fn vcpu_list(&self) -> AxVmResult<&[AxVCpuRef]> {
@@ -308,20 +660,27 @@ impl AxVMResources {
             .ok_or_else(|| ax_err_type!(BadState, "VM vCPU resources are not prepared"))
     }
 
-    fn devices(&self) -> AxVmResult<Arc<AxVmDevices>> {
+    fn devices(&self) -> AxVmResult<Arc<DeviceRuntime>> {
         self.devices
             .clone()
             .ok_or_else(|| ax_err_type!(BadState, "VM devices are not prepared"))
     }
 
-    fn interrupt_fabric(&self) -> AxVmResult<&InterruptFabric> {
-        self.interrupt_fabric
+    fn interrupt_controller(
+        &self,
+    ) -> AxVmResult<&Arc<dyn axdevice_base::VirtualInterruptController>> {
+        self.interrupt_controller
             .as_ref()
-            .ok_or_else(|| ax_err_type!(BadState, "VM interrupt fabric is not prepared"))
+            .ok_or_else(|| ax_err_type!(BadState, "VM interrupt controller is not prepared"))
     }
 
     fn reset_transient_resources(&mut self) -> AxVmResult {
-        self.release_devices();
+        self.teardown_ivc_bindings()?;
+        if let Some(devices) = self.devices.take() {
+            devices
+                .reset_lifecycle_devices()
+                .map_err(|error| AxVmError::device("reset device lifecycle", error))?;
+        }
         let memory_regions = self.memory_regions.clone();
         self.address_space.clear();
         for region in &memory_regions {
@@ -340,36 +699,304 @@ impl AxVMResources {
                 })?;
         }
         self.vcpu_list = None;
-        self.interrupt_fabric = None;
+        self.interrupt_controller = None;
         self.address_layout = None;
         Ok(())
     }
 
-    fn release_devices(&mut self) {
-        if let Some(devices) = self.devices.take() {
-            crate::arch::release_vm_devices(&devices);
-        }
+    fn teardown_ivc_bindings(&mut self) -> AxVmResult {
+        let vm_id = self.config.id();
+        let teardowns = crate::runtime::ivc::teardown_vm(vm_id);
+        release_ivc_teardowns(vm_id, teardowns, self)
     }
 }
 
-struct PendingFwCfg {
-    base: GuestPhysAddr,
-    size: usize,
-    kernel: &'static [u8],
-    initrd: Option<&'static [u8]>,
-    cmdline: Option<String>,
-    cpu_num: u16,
-    platform: FwCfgPlatformConfig,
+trait IvcGuestBindingRelease {
+    fn unmap_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult;
+
+    fn release_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult;
+}
+
+impl IvcGuestBindingRelease for AxVMResources {
+    fn unmap_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult {
+        self.address_space
+            .unmap(binding.gpa, binding.size)
+            .map_err(|error| AxVmError::from_addrspace("unmap IVC binding", error))
+    }
+
+    fn release_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult {
+        if let Some(devices) = &self.devices {
+            crate::runtime::ivc::release_guest_binding(devices, binding.gpa, binding.size)
+                .map_err(|error| {
+                    AxVmError::device("release IVC binding during lifecycle cleanup", error)
+                })?;
+        }
+        Ok(())
+    }
+}
+
+impl IvcGuestBindingRelease for &AxVM {
+    fn unmap_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult {
+        self.unmap_region(binding.gpa, binding.size)
+    }
+
+    fn release_ivc_guest_binding(
+        &mut self,
+        binding: crate::runtime::ivc::IvcGuestBinding,
+    ) -> AxVmResult {
+        self.release_ivc_channel(binding.gpa, binding.size)
+    }
+}
+
+fn release_ivc_teardowns(
+    vm_id: usize,
+    teardowns: Vec<crate::runtime::ivc::IvcTeardown>,
+    release: &mut impl IvcGuestBindingRelease,
+) -> AxVmResult {
+    for teardown in teardowns {
+        let binding = teardown.binding();
+        if release_one_ivc_guest_binding(vm_id, binding, release) {
+            teardown.commit();
+        }
+    }
+    Ok(())
+}
+
+fn release_one_ivc_guest_binding(
+    vm_id: usize,
+    binding: crate::runtime::ivc::IvcGuestBinding,
+    release: &mut impl IvcGuestBindingRelease,
+) -> bool {
+    if let Err(err) = release.unmap_ivc_guest_binding(binding) {
+        warn!(
+            "VM[{}] failed to unmap IVC binding at GPA={:#x}: {err:?}",
+            vm_id,
+            binding.gpa.as_usize()
+        );
+        return false;
+    }
+    if let Err(err) = release.release_ivc_guest_binding(binding) {
+        warn!(
+            "VM[{}] failed to release IVC binding at GPA={:#x}: {err:?}",
+            vm_id,
+            binding.gpa.as_usize()
+        );
+        return false;
+    }
+    true
+}
+
+pub(crate) fn release_ivc_teardown_for_vm(
+    vm_id: usize,
+    teardown: crate::runtime::ivc::IvcTeardown,
+    vm: &AxVM,
+) -> bool {
+    let binding = teardown.binding();
+    let mut release = vm;
+    let released = release_one_ivc_guest_binding(vm_id, binding, &mut release);
+    if released {
+        teardown.commit();
+    }
+    released
+}
+#[cfg(test)]
+mod ivc_lifecycle_tests {
+    use std::vec::Vec;
+
+    use super::*;
+
+    #[derive(Default)]
+    struct RecordingIvcBindingRelease {
+        events: Vec<String>,
+        fail_release: bool,
+    }
+
+    impl IvcGuestBindingRelease for RecordingIvcBindingRelease {
+        fn unmap_ivc_guest_binding(
+            &mut self,
+            binding: crate::runtime::ivc::IvcGuestBinding,
+        ) -> AxVmResult {
+            self.events
+                .push(format!("unmap:{:#x}", binding.gpa.as_usize()));
+            Ok(())
+        }
+
+        fn release_ivc_guest_binding(
+            &mut self,
+            binding: crate::runtime::ivc::IvcGuestBinding,
+        ) -> AxVmResult {
+            self.events
+                .push(format!("release:{:#x}", binding.gpa.as_usize()));
+            if self.fail_release {
+                Err(AxVmError::device("release test IVC binding", "injected"))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn ivc_lifecycle_cleanup_unmaps_before_releasing_aperture_range() {
+        let mut release = RecordingIvcBindingRelease::default();
+
+        assert!(release_one_ivc_guest_binding(
+            1,
+            crate::runtime::ivc::IvcGuestBinding {
+                gpa: GuestPhysAddr::from_usize(0x7000_0000),
+                size: 0x1000,
+            },
+            &mut release
+        ));
+        assert!(release_one_ivc_guest_binding(
+            1,
+            crate::runtime::ivc::IvcGuestBinding {
+                gpa: GuestPhysAddr::from_usize(0x7000_1000),
+                size: 0x1000,
+            },
+            &mut release
+        ));
+
+        assert_eq!(
+            release.events,
+            [
+                "unmap:0x70000000",
+                "release:0x70000000",
+                "unmap:0x70001000",
+                "release:0x70001000"
+            ]
+        );
+    }
+
+    #[test]
+    fn ivc_lifecycle_cleanup_does_not_commit_after_release_failure() {
+        let mut release = RecordingIvcBindingRelease {
+            fail_release: true,
+            ..Default::default()
+        };
+
+        assert!(!release_one_ivc_guest_binding(
+            2,
+            crate::runtime::ivc::IvcGuestBinding {
+                gpa: GuestPhysAddr::from_usize(0x7100_0000),
+                size: 0x1000,
+            },
+            &mut release
+        ));
+
+        assert_eq!(release.events, ["unmap:0x71000000", "release:0x71000000"]);
+    }
 }
 
 pub struct FwCfgDeviceConfig {
     pub base: GuestPhysAddr,
     pub size: usize,
-    pub kernel: &'static [u8],
-    pub initrd: Option<&'static [u8]>,
+    pub kernel: FwCfgKernelPayload,
+    pub initrd: Option<Arc<[u8]>>,
     pub cmdline: Option<String>,
     pub cpu_num: u16,
     pub platform: FwCfgPlatformConfig,
+}
+
+#[derive(Clone)]
+struct AxVmDeviceAccessPorts {
+    vm_id: usize,
+}
+
+impl AxVmDeviceAccessPorts {
+    const fn new(vm_id: usize) -> Self {
+        Self { vm_id }
+    }
+
+    fn into_ports(self) -> RuntimeAccessPorts {
+        let this = Arc::new(self);
+        RuntimeAccessPorts::new()
+            .with_timer(this.clone())
+            .with_wake(this.clone())
+            .with_stop(this)
+    }
+
+    fn vm(&self, operation: &'static str) -> axdevice::DeviceManagerResult<AxVMRef> {
+        crate::get_vm_by_id(self.vm_id).ok_or_else(|| {
+            axdevice::DeviceManagerError::ResourceNotFound {
+                operation,
+                resource: format!("VM[{}]", self.vm_id),
+            }
+        })
+    }
+}
+
+impl TimerAccessPort for AxVmDeviceAccessPorts {
+    fn schedule_timer(
+        &self,
+        device_id: DeviceId,
+        deadline_ns: u64,
+    ) -> axdevice::DeviceManagerResult {
+        let vm_id = self.vm_id;
+        trace!(
+            "VM[{vm_id}] device {device_id:?} scheduled access-scoped timer at {deadline_ns:#x} ns"
+        );
+        crate::timer::register_timer(
+            deadline_ns,
+            Box::new(move |_| crate::runtime::vcpus::notify_all_vcpus(vm_id)),
+        );
+        Ok(())
+    }
+}
+
+impl WakeAccessPort for AxVmDeviceAccessPorts {
+    fn wake_vcpu(&self, device_id: DeviceId, vcpu_id: usize) -> axdevice::DeviceManagerResult {
+        let vm = self.vm("wake vCPU from device access")?;
+        if vm.vcpu(vcpu_id).is_none() {
+            return Err(axdevice::DeviceManagerError::InvalidInput {
+                operation: "wake vCPU from device access",
+                detail: format!(
+                    "device {device_id:?} requested nonexistent VM[{}] vCPU {}",
+                    self.vm_id, vcpu_id
+                ),
+            });
+        }
+        vm.with_runtime(|runtime| {
+            runtime.notify_all();
+            Ok(())
+        })
+        .map_err(|error| axdevice::DeviceManagerError::InvalidState {
+            operation: "wake vCPU from device access",
+            detail: format!("{error}"),
+        })
+    }
+}
+
+impl StopAccessPort for AxVmDeviceAccessPorts {
+    fn request_vm_stop(&self, device_id: DeviceId, reason: &str) -> axdevice::DeviceManagerResult {
+        let vm = self.vm("request VM stop from device access")?;
+        vm.stop(StopReason::Fault(format!(
+            "device {device_id:?} requested VM stop: {reason}"
+        )))
+        .map_err(|error| axdevice::DeviceManagerError::InvalidState {
+            operation: "request VM stop from device access",
+            detail: format!("{error}"),
+        })?;
+        if let Ok(()) = vm.with_runtime(|runtime| {
+            runtime.notify_all();
+            Ok(())
+        }) {}
+        Ok(())
+    }
 }
 
 /// Represents a memory region in a virtual machine.
@@ -409,12 +1036,7 @@ pub struct AxVM {
     id: usize,
     name: String,
     machine: Mutex<Machine<AxVMResources, Arc<VmRuntimeHandle>>>,
-    pending_fw_cfg: Mutex<Option<PendingFwCfg>>,
-    physical_resource_lease: PhysicalResourceLease,
-    #[cfg(feature = "stage2-hpa-evidence")]
-    stage2_hpa_marker_emitted: core::sync::atomic::AtomicBool,
-    #[cfg(feature = "stage2-hpa-evidence")]
-    stage2_hpa_failure_reported: core::sync::atomic::AtomicBool,
+    fw_cfg_payload: Arc<FwCfgPayloadSlot>,
 }
 
 impl AxVM {
@@ -429,18 +1051,14 @@ impl AxVM {
     pub fn new(config: AxVMConfig) -> AxVmResult<AxVMRef> {
         let id = config.id();
         let name = config.name();
-        let physical_resource_lease = PhysicalResourceLease::acquire(&config)?;
-        let resources = crate::arch::CurrentArch::create_vm_resources(config)?;
+        let fw_cfg_payload = Arc::new(FwCfgPayloadSlot::new());
+        let resources =
+            crate::arch::CurrentArch::create_vm_resources(config, fw_cfg_payload.clone())?;
         let result = Arc::new(Self {
             id,
             name,
             machine: Mutex::new(Machine::Ready(resources)),
-            pending_fw_cfg: Mutex::new(None),
-            physical_resource_lease,
-            #[cfg(feature = "stage2-hpa-evidence")]
-            stage2_hpa_marker_emitted: core::sync::atomic::AtomicBool::new(false),
-            #[cfg(feature = "stage2-hpa-evidence")]
-            stage2_hpa_failure_reported: core::sync::atomic::AtomicBool::new(false),
+            fw_cfg_payload,
         });
 
         info!("VM created: id={}", result.id());
@@ -454,25 +1072,6 @@ impl AxVM {
         self.id
     }
 
-    #[cfg(feature = "stage2-hpa-evidence")]
-    pub(crate) fn stage2_hpa_marker_emitted(&self) -> bool {
-        self.stage2_hpa_marker_emitted.load(Ordering::Acquire)
-    }
-
-    #[cfg(feature = "stage2-hpa-evidence")]
-    pub(crate) fn mark_stage2_hpa_marker_emitted(&self) -> bool {
-        self.stage2_hpa_marker_emitted
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
-    }
-
-    #[cfg(feature = "stage2-hpa-evidence")]
-    pub(crate) fn mark_stage2_hpa_failure_reported(&self) -> bool {
-        self.stage2_hpa_failure_reported
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
-    }
-
     /// Returns the configured VM name.
     pub fn name(&self) -> String {
         self.name.clone()
@@ -483,10 +1082,10 @@ impl AxVM {
         self.machine.lock().status()
     }
 
-    /// Returns the configured VM interrupt mode.
-    pub fn interrupt_mode(&self) -> VMInterruptMode {
-        self.with_resources(|resources| Ok(resources.config.interrupt_mode()))
-            .unwrap_or(VMInterruptMode::NoIrq)
+    /// Returns whether the guest address space starts from host identity mappings.
+    pub fn uses_passthrough_address_space(&self) -> bool {
+        self.with_resources(|resources| Ok(resources.config.uses_passthrough_address_space()))
+            .unwrap_or(false)
     }
 
     fn with_resources<F, R>(&self, f: F) -> AxVmResult<R>
@@ -511,6 +1110,28 @@ impl AxVM {
         f(resources)
     }
 
+    /// Snapshots the interrupt backend while validating the VM lifecycle state.
+    ///
+    /// The snapshot pins only the backend capability. A lifecycle change after
+    /// this method returns is observed by the sender when it resolves the
+    /// current runtime.
+    fn interrupt_controller_snapshot(
+        &self,
+    ) -> AxVmResult<Arc<dyn axdevice_base::VirtualInterruptController>> {
+        let machine = self.machine.lock();
+        match machine.status() {
+            VmStatus::Running | VmStatus::Paused => machine
+                .resources()
+                .ok_or_else(|| ax_err_type!(BadState, "VM resources are not available"))?
+                .interrupt_controller()
+                .cloned(),
+            status => ax_err!(
+                BadState,
+                format!("VM[{}] cannot accept IRQ in {status:?}", self.id())
+            ),
+        }
+    }
+
     pub(crate) fn with_runtime<F, R>(&self, f: F) -> AxVmResult<R>
     where
         F: FnOnce(&Arc<VmRuntimeHandle>) -> AxVmResult<R>,
@@ -520,6 +1141,15 @@ impl AxVM {
             .runtime()
             .ok_or_else(|| ax_err_type!(BadState, "VM runtime is not available"))?;
         f(runtime)
+    }
+
+    #[cfg_attr(
+        not(target_arch = "riscv64"),
+        expect(dead_code, reason = "currently consumed by the RISC-V IPI router")
+    )]
+    pub(crate) fn current_interrupt_runtime(&self) -> AxVmResult<Arc<VmRuntimeHandle>> {
+        let machine = self.machine.lock();
+        Ok(machine.interrupt_runtime()?.clone())
     }
 
     fn take_stopped_runtime(&self) -> Option<Arc<VmRuntimeHandle>> {
@@ -564,31 +1194,32 @@ impl AxVM {
         self.with_resources(|resources| Ok(resources.address_space.page_table_root()))
     }
 
-    /// Borrows the VM configuration for read-only inspection.
+    /// Returns to the VM's configuration.
     pub fn with_config<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&AxVMConfig) -> R,
-    {
-        let machine = self.machine.lock();
-        let resources = machine
-            .resources()
-            .expect("VM resources are not available for config access");
-        f(&resources.config)
-    }
-
-    /// Mutably borrows boot-time configuration inside the AxVM crate.
-    ///
-    /// Callers must not change fields represented by the physical-resource
-    /// lease after [`Self::new`] has acquired it.
-    pub(crate) fn with_config_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut AxVMConfig) -> R,
     {
         let mut machine = self.machine.lock();
         let resources = machine
             .resources_mut()
-            .expect("VM resources are not available for mutable config access");
+            .expect("VM resources are not available for config access");
         f(&mut resources.config)
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    pub(crate) fn with_architecture_plan<F, R>(&self, f: F) -> AxVmResult<R>
+    where
+        F: FnOnce(&crate::arch::ArchVmPlan) -> AxVmResult<R>,
+    {
+        self.with_resources(|resources| f(resources.architecture_plan()))
+    }
+
+    /// Reads the immutable device graph resolved during architecture planning.
+    pub(crate) fn with_planned_device_graph<F, R>(&self, f: F) -> AxVmResult<R>
+    where
+        F: FnOnce(&axdevice::ResolvedDeviceGraph) -> AxVmResult<R>,
+    {
+        self.with_resources(|resources| f(resources.planned_devices().graph()))
     }
 
     /// Stores a guest DTB as VM-owned boot-description state.
@@ -602,32 +1233,13 @@ impl AxVM {
         })
     }
 
-    #[cfg(feature = "guest-fdt-evidence")]
-    #[allow(
-        dead_code,
-        reason = "AArch64 evidence stays host-compiled for feature audits"
-    )]
-    pub(crate) fn guest_dtb_hpa_segments(
-        &self,
-        load_gpa: GuestPhysAddr,
-        size: usize,
-    ) -> AxVmResult<Vec<crate::boot::fdt::evidence::HpaSegment>> {
-        fn map_query_error<E>(error: E) -> AxVmError
-        where
-            E: Into<axaddrspace::AddrSpaceError>,
-        {
-            AxVmError::from_addrspace("resolve guest DTB HPA segment", error.into())
-        }
-
-        self.with_resources(|resources| {
-            crate::boot::fdt::evidence::resolve_hpa_segments(load_gpa, size, |gpa| {
-                resources
-                    .address_space
-                    .page_table()
-                    .query(gpa)
-                    .map(|(hpa, ..)| hpa)
-                    .map_err(map_query_error)
-            })
+    /// Stores a directly installed guest ACPI image as VM-owned boot state.
+    pub fn set_guest_acpi_tables(&self, rsdp_gpa: GuestPhysAddr, bytes: Vec<u8>) -> AxVmResult {
+        self.with_resources_mut(|resources| {
+            resources
+                .boot_description
+                .set_acpi_tables(GuestAcpiTables::generated(rsdp_gpa, bytes));
+            Ok(())
         })
     }
 
@@ -659,8 +1271,9 @@ impl AxVM {
     pub fn start(self: &Arc<Self>) -> AxVmResult {
         if self.status() == VmStatus::Stopped {
             if let Some(runtime) = self.take_stopped_runtime() {
-                runtime.join_all_vcpu_tasks(self.id());
+                runtime.join_all_vcpu_tasks(self.id())?;
             }
+            crate::arch::CurrentArch::deactivate_devices(self)?;
             self.prepare()?;
         }
         info!("Starting VM[{}]", self.id());
@@ -670,7 +1283,7 @@ impl AxVM {
         let primary_task = crate::runtime::vcpus::build_vcpu_task(self, primary_vcpu);
         let runtime = Arc::new(VmRuntimeHandle::new());
 
-        self.machine.lock().start_with(|resources| {
+        self.with_resources(|resources| {
             resources
                 .vcpu_list()
                 .map_err(|error| AxVmError::resource_unavailable("vCPU list", error))?;
@@ -678,13 +1291,29 @@ impl AxVM {
                 .devices()
                 .map_err(|error| AxVmError::resource_unavailable("devices", error))?;
             resources
-                .interrupt_fabric()
-                .map_err(|error| AxVmError::resource_unavailable("interrupt fabric", error))?;
-            Ok(runtime.clone())
+                .interrupt_controller()
+                .map_err(|error| AxVmError::resource_unavailable("interrupt controller", error))?;
+            Ok(())
         })?;
 
-        let task = crate::host::task::spawn_task(primary_task);
-        runtime.add_vcpu_task(0, task);
+        crate::arch::CurrentArch::activate_devices(self)?;
+        let start_result = self
+            .machine
+            .lock()
+            .start_with(|_resources| Ok(runtime.clone()));
+        if let Err(error) = start_result {
+            return match crate::arch::CurrentArch::deactivate_devices(self) {
+                Ok(()) => Err(error),
+                Err(rollback) => Err(AxVmError::lifecycle_rollback("start VM", error, rollback)),
+            };
+        }
+
+        crate::runtime::vcpus::spawn_registered_vcpu_task(
+            self.id(),
+            0,
+            runtime.clone(),
+            primary_task,
+        );
         Ok(())
     }
 
@@ -710,12 +1339,34 @@ impl AxVM {
 
     /// Pauses a running VM.
     pub fn pause(&self) -> AxVmResult {
-        self.machine.lock().pause()
+        let mut machine = self.machine.lock();
+        if machine.status() != VmStatus::Running {
+            return machine.pause();
+        }
+        let devices = machine
+            .resources()
+            .expect("running VM must retain resources")
+            .devices()?;
+        devices
+            .suspend_lifecycle_devices()
+            .map_err(|error| AxVmError::device("suspend device lifecycle", error))?;
+        machine.pause()
     }
 
     /// Resumes a paused VM.
     pub fn resume(&self) -> AxVmResult {
-        self.machine.lock().resume()
+        let mut machine = self.machine.lock();
+        if machine.status() != VmStatus::Paused {
+            return machine.resume();
+        }
+        let devices = machine
+            .resources()
+            .expect("paused VM must retain resources")
+            .devices()?;
+        devices
+            .resume_lifecycle_devices()
+            .map_err(|error| AxVmError::device("resume device lifecycle", error))?;
+        machine.resume()
     }
 
     /// Requests a stop. Running vCPUs observe the Stopping state and exit.
@@ -725,7 +1376,12 @@ impl AxVM {
     }
 
     pub(crate) fn finish_stop(&self) -> AxVmResult {
-        self.machine.lock().finish_stop()
+        let mut machine = self.machine.lock();
+        machine.finish_stop()?;
+        if let Some(resources) = machine.resources_mut() {
+            resources.teardown_ivc_bindings()?;
+        }
+        Ok(())
     }
 
     fn wait_until_stopped(&self) -> AxVmResult {
@@ -777,9 +1433,9 @@ impl AxVM {
         }
 
         if let Some(runtime) = self.take_stopped_runtime() {
-            runtime.join_all_vcpu_tasks(self.id());
+            runtime.join_all_vcpu_tasks(self.id())?;
         }
-        Ok(())
+        crate::arch::CurrentArch::deactivate_devices(self)
     }
 
     /// Resets the VM by discarding runtime-only state, rebuilding vCPUs/devices,
@@ -798,21 +1454,13 @@ impl AxVM {
     }
 
     /// Returns this VM's emulated devices.
-    pub fn get_devices(&self) -> AxVmResult<Arc<AxVmDevices>> {
+    pub fn get_devices(&self) -> AxVmResult<Arc<DeviceRuntime>> {
         self.with_resources(|resources| resources.devices())
     }
 
-    /// Pulses a prepared VM interrupt fabric line without exposing the fabric.
+    /// Pulses a prepared VM interrupt-controller input without exposing it.
     pub fn pulse_interrupt(&self, irq_id: usize) -> AxVmResult {
-        match self.status() {
-            VmStatus::Running | VmStatus::Paused => {
-                self.with_resources(|resources| resources.interrupt_fabric()?.pulse(irq_id))
-            }
-            status => ax_err!(
-                BadState,
-                format!("VM[{}] cannot accept IRQ in {status:?}", self.id())
-            ),
-        }
+        pulse_interrupt_with_snapshot(|| self.interrupt_controller_snapshot(), irq_id)
     }
 
     /// Returns the number of prepared emulated devices.
@@ -824,14 +1472,11 @@ impl AxVM {
 
     /// Queue a QEMU fw_cfg device that will be attached during VM initialization.
     pub fn add_fw_cfg_device(&self, config: FwCfgDeviceConfig) -> AxVmResult {
-        let mut pending = self.pending_fw_cfg.lock();
-        if pending.is_some() {
-            return ax_err!(
-                AlreadyExists,
-                format!("VM[{}] fw_cfg device already exists", self.id())
-            );
-        }
-        *pending = Some(PendingFwCfg {
+        let base = config.base;
+        let size = config.size;
+        let kernel_size = config.kernel.total_len();
+        let initrd_size = config.initrd.as_ref().map(|data| data.len());
+        self.fw_cfg_payload.set(FwCfgPayloadConfig {
             base: config.base,
             size: config.size,
             kernel: config.kernel,
@@ -839,73 +1484,52 @@ impl AxVM {
             cmdline: config.cmdline,
             cpu_num: config.cpu_num,
             platform: config.platform,
-        });
+        })?;
         debug!(
             "VM[{}] queued fw_cfg device: base={:#x}, size={:#x}, kernel={} bytes, initrd={:?}",
             self.id(),
-            config.base.as_usize(),
-            config.size,
-            config.kernel.len(),
-            config.initrd.map(|data| data.len())
+            base.as_usize(),
+            size,
+            kernel_size,
+            initrd_size
         );
         Ok(())
     }
 
-    fn add_special_emulated_devices(&self, devices: &mut AxVmDevices) -> AxVmResult {
-        if let Some(pending) = self.pending_fw_cfg.lock().take() {
-            debug!(
-                "VM[{}] adding fw_cfg MMIO device at [{:#x},{:#x})",
-                self.id(),
-                pending.base.as_usize(),
-                pending.base.as_usize() + pending.size
-            );
-            devices.add_fw_cfg_dev(Arc::new(FwCfg::new(
-                pending.base,
-                pending.size,
-                pending.kernel,
-                pending.initrd,
-                pending.cmdline.as_deref(),
-                pending.cpu_num,
-                pending.platform,
-            )))?;
-        }
-        Ok(())
+    #[allow(dead_code)]
+    pub(crate) fn fw_cfg_payload(&self) -> Option<FwCfgPayloadConfig> {
+        self.fw_cfg_payload.get()
     }
 
-    pub(crate) fn handle_mmio_write(
+    /// Builds the runtime ports used by access-scoped device grants.
+    pub(crate) fn device_access_ports(&self) -> RuntimeAccessPorts {
+        AxVmDeviceAccessPorts::new(self.id()).into_ports()
+    }
+
+    pub(crate) fn try_handle_mmio_write(
         &self,
         addr: GuestPhysAddr,
         width: AccessWidth,
         data: usize,
-    ) -> AxVmResult {
+    ) -> AxVmResult<bool> {
         let devices = self.get_devices()?;
-        if let Some(fw_cfg) = devices.fw_cfg_for_dma_addr(addr) {
-            if let Some(desc_addr) = fw_cfg.write_dma_address(addr, width, data)? {
-                fw_cfg.process_dma(
-                    desc_addr,
-                    |gpa, buffer| {
-                        self.read_from_guest(gpa, buffer).map_err(|error| {
-                            DeviceManagerError::UnexpectedResponse {
-                                operation: "read guest memory for fw_cfg DMA",
-                                detail: alloc::format!("{error}"),
-                            }
-                        })
-                    },
-                    |gpa, buffer| {
-                        self.write_to_guest(gpa, buffer).map_err(|error| {
-                            DeviceManagerError::UnexpectedResponse {
-                                operation: "write guest memory for fw_cfg DMA",
-                                detail: alloc::format!("{error}"),
-                            }
-                        })
-                    },
-                )?;
-            }
-            return Ok(());
-        }
+        let mut memory = VmDmaAccess { vm: self };
+        devices
+            .try_handle_mmio_write_with_memory(addr, width, data, &mut memory)
+            .map_err(Into::into)
+    }
 
-        devices.handle_mmio_write(addr, width, data)?;
-        Ok(())
+    pub(crate) fn try_handle_port_write(
+        &self,
+        port: Port,
+        width: AccessWidth,
+        data: usize,
+    ) -> AxVmResult<bool> {
+        let devices = self.get_devices()?;
+        let mut memory = VmDmaAccess { vm: self };
+        devices
+            .try_handle_port_write_with_memory(port, width, data, &mut memory)
+            .map_err(Into::into)
     }
 
     pub(crate) fn handle_nested_page_fault(
@@ -931,7 +1555,7 @@ impl AxVM {
         handled: bool,
     ) {
         let root = resources.address_space.page_table_root();
-        match resources.address_space.page_table().query(addr) {
+        match NestedPageTableOps::query(resources.address_space.page_table(), addr) {
             Ok((hpa, flags, size)) => {
                 if handled {
                     debug!(
@@ -1061,6 +1685,13 @@ impl AxVM {
             .unwrap_or_default()
     }
 
+    pub fn get_vcpu_guest_mpidrs(&self) -> Vec<(usize, u64)> {
+        self.vcpu_list()
+            .iter()
+            .filter_map(|vcpu| vcpu.guest_mpidr().map(|mpidr| (vcpu.id(), mpidr)))
+            .collect()
+    }
+
     /// Maps a region of host physical memory to guest physical memory.
     pub fn map_region(
         &self,
@@ -1091,13 +1722,10 @@ impl AxVM {
 
     /// Reads an object of type `T` from the guest physical address.
     pub fn read_from_guest_of<T>(&self, gpa_ptr: GuestPhysAddr) -> AxVmResult<T> {
-        let size = core::mem::size_of::<T>();
+        let size = std::mem::size_of::<T>();
 
         // Ensure the address is properly aligned for the type.
-        if !gpa_ptr
-            .as_usize()
-            .is_multiple_of(core::mem::align_of::<T>())
-        {
+        if !gpa_ptr.as_usize().is_multiple_of(std::mem::align_of::<T>()) {
             return ax_err!(InvalidInput, "Unaligned guest physical address");
         }
 
@@ -1129,7 +1757,7 @@ impl AxVM {
             }
             let data: T = unsafe {
                 // Use `ptr::read_unaligned` for safety in case of unaligned memory.
-                core::ptr::read_unaligned(data_bytes.as_ptr() as *const T)
+                std::ptr::read_unaligned(data_bytes.as_ptr() as *const T)
             };
             Ok(data)
         })
@@ -1165,7 +1793,7 @@ impl AxVM {
     /// Writes an object of type `T` to the guest physical address.
     pub fn write_to_guest_of<T>(&self, gpa_ptr: GuestPhysAddr, data: &T) -> AxVmResult {
         let bytes = unsafe {
-            core::slice::from_raw_parts(data as *const T as *const u8, core::mem::size_of::<T>())
+            std::slice::from_raw_parts(data as *const T as *const u8, std::mem::size_of::<T>())
         };
         self.write_to_guest(gpa_ptr, bytes)
     }
@@ -1197,9 +1825,8 @@ impl AxVM {
     pub fn alloc_ivc_channel(&self, expected_size: usize) -> AxVmResult<(GuestPhysAddr, usize)> {
         // Ensure the expected size is aligned to 4K.
         let size = align_up_4k(expected_size);
-        let gpa = self
-            .get_devices()?
-            .alloc_ivc_channel(size)
+        let devices = self.get_devices()?;
+        let gpa = crate::runtime::ivc::alloc_guest_binding(&devices, size)
             .map_err(|error| AxVmError::memory("reserve IVC guest address range", error))?;
         Ok((gpa, size))
     }
@@ -1211,8 +1838,7 @@ impl AxVM {
     /// ## Returns
     /// * `AxVmResult<()>` - An empty result indicating success or failure.
     pub fn release_ivc_channel(&self, gpa: GuestPhysAddr, size: usize) -> AxVmResult {
-        self.get_devices()?
-            .release_ivc_channel(gpa, size)
+        crate::runtime::ivc::release_guest_binding(self.get_devices()?.as_ref(), gpa, size)
             .map_err(|error| AxVmError::memory("release IVC guest address range", error))?;
         Ok(())
     }
@@ -1228,13 +1854,13 @@ impl AxVM {
             "Cannot allocate zero-sized memory region"
         );
 
-        let hva = unsafe { alloc::alloc::alloc_zeroed(layout) };
+        let hva = unsafe { std::alloc::alloc_zeroed(layout) };
         if hva.is_null() {
             return Err(AxVmError::OutOfMemory {
                 operation: "allocate IVC channel",
             });
         }
-        let s = unsafe { core::slice::from_raw_parts_mut(hva, layout.size()) };
+        let s = unsafe { std::slice::from_raw_parts_mut(hva, layout.size()) };
         let hva = HostVirtAddr::from_mut_ptr_of(hva);
 
         let hpa = virt_to_phys(hva);
@@ -1263,7 +1889,7 @@ impl AxVM {
             Ok(())
         }) {
             unsafe {
-                alloc::alloc::dealloc(hva.as_mut_ptr(), layout);
+                std::alloc::dealloc(hva.as_mut_ptr(), layout);
             }
             return Err(err);
         }
@@ -1279,14 +1905,12 @@ impl AxVM {
 
     /// Prepares all memory regions configured for this VM.
     pub fn prepare_memory_layout(&self) -> AxVmResult<PreparedMemoryLayout> {
-        let memory_regions = self.with_resources(|resources| {
-            self.physical_resource_lease.validate(resources.config())?;
-            Ok(resources.config.memory_regions().to_vec())
-        })?;
+        let memory_regions =
+            self.with_resources(|resources| Ok(resources.config.memory_regions().to_vec()))?;
         let layout = memory::MemoryLayoutBuilder::new(self, &memory_regions).prepare()?;
         let main_memory = layout.main_memory();
         let boot_plan = boot::BootImagePlan::new(main_memory.gpa, main_memory.is_identical());
-        self.with_config_mut(|config| boot_plan.apply_to_config(config));
+        self.with_config(|config| boot_plan.apply_to_config(config));
         Ok(layout)
     }
 
@@ -1302,19 +1926,12 @@ impl AxVM {
         );
         let gpa =
             gpa.ok_or_else(|| ax_err_type!(InvalidInput, "Reserved memory GPA is required"))?;
-        let (hpa, hva) = memory::authorized_reserved_host_addresses(
-            self.id(),
-            gpa,
-            layout.size(),
-            |vm_id, hpa, size| host::default_host().owns_vm_carveout(vm_id, hpa, size),
-            host::paging::phys_to_virt,
-        )?;
         self.with_resources_mut(|resources| {
             resources
                 .address_space
                 .map_linear(
                     gpa,
-                    hpa,
+                    gpa.as_usize().into(),
                     layout.size(),
                     MappingFlags::READ
                         | MappingFlags::WRITE
@@ -1322,6 +1939,7 @@ impl AxVM {
                         | MappingFlags::USER,
                 )
                 .map_err(|error| AxVmError::from_addrspace("map reserved guest memory", error))?;
+            let hva = gpa.as_usize().into();
             resources.memory_regions.push(VMMemoryRegion {
                 gpa,
                 hva,
@@ -1341,7 +1959,10 @@ impl AxVM {
             }
             VmStatus::Ready | VmStatus::Stopped | VmStatus::Failed => {
                 if let Some(runtime) = self.take_stopped_runtime() {
-                    runtime.join_all_vcpu_tasks(vm_id);
+                    runtime.join_all_vcpu_tasks(vm_id)?;
+                }
+                if self.status() == VmStatus::Stopped {
+                    crate::arch::CurrentArch::deactivate_devices(self)?;
                 }
             }
             VmStatus::Destroyed | VmStatus::Destroying => {}
@@ -1351,16 +1972,26 @@ impl AxVM {
         }
         self.machine.lock().destroy_with(|resources| {
             if let Some(mut resources) = resources {
-                Self::cleanup_resource_set(vm_id, &mut resources);
+                Self::cleanup_resource_set(vm_id, &mut resources)?;
             }
             Ok(())
         })
     }
 
-    fn cleanup_resource_set(vm_id: usize, resources: &mut AxVMResources) {
+    fn cleanup_resource_set(vm_id: usize, resources: &mut AxVMResources) -> AxVmResult {
         info!("Cleaning up VM[{vm_id}] resources...");
 
-        resources.release_devices();
+        resources.teardown_ivc_bindings()?;
+
+        if let Some(devices) = resources.devices.take() {
+            devices.reset_lifecycle_devices().map_err(|error| {
+                AxVmError::device("reset device lifecycle during destroy", error)
+            })?;
+            debug!(
+                "VM[{vm_id}] devices cleanup: {} device(s)",
+                devices.devices().count()
+            );
+        }
 
         let regions_to_cleanup = resources.memory_regions.clone();
         for region in &regions_to_cleanup {
@@ -1385,7 +2016,7 @@ impl AxVM {
                     region.size()
                 );
                 unsafe {
-                    alloc::alloc::dealloc(region.hva.as_mut_ptr(), region.layout);
+                    std::alloc::dealloc(region.hva.as_mut_ptr(), region.layout);
                 }
             } else {
                 debug!(
@@ -1401,9 +2032,10 @@ impl AxVM {
         resources.address_space.clear();
 
         resources.vcpu_list = None;
-        resources.interrupt_fabric = None;
+        resources.interrupt_controller = None;
 
         info!("VM[{vm_id}] resources cleanup completed");
+        Ok(())
     }
 }
 
@@ -1421,6 +2053,13 @@ impl Drop for AxVM {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::RefCell, sync::atomic::AtomicBool};
+
+    use axdevice_base::{
+        ControllerInputId, InterruptControllerId, InterruptEndpoint, InterruptTriggerMode,
+        IrqError, IrqResult, VirtualInterruptController, WiredIrqInput, WiredIrqSink,
+    };
+
     use super::*;
 
     #[test]
@@ -1454,5 +2093,261 @@ mod tests {
         write_guest_bytes_to_chunks(&mut chunks, &[]).unwrap();
 
         assert_eq!(chunk, [7, 7]);
+    }
+
+    fn drain_normal_vectors(runtime: &VmRuntimeHandle, vcpu_id: usize) -> Vec<usize> {
+        runtime
+            .drain_pending_interrupts(vcpu_id)
+            .into_iter()
+            .map(|interrupt| match interrupt {
+                PendingInterrupt::Normal(vector) => vector,
+                PendingInterrupt::External { .. } => {
+                    panic!("unexpected external interrupt in normal queue test")
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn runtime_pending_interrupts_are_per_vcpu_and_drained_once() {
+        let runtime = VmRuntimeHandle::new();
+
+        assert_eq!(
+            runtime
+                .queue_pending_interrupt_for_cpu(0, 3, PendingInterrupt::Normal(2))
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            runtime
+                .queue_pending_interrupt_for_cpu(1, 5, PendingInterrupt::Normal(9))
+                .unwrap(),
+            5
+        );
+
+        assert_eq!(drain_normal_vectors(&runtime, 0), std::vec![2]);
+        assert_eq!(drain_normal_vectors(&runtime, 1), std::vec![9]);
+
+        assert!(drain_normal_vectors(&runtime, 0).is_empty());
+        assert!(drain_normal_vectors(&runtime, 1).is_empty());
+    }
+
+    #[test]
+    fn runtime_dispatch_orders_enqueue_before_notify_and_ipi() {
+        let events = RefCell::new(Vec::new());
+
+        dispatch_vcpu_interrupt_with(
+            || {
+                events.borrow_mut().push("enqueue");
+                Ok(3)
+            },
+            || events.borrow_mut().push("notify"),
+            |cpu_id| {
+                assert_eq!(cpu_id, 3);
+                events.borrow_mut().push("ipi");
+            },
+        )
+        .unwrap();
+
+        assert_eq!(*events.borrow(), ["enqueue", "notify", "ipi"]);
+    }
+
+    #[cfg(feature = "host-test")]
+    #[test]
+    fn runtime_dispatch_releases_queue_lock_before_callbacks() {
+        let dispatcher = VcpuIrqDispatcher::new();
+        dispatcher.register_test_vcpu(0, 3);
+        let interrupt = PendingVcpuInterrupt {
+            id: crate::irq::model::VirtualInterruptId(7),
+            trigger: crate::InterruptTriggerMode::LevelTriggered,
+        };
+        let events = RefCell::new(Vec::new());
+
+        dispatch_vcpu_interrupt_with(
+            || dispatcher.enqueue(0, interrupt),
+            || {
+                assert_eq!(dispatcher.drain(0), std::vec![interrupt]);
+                events.borrow_mut().push("notify");
+            },
+            |_| events.borrow_mut().push("ipi"),
+        )
+        .unwrap();
+
+        assert_eq!(*events.borrow(), ["notify", "ipi"]);
+    }
+
+    #[test]
+    fn runtime_dispatch_stops_when_enqueue_fails() {
+        let events = RefCell::new(Vec::new());
+
+        let result = dispatch_vcpu_interrupt_with(
+            || {
+                events.borrow_mut().push("enqueue");
+                Err(ax_err_type!(NotFound, "vCPU task not found"))
+            },
+            || events.borrow_mut().push("notify"),
+            |_| events.borrow_mut().push("ipi"),
+        );
+
+        assert!(matches!(result, Err(AxVmError::ResourceUnavailable { .. })));
+        assert_eq!(*events.borrow(), ["enqueue"]);
+    }
+
+    #[test]
+    fn runtime_notification_advances_wake_generation_without_waiters() {
+        let runtime = VmRuntimeHandle::new();
+        let observed = runtime.notification_generation();
+
+        runtime.notify_one();
+
+        assert_ne!(runtime.notification_generation(), observed);
+    }
+
+    #[test]
+    fn runtime_records_the_first_lifecycle_error_once() {
+        let runtime = VmRuntimeHandle::new();
+        let first = AxVmError::interrupt("deactivate architecture devices", "first failure");
+        let second = AxVmError::device("finish VM stop", "second failure");
+
+        runtime.record_lifecycle_error(first.clone());
+        runtime.record_lifecycle_error(second);
+
+        assert_eq!(runtime.take_lifecycle_error(), Some(first));
+        assert_eq!(runtime.take_lifecycle_error(), None);
+    }
+
+    #[test]
+    fn interrupt_pulse_runs_after_snapshot_lock_is_released() {
+        let machine_lock = Arc::new(TestMachineLock::default());
+        let sink = Arc::new(TestIrqSink::with_machine_lock(machine_lock.clone()));
+        let controller: Arc<dyn VirtualInterruptController> =
+            Arc::new(TestInterruptController { sink: sink.clone() });
+
+        pulse_interrupt_with_snapshot(
+            || {
+                let _machine = machine_lock.lock();
+                Ok(controller.clone())
+            },
+            7,
+        )
+        .unwrap();
+
+        assert_eq!(sink.pulse_count.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn interrupt_snapshot_failure_does_not_call_sink() {
+        let sink = Arc::new(TestIrqSink::default());
+        let expected = ax_err_type!(BadState, "interrupt snapshot unavailable");
+
+        let result = pulse_interrupt_with_snapshot(|| Err(expected.clone()), 9);
+
+        assert_eq!(result, Err(expected));
+        assert_eq!(sink.pulse_count.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn interrupt_pulse_propagates_sink_error() {
+        let irq_error = IrqError::Backend {
+            endpoint: InterruptEndpoint::Wired {
+                controller: InterruptControllerId::new(0),
+                input: ControllerInputId::new(11),
+            },
+            operation: "test pulse",
+            detail: "controller rejected interrupt".into(),
+        };
+        let sink = Arc::new(TestIrqSink::with_pulse_error(irq_error.clone()));
+        let controller: Arc<dyn VirtualInterruptController> =
+            Arc::new(TestInterruptController { sink });
+
+        let result = pulse_interrupt_with_snapshot(|| Ok(controller.clone()), 11);
+
+        assert_eq!(result, Err(AxVmError::from(irq_error)));
+    }
+
+    #[derive(Default)]
+    struct TestIrqSink {
+        machine_lock: Option<Arc<TestMachineLock>>,
+        pulse_error: Option<IrqError>,
+        pulse_count: AtomicUsize,
+    }
+
+    impl TestIrqSink {
+        fn with_machine_lock(machine_lock: Arc<TestMachineLock>) -> Self {
+            Self {
+                machine_lock: Some(machine_lock),
+                ..Self::default()
+            }
+        }
+
+        fn with_pulse_error(pulse_error: IrqError) -> Self {
+            Self {
+                pulse_error: Some(pulse_error),
+                ..Self::default()
+            }
+        }
+    }
+
+    struct TestInterruptController {
+        sink: Arc<TestIrqSink>,
+    }
+
+    impl VirtualInterruptController for TestInterruptController {
+        fn id(&self) -> InterruptControllerId {
+            InterruptControllerId::new(0)
+        }
+
+        fn wired_input(
+            &self,
+            input: ControllerInputId,
+            trigger: InterruptTriggerMode,
+        ) -> IrqResult<WiredIrqInput> {
+            let sink: Arc<dyn WiredIrqSink> = self.sink.clone();
+            Ok(WiredIrqInput::new(self.id(), input, trigger, sink))
+        }
+    }
+
+    impl WiredIrqSink for TestIrqSink {
+        fn set_level(&self, _input: ControllerInputId, _asserted: bool) -> IrqResult {
+            Ok(())
+        }
+
+        fn pulse(&self, _input: ControllerInputId) -> IrqResult {
+            let _machine = self.machine_lock.as_ref().map(|machine_lock| {
+                machine_lock
+                    .try_lock()
+                    .expect("interrupt callback must run without the machine lock")
+            });
+            self.pulse_count.fetch_add(1, Ordering::Relaxed);
+            self.pulse_error.clone().map_or(Ok(()), Err)
+        }
+    }
+
+    #[derive(Default)]
+    struct TestMachineLock {
+        held: AtomicBool,
+    }
+
+    impl TestMachineLock {
+        fn lock(&self) -> TestMachineGuard<'_> {
+            self.try_lock().expect("test machine lock is already held")
+        }
+
+        fn try_lock(&self) -> Option<TestMachineGuard<'_>> {
+            self.held
+                .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+                .ok()
+                .map(|_| TestMachineGuard { lock: self })
+        }
+    }
+
+    struct TestMachineGuard<'a> {
+        lock: &'a TestMachineLock,
+    }
+
+    impl Drop for TestMachineGuard<'_> {
+        fn drop(&mut self) {
+            self.lock.held.store(false, Ordering::Release);
+        }
     }
 }

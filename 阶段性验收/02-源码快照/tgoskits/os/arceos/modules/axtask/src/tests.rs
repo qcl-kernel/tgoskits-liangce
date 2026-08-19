@@ -1,3 +1,5 @@
+#[cfg(feature = "irq")]
+use core::sync::atomic::AtomicU64;
 use core::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(feature = "irq")]
 use std::sync::{Arc, Barrier};
@@ -8,14 +10,16 @@ use std::{
     thread,
 };
 
-use ax_errno::{AxError, AxResult};
-#[cfg(feature = "preempt")]
-use ax_kernel_guard::NoPreempt;
 use axpoll::{IoEvents, Pollable};
 
 #[cfg(feature = "irq")]
 use crate::IrqNotify;
-use crate::{WaitQueue, api as ax_task, current};
+#[cfg(feature = "preempt")]
+use crate::sync::{PreemptGuard, SpinLock};
+use crate::{
+    WaitQueue, api as ax_task, current,
+    future::{TaskError, TaskResult},
+};
 
 type TestResult = Result<(), Box<dyn core::any::Any + Send>>;
 type TestJob = (Box<dyn FnOnce() + Send + 'static>, mpsc::Sender<TestResult>);
@@ -83,7 +87,7 @@ const RAW_TASK_STACK_SIZE: usize = 0x10000;
 const RAW_TASK_STACK_SIZE: usize = 0x1000;
 
 #[cfg(all(feature = "lockdep", feature = "preempt"))]
-static HELD_LOCK_DIAGNOSTIC_LOCK: ax_kspin::SpinNoPreempt<()> = ax_kspin::SpinNoPreempt::new(());
+static HELD_LOCK_DIAGNOSTIC_LOCK: SpinLock<()> = SpinLock::new(());
 
 #[cfg(feature = "preempt")]
 fn panic_payload_message(payload: &(dyn core::any::Any + Send)) -> &str {
@@ -128,7 +132,7 @@ fn might_sleep_reports_held_lock_stack() {
 fn might_sleep_reports_preempt_disabled_reason() {
     run_in_test_scheduler(|| {
         let result = catch_unwind(AssertUnwindSafe(|| {
-            let _guard = NoPreempt::new();
+            let _guard = PreemptGuard::new();
             ax_task::might_sleep();
         }));
         let panic = result.expect_err("might_sleep should reject preempt-disabled context");
@@ -154,7 +158,7 @@ fn poll_io_ready_operation_wins_over_pending_interrupt() {
             &pollable,
             IoEvents::OUT,
             false,
-            || -> AxResult<usize> {
+            || -> TaskResult<usize> {
                 calls.fetch_add(1, Ordering::Relaxed);
                 Ok(5)
             },
@@ -178,10 +182,13 @@ fn poll_io_blocked_operation_observes_pending_interrupt() {
             &CountingPollable::new(),
             IoEvents::OUT,
             false,
-            || -> AxResult<usize> { Err(AxError::WouldBlock) },
+            || -> TaskResult<usize> { Err(TaskError::WouldBlock) },
         ));
 
-        assert_eq!(result, Err(AxError::Interrupted));
+        assert_eq!(
+            result,
+            Err(TaskError::Interrupted(crate::future::Interrupted))
+        );
         assert_eq!(curr.take_interrupt(), false);
     });
 }
@@ -197,10 +204,10 @@ fn poll_io_nonblocking_wouldblock_wins_over_pending_interrupt() {
             &pollable,
             IoEvents::OUT,
             true,
-            || -> AxResult<usize> { Err(AxError::WouldBlock) },
+            || -> TaskResult<usize> { Err(TaskError::WouldBlock) },
         ));
 
-        assert_eq!(result, Err(AxError::WouldBlock));
+        assert_eq!(result, Err(TaskError::WouldBlock));
         assert_eq!(pollable.register_count(), 1);
         assert_eq!(curr.take_interrupt(), true);
     });
@@ -336,6 +343,24 @@ fn test_irq_notify_coalesces_concurrent_irq_callbacks() {
     assert!(notify.is_pending());
     assert!(notify.drain());
     assert!(!notify.drain());
+}
+
+#[cfg(feature = "irq")]
+#[test]
+fn external_timer_deadline_is_included_in_host_reprogramming_selection() {
+    run_in_test_scheduler(|| {
+        const NO_DEADLINE: u64 = u64::MAX;
+
+        let external_deadline = Arc::new(AtomicU64::new(1));
+        let published_deadline = external_deadline.clone();
+        ax_task::register_timer_deadline_source(move || {
+            let deadline = published_deadline.load(Ordering::Acquire);
+            (deadline != NO_DEADLINE).then_some(deadline)
+        });
+
+        assert_eq!(ax_task::next_timer_deadline_nanos(), Some(1));
+        external_deadline.store(NO_DEADLINE, Ordering::Release);
+    });
 }
 
 #[cfg(feature = "irq")]

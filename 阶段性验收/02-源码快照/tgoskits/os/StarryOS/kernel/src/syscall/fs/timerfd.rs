@@ -3,22 +3,24 @@
 
 use core::time::Duration;
 
-use ax_errno::{AxError, AxResult};
 use linux_raw_sys::general::{__kernel_itimerspec, __kernel_timespec, O_CLOEXEC, O_NONBLOCK};
 use starry_vm::{VmMutPtr, VmPtr};
 
-use crate::file::{
-    FileLike, add_file_like,
-    timerfd::{TFD_TIMER_ABSTIME, TFD_TIMER_CANCEL_ON_SET, Timerfd},
+use crate::{
+    StarryError, StarryResult,
+    file::{
+        FileLike, add_file_like,
+        timerfd::{TFD_TIMER_ABSTIME, TFD_TIMER_CANCEL_ON_SET, Timerfd},
+    },
 };
 
 // linux-raw-sys does not export these under their `TFD_*` names, so alias.
 const TFD_CLOEXEC: u32 = O_CLOEXEC;
 const TFD_NONBLOCK: u32 = O_NONBLOCK;
 
-fn timespec_to_duration(ts: &__kernel_timespec) -> AxResult<Duration> {
+fn timespec_to_duration(ts: &__kernel_timespec) -> StarryResult<Duration> {
     if ts.tv_sec < 0 || !(0..1_000_000_000).contains(&ts.tv_nsec) {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
     Ok(Duration::new(ts.tv_sec as u64, ts.tv_nsec as u32))
 }
@@ -31,13 +33,13 @@ fn duration_to_timespec(d: Duration) -> __kernel_timespec {
 }
 
 /// `timerfd_create(clockid, flags)`.
-pub fn sys_timerfd_create(clockid: i32, flags: i32) -> AxResult<isize> {
+pub fn sys_timerfd_create(clockid: i32, flags: i32) -> StarryResult<isize> {
     if clockid < 0 {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
     let flags = flags as u32;
     if flags & !(TFD_CLOEXEC | TFD_NONBLOCK) != 0 {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
 
     let tfd = Timerfd::new(clockid as u32)?;
@@ -57,10 +59,10 @@ pub fn sys_timerfd_settime(
     flags: i32,
     new_value: *const __kernel_itimerspec,
     old_value: *mut __kernel_itimerspec,
-) -> AxResult<isize> {
+) -> StarryResult<isize> {
     let flags = flags as u32;
     if flags & !(TFD_TIMER_ABSTIME | TFD_TIMER_CANCEL_ON_SET) != 0 {
-        return Err(AxError::InvalidInput);
+        return Err(StarryError::InvalidInput);
     }
 
     let tfd = Timerfd::from_fd(fd)?;
@@ -89,7 +91,7 @@ pub fn sys_timerfd_settime(
 }
 
 /// `timerfd_gettime(fd, curr)`.
-pub fn sys_timerfd_gettime(fd: i32, curr_value: *mut __kernel_itimerspec) -> AxResult<isize> {
+pub fn sys_timerfd_gettime(fd: i32, curr_value: *mut __kernel_itimerspec) -> StarryResult<isize> {
     let tfd = Timerfd::from_fd(fd)?;
     let (ival, rem) = tfd.gettime();
     let out = __kernel_itimerspec {
@@ -98,4 +100,49 @@ pub fn sys_timerfd_gettime(fd: i32, curr_value: *mut __kernel_itimerspec) -> AxR
     };
     curr_value.vm_write(out)?;
     Ok(0)
+}
+
+#[cfg(axtest)]
+pub(crate) fn timerfd_timespec_conversion_rules_hold_for_test() -> bool {
+    use linux_raw_sys::general::__kernel_timespec;
+    // Test timespec_to_duration validation
+    let valid_ts = __kernel_timespec {
+        tv_sec: 1,
+        tv_nsec: 500_000_000,
+    };
+    assert!(timespec_to_duration(&valid_ts).is_ok());
+
+    let zero_ts = __kernel_timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    assert!(timespec_to_duration(&zero_ts).is_ok());
+
+    // Negative tv_sec should fail
+    let neg_sec = __kernel_timespec {
+        tv_sec: -1,
+        tv_nsec: 0,
+    };
+    assert!(timespec_to_duration(&neg_sec).is_err());
+
+    // tv_nsec out of range should fail
+    let bad_nsec = __kernel_timespec {
+        tv_sec: 0,
+        tv_nsec: 1_000_000_000,
+    };
+    assert!(timespec_to_duration(&bad_nsec).is_err());
+
+    let neg_nsec = __kernel_timespec {
+        tv_sec: 0,
+        tv_nsec: -1,
+    };
+    assert!(timespec_to_duration(&neg_nsec).is_err());
+
+    // Test duration_to_timespec roundtrip
+    let d = core::time::Duration::new(5, 123_456_789);
+    let ts = duration_to_timespec(d);
+    assert!(ts.tv_sec == 5);
+    assert!(ts.tv_nsec == 123_456_789);
+
+    true
 }

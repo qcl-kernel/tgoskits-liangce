@@ -20,11 +20,15 @@
 //! - `tls`: Enable kernel space thread-local storage support.
 //! - `rtc`: Enable real-time clock support.
 //! - `uspace`: Enable user space support.
+//! - `axtest`: Enable internal AxTest cases.
 //!
 //! [ArceOS]: https://github.com/arceos-org/arceos
 //! [cargo test]: https://doc.rust-lang.org/cargo/guide/tests.html
 
 #![no_std]
+
+#[cfg(all(axtest, feature = "axtest"))]
+mod axtest;
 
 #[cfg(all(feature = "uspace", feature = "tls"))]
 compile_error!("ax-hal features `uspace` and `tls` select incompatible register ownership modes");
@@ -77,6 +81,29 @@ pub mod power {
     #[cfg(feature = "smp")]
     pub use ax_plat::power::cpu_boot;
     pub use ax_plat::power::{system_off, system_reset};
+}
+
+/// CPU topology.
+pub mod topology {
+    /// Maps a firmware or hardware CPU ID to the runtime logical CPU index.
+    #[cfg(any(test, feature = "host-test"))]
+    pub const fn resolve_cpu_index(hardware_id: usize) -> Option<usize> {
+        if hardware_id == 0 { Some(0) } else { None }
+    }
+
+    #[cfg(not(any(test, feature = "host-test")))]
+    pub use ax_plat::cpu::resolve_cpu_index;
+
+    #[cfg(test)]
+    mod tests {
+        use super::resolve_cpu_index;
+
+        #[test]
+        fn dummy_topology_only_maps_the_boot_cpu() {
+            assert_eq!(resolve_cpu_index(0), Some(0));
+            assert_eq!(resolve_cpu_index(1), None);
+        }
+    }
 }
 
 /// Trap handling.
@@ -134,7 +161,7 @@ pub fn init_early_secondary(cpu_id: usize) {
 pub fn cpu_num() -> usize {
     #[cfg(feature = "smp")]
     {
-        use spin::LazyLock;
+        use ax_lazyinit::LazyLock;
 
         /// The number of CPUs in the system. Based on the number declared by the
         /// platform crate and limited by the configured maximum CPU number.

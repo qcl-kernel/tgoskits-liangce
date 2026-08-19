@@ -1,7 +1,7 @@
 use core::{
     alloc::Layout,
     mem::size_of,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicU32, AtomicUsize, Ordering},
 };
 
 use kernutil::memory::MemoryType;
@@ -22,6 +22,98 @@ static CPU_AREA_LAYOUT_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CPU_AREA_RUNTIME_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 const PERCPU_INIT_OK: u32 = 0;
+
+const CPU_BOOT_DEAD: u32 = 0;
+const CPU_BOOT_KICKED: u32 = 1;
+const CPU_BOOT_ALIVE: u32 = 2;
+const CPU_BOOT_SHOULD_ONLINE: u32 = 3;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CpuBootStatus {
+    WaitingForAlive,
+    Alive,
+}
+
+/// Per-CPU synchronization owned by the generic secondary-boot core.
+///
+/// This object is deliberately separate from [`PerCpuMeta`]. Metadata is an
+/// immutable trampoline ABI after publication, while this object is the sole
+/// mutable owner of the `DEAD -> KICKED -> ALIVE -> SHOULD_ONLINE` handshake.
+#[repr(C)]
+pub(crate) struct CpuBootSync {
+    state: AtomicU32,
+}
+
+impl CpuBootSync {
+    const fn new() -> Self {
+        Self {
+            state: AtomicU32::new(CPU_BOOT_DEAD),
+        }
+    }
+
+    fn prepare_kick(&self) -> Result<(), CpuBootPrepareError> {
+        self.state
+            .compare_exchange(
+                CPU_BOOT_DEAD,
+                CPU_BOOT_KICKED,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map(|_| ())
+            .map_err(|state| CpuBootPrepareError::UnexpectedState { state })
+    }
+
+    fn report_alive(&self) -> Result<(), CpuBootPrepareError> {
+        self.state
+            .compare_exchange(
+                CPU_BOOT_KICKED,
+                CPU_BOOT_ALIVE,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map(|_| ())
+            .map_err(|state| CpuBootPrepareError::UnexpectedState { state })
+    }
+
+    fn status(&self) -> Result<CpuBootStatus, CpuBootPrepareError> {
+        match self.state.load(Ordering::Acquire) {
+            CPU_BOOT_KICKED => Ok(CpuBootStatus::WaitingForAlive),
+            CPU_BOOT_ALIVE => Ok(CpuBootStatus::Alive),
+            state => Err(CpuBootPrepareError::UnexpectedState { state }),
+        }
+    }
+
+    fn release_alive(&self) -> Result<(), CpuBootPrepareError> {
+        self.state
+            .compare_exchange(
+                CPU_BOOT_ALIVE,
+                CPU_BOOT_SHOULD_ONLINE,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map(|_| ())
+            .map_err(|state| CpuBootPrepareError::UnexpectedState { state })
+    }
+
+    fn wait_until_released(&self) {
+        while self.state.load(Ordering::Acquire) != CPU_BOOT_SHOULD_ONLINE {
+            core::hint::spin_loop();
+        }
+    }
+
+    #[cfg(test)]
+    fn state(&self) -> u32 {
+        self.state.load(Ordering::Acquire)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+pub(crate) enum CpuBootPrepareError {
+    #[error("logical CPU {cpu_index} has no published boot synchronization")]
+    Missing { cpu_index: usize },
+    #[error("CPU boot synchronization is in unexpected state {state}")]
+    UnexpectedState { state: u32 },
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 enum PerCpuLayoutError {
@@ -225,9 +317,18 @@ pub fn cpu_meta(idx: usize) -> Option<PerCpuMeta> {
     if idx >= runtime_cpu_count() {
         return None;
     }
+    cpu_meta_slot(idx)
+}
+
+fn cpu_meta_slot(idx: usize) -> Option<PerCpuMeta> {
     let meta_start = cpu_meta_addr(idx)?;
     let meta_va = phys_to_virt(meta_start);
     debug_assert_eq!((meta_va as usize) % meta_align(), 0);
+    // SAFETY: callers reach this publication-independent reader only after an
+    // Acquire load observed a nonzero runtime count and bound `idx` by that
+    // count. The matching Release store happens after every aligned metadata
+    // slot is initialized and cache-maintained. CPU identity fields remain
+    // immutable after publication.
     Some(unsafe { *(meta_va as *const PerCpuMeta) })
 }
 
@@ -260,6 +361,53 @@ pub fn runtime_cpu_count() -> usize {
 /// Physical address of cpu meta
 pub(crate) fn cpu_meta_addr(idx: usize) -> Option<usize> {
     layout::cpu_meta_addr(idx)
+}
+
+fn cpu_boot_sync(idx: usize) -> Option<&'static CpuBootSync> {
+    if idx >= runtime_cpu_count() {
+        return None;
+    }
+    let sync_start = layout::cpu_boot_sync_addr(idx)?;
+    let sync_va = phys_to_virt(sync_start);
+    // SAFETY: initialization constructs one CpuBootSync in every reserved
+    // slot before the Release publication of CPU_AREA_RUNTIME_COUNT. Its
+    // address remains stable until shutdown and all mutation is atomic.
+    Some(unsafe { &*sync_va.cast::<CpuBootSync>() })
+}
+
+pub(crate) fn prepare_secondary_boot(cpu_index: usize) -> Result<(), CpuBootPrepareError> {
+    cpu_boot_sync(cpu_index)
+        .ok_or(CpuBootPrepareError::Missing { cpu_index })?
+        .prepare_kick()
+}
+
+pub(crate) fn secondary_boot_status(
+    cpu_index: usize,
+) -> Result<CpuBootStatus, CpuBootPrepareError> {
+    cpu_boot_sync(cpu_index)
+        .ok_or(CpuBootPrepareError::Missing { cpu_index })?
+        .status()
+}
+
+pub(crate) fn release_secondary_boot(cpu_index: usize) -> Result<(), CpuBootPrepareError> {
+    release_secondary_boot_from(cpu_boot_sync(cpu_index), cpu_index)
+}
+
+fn release_secondary_boot_from(
+    sync: Option<&CpuBootSync>,
+    cpu_index: usize,
+) -> Result<(), CpuBootPrepareError> {
+    sync.ok_or(CpuBootPrepareError::Missing { cpu_index })?
+        .release_alive()
+}
+
+pub(crate) fn synchronize_secondary_boot(cpu_index: usize) {
+    let sync = cpu_boot_sync(cpu_index)
+        .unwrap_or_else(|| panic!("missing boot synchronization for CPU {cpu_index}"));
+    sync.report_alive().unwrap_or_else(|error| {
+        panic!("CPU {cpu_index} reported alive from an invalid boot state: {error}")
+    });
+    sync.wait_until_released();
 }
 
 pub(crate) fn cpu_area_phys(idx: usize) -> Option<usize> {
@@ -336,21 +484,76 @@ pub fn try_early_cpu_idx() -> Option<usize> {
     cpu_id_to_idx(early_current_hart_id())
 }
 
-pub fn cpu_id_to_idx(hart_id: usize) -> Option<usize> {
-    for (idx, id) in __cpu_id_list().enumerate() {
-        if id == hart_id {
-            return Some(idx);
+fn cpu_id_to_idx_from_sources<I>(
+    hardware_id: usize,
+    runtime_count: usize,
+    mut meta_at: impl FnMut(usize) -> Option<PerCpuMeta>,
+    early_ids: impl FnOnce() -> I,
+) -> Option<usize>
+where
+    I: Iterator<Item = usize>,
+{
+    if runtime_count == 0 {
+        return early_ids().position(|id| id == hardware_id);
+    }
+
+    let mut matching_index = None;
+    for cpu_index in 0..runtime_count {
+        let meta = meta_at(cpu_index)?;
+        if meta.cpu_idx != cpu_index {
+            return None;
+        }
+        if meta.cpu_id == hardware_id {
+            matching_index = Some(cpu_index);
         }
     }
-    None
+    matching_index
 }
 
-pub fn cpu_idx_to_id(idx: usize) -> Option<usize> {
-    __cpu_id_list().nth(idx)
+fn cpu_idx_to_id_from_sources<I>(
+    cpu_index: usize,
+    runtime_count: usize,
+    meta_at: impl FnOnce(usize) -> Option<PerCpuMeta>,
+    early_ids: impl FnOnce() -> I,
+) -> Option<usize>
+where
+    I: Iterator<Item = usize>,
+{
+    if runtime_count == 0 {
+        return early_ids().nth(cpu_index);
+    }
+    if cpu_index >= runtime_count {
+        return None;
+    }
+
+    let meta = meta_at(cpu_index)?;
+    (meta.cpu_idx == cpu_index).then_some(meta.cpu_id)
+}
+
+fn cpu_count_from_sources<I>(runtime_count: usize, early_ids: impl FnOnce() -> I) -> usize
+where
+    I: Iterator<Item = usize>,
+{
+    if runtime_count == 0 {
+        early_ids().count()
+    } else {
+        runtime_count
+    }
+}
+
+pub fn cpu_id_to_idx(hardware_id: usize) -> Option<usize> {
+    let runtime_count = runtime_cpu_count();
+    cpu_id_to_idx_from_sources(hardware_id, runtime_count, cpu_meta_slot, __cpu_id_list)
+}
+
+pub fn cpu_idx_to_id(cpu_index: usize) -> Option<usize> {
+    let runtime_count = runtime_cpu_count();
+    cpu_idx_to_id_from_sources(cpu_index, runtime_count, cpu_meta_slot, __cpu_id_list)
 }
 
 pub fn cpu_count() -> usize {
-    __cpu_id_list().count()
+    let runtime_count = runtime_cpu_count();
+    cpu_count_from_sources(runtime_count, __cpu_id_list)
 }
 
 struct CpuMetaIter {
@@ -444,11 +647,17 @@ fn initialize_runtime_metadata() {
             boot_table_paddr: 0,
             primary_table_paddr: 0,
         };
+        let sync_start = layout::cpu_boot_sync_addr(cpu_index)
+            .expect("reserved per-CPU boot synchronization slot must remain addressable");
         let meta_va = phys_to_virt(meta_start);
+        let sync_va = phys_to_virt(sync_start);
         debug_assert_eq!((meta_va as usize) % meta_align(), 0);
         // SAFETY: early allocation reserved this unique raw metadata slot and
         // no consumer can observe it before runtime count publication.
         unsafe { meta_va.cast::<PerCpuMeta>().write(meta) };
+        // SAFETY: every CPU area owns exactly one disjoint synchronization
+        // slot and runtime publication has not occurred yet.
+        unsafe { sync_va.cast::<CpuBootSync>().write(CpuBootSync::new()) };
     }
 }
 
@@ -480,11 +689,233 @@ fn allocate_cpu_area_region(layout: Layout) -> usize {
 mod tests {
     use super::*;
 
+    fn runtime_metadata<const N: usize>(hardware_ids: [usize; N]) -> [PerCpuMeta; N] {
+        core::array::from_fn(|cpu_index| PerCpuMeta {
+            stack_top: 0,
+            cpu_id: hardware_ids[cpu_index],
+            cpu_idx: cpu_index,
+            stack_top_virt: 0,
+            entry_virt: 0,
+            boot_table_paddr: 0,
+            primary_table_paddr: 0,
+        })
+    }
+
+    #[test]
+    fn boot_sync_release_requires_the_matching_cpu_to_report_alive() {
+        let first = CpuBootSync::new();
+        let second = CpuBootSync::new();
+
+        first.prepare_kick().unwrap();
+        second.prepare_kick().unwrap();
+        second.report_alive().unwrap();
+
+        assert_eq!(
+            first.release_alive(),
+            Err(CpuBootPrepareError::UnexpectedState {
+                state: CPU_BOOT_KICKED
+            })
+        );
+        second.release_alive().unwrap();
+        assert_eq!(first.state(), CPU_BOOT_KICKED);
+        assert_eq!(second.state(), CPU_BOOT_SHOULD_ONLINE);
+    }
+
+    #[test]
+    fn boot_sync_observation_does_not_release_an_alive_cpu() {
+        let sync = CpuBootSync::new();
+
+        sync.prepare_kick().unwrap();
+        assert_eq!(sync.status(), Ok(CpuBootStatus::WaitingForAlive));
+
+        sync.report_alive().unwrap();
+        assert_eq!(sync.status(), Ok(CpuBootStatus::Alive));
+        assert_eq!(sync.state(), CPU_BOOT_ALIVE);
+    }
+
+    #[test]
+    fn boot_sync_rejects_a_cpu_already_released_to_online_startup() {
+        let sync = CpuBootSync::new();
+        sync.prepare_kick().unwrap();
+        sync.report_alive().unwrap();
+        sync.release_alive().unwrap();
+
+        assert_eq!(
+            sync.prepare_kick(),
+            Err(CpuBootPrepareError::UnexpectedState {
+                state: CPU_BOOT_SHOULD_ONLINE
+            })
+        );
+    }
+
+    #[test]
+    fn boot_sync_rejects_alive_before_the_cpu_is_kicked() {
+        let sync = CpuBootSync::new();
+
+        assert_eq!(
+            sync.report_alive(),
+            Err(CpuBootPrepareError::UnexpectedState {
+                state: CPU_BOOT_DEAD
+            })
+        );
+    }
+
+    #[test]
+    fn releasing_an_unpublished_cpu_returns_a_typed_error() {
+        assert_eq!(
+            release_secondary_boot_from(None, usize::MAX),
+            Err(CpuBootPrepareError::Missing {
+                cpu_index: usize::MAX
+            })
+        );
+    }
+
     #[test]
     fn extreme_alignment_input_does_not_wrap_or_panic() {
         assert_eq!(
             checked_align_up_pow2(usize::MAX, 4096),
             Err(PerCpuLayoutError::AddressOverflow)
+        );
+    }
+
+    #[test]
+    fn unpublished_cpu_count_uses_early_ids() {
+        assert_eq!(cpu_count_from_sources(0, || [2, 0, 1, 3].into_iter()), 4);
+    }
+
+    #[test]
+    fn published_cpu_count_does_not_query_early_ids() {
+        assert_eq!(
+            cpu_count_from_sources(4, || -> core::array::IntoIter<usize, 0> {
+                panic!("early CPU IDs queried after publication")
+            }),
+            4
+        );
+    }
+
+    #[test]
+    fn unpublished_hardware_id_lookup_uses_early_ids() {
+        assert_eq!(
+            cpu_id_to_idx_from_sources(
+                1,
+                0,
+                |_| panic!("runtime metadata queried before publication"),
+                || [2, 0, 1, 3].into_iter(),
+            ),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn published_hardware_id_lookup_does_not_query_early_ids() {
+        let metadata = runtime_metadata([2, 0, 1, 3]);
+
+        assert_eq!(
+            cpu_id_to_idx_from_sources(
+                1,
+                metadata.len(),
+                |slot| metadata.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn published_hardware_id_lookup_rejects_missing_or_inconsistent_metadata() {
+        let metadata = runtime_metadata([2, 0, 1, 3]);
+        assert_eq!(
+            cpu_id_to_idx_from_sources(
+                7,
+                metadata.len(),
+                |slot| metadata.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            None
+        );
+
+        let mut inconsistent = metadata;
+        inconsistent[1].cpu_idx = 2;
+        assert_eq!(
+            cpu_id_to_idx_from_sources(
+                3,
+                inconsistent.len(),
+                |slot| inconsistent.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn published_hardware_id_lookup_validates_slots_after_the_match() {
+        let mut metadata = runtime_metadata([2, 0, 1, 3]);
+        metadata[3].cpu_idx = 2;
+
+        assert_eq!(
+            cpu_id_to_idx_from_sources(
+                2,
+                metadata.len(),
+                |slot| metadata.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn unpublished_logical_index_lookup_uses_early_ids() {
+        assert_eq!(
+            cpu_idx_to_id_from_sources(
+                2,
+                0,
+                |_| panic!("runtime metadata queried before publication"),
+                || [2, 0, 1, 3].into_iter(),
+            ),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn published_logical_index_lookup_does_not_query_early_ids() {
+        let metadata = runtime_metadata([2, 0, 1, 3]);
+
+        assert_eq!(
+            cpu_idx_to_id_from_sources(
+                2,
+                metadata.len(),
+                |slot| metadata.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn published_logical_index_lookup_rejects_inconsistent_metadata() {
+        let mut metadata = runtime_metadata([2, 0, 1, 3]);
+        metadata[2].cpu_idx = 1;
+
+        assert_eq!(
+            cpu_idx_to_id_from_sources(
+                2,
+                metadata.len(),
+                |slot| metadata.get(slot).copied(),
+                || -> core::array::IntoIter<usize, 0> {
+                    panic!("early CPU IDs queried after publication")
+                },
+            ),
+            None
         );
     }
 }

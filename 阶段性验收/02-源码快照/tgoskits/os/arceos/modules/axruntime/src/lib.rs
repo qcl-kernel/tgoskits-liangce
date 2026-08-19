@@ -50,15 +50,19 @@ mod stack_protector;
 #[cfg(feature = "smp")]
 mod mp;
 
+#[cfg(feature = "paging")]
+mod kernel_mapping;
 mod klib;
 
 mod devices;
+mod error;
 mod fs;
 #[cfg(feature = "irq")]
 pub mod irq;
 mod registers;
 #[cfg(feature = "serial")]
 pub mod serial;
+pub mod sync;
 
 #[cfg(all(feature = "net", feature = "fs"))]
 mod unix_ns;
@@ -67,6 +71,7 @@ mod unix_ns;
 mod wifi_glue;
 
 pub use ax_hal as hal;
+pub use error::{RuntimeError, RuntimeResult};
 
 pub(crate) mod build_info {
     include!(concat!(env!("OUT_DIR"), "/build_info.rs"));
@@ -350,6 +355,9 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     #[cfg(all(feature = "irq", feature = "ipi"))]
     ax_ipi::wait_for_all_cpus_ready();
 
+    #[cfg(all(feature = "smp", feature = "ipi"))]
+    fs::online_smp();
+
     ax_app_entry();
 
     #[cfg(feature = "multitask")]
@@ -392,12 +400,6 @@ fn init_allocator() {
         }
     }
 
-    #[cfg(feature = "host-carveout-allocator-evidence")]
-    emit_host_vm_carveout_allocator_evidence();
-
-    #[cfg(feature = "host-dma-guard-allocator-evidence")]
-    emit_host_dma_guard_allocator_evidence();
-
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
             ax_alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size)
@@ -414,256 +416,6 @@ fn init_allocator() {
     }
 }
 
-#[cfg(feature = "host-carveout-allocator-evidence")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CarveoutAllocatorEvidenceError {
-    CarveoutRangeOverflow { vm_id: u32 },
-    RegionRangeOverflow,
-    MissingReservedCover { vm_id: u32 },
-    FreeRegionOverlap { vm_id: u32 },
-}
-
-#[cfg(any(
-    feature = "host-carveout-allocator-evidence",
-    feature = "host-dma-guard-allocator-evidence"
-))]
-fn range_end(start: usize, size: usize) -> Option<usize> {
-    start.checked_add(size)
-}
-
-#[cfg(any(
-    feature = "host-carveout-allocator-evidence",
-    feature = "host-dma-guard-allocator-evidence"
-))]
-fn ranges_overlap(
-    left_start: usize,
-    left_end: usize,
-    right_start: usize,
-    right_end: usize,
-) -> bool {
-    left_start < right_end && right_start < left_end
-}
-
-#[cfg(feature = "host-carveout-allocator-evidence")]
-fn validate_host_vm_carveout_allocator_evidence<
-    C,
-    R,
-    Regions,
-    RegionIter,
-    CarveoutRange,
-    RegionRange,
->(
-    carveouts: impl IntoIterator<Item = C>,
-    regions: Regions,
-    carveout_range: CarveoutRange,
-    region_range: RegionRange,
-) -> Result<(), CarveoutAllocatorEvidenceError>
-where
-    C: Copy,
-    R: Copy,
-    Regions: Fn() -> RegionIter,
-    RegionIter: IntoIterator<Item = R>,
-    CarveoutRange: Fn(C) -> (u32, usize, usize),
-    RegionRange: Fn(R) -> (usize, usize, bool, bool),
-{
-    for carveout in carveouts {
-        let (vm_id, carveout_start, carveout_size) = carveout_range(carveout);
-        let carveout_end = range_end(carveout_start, carveout_size)
-            .ok_or(CarveoutAllocatorEvidenceError::CarveoutRangeOverflow { vm_id })?;
-        let mut reserved_cover = false;
-
-        for region in regions() {
-            let (region_start, region_size, is_reserved, is_free) = region_range(region);
-            let region_end = range_end(region_start, region_size)
-                .ok_or(CarveoutAllocatorEvidenceError::RegionRangeOverflow)?;
-            if is_reserved && region_start <= carveout_start && carveout_end <= region_end {
-                reserved_cover = true;
-            }
-            if is_free && ranges_overlap(carveout_start, carveout_end, region_start, region_end) {
-                return Err(CarveoutAllocatorEvidenceError::FreeRegionOverlap { vm_id });
-            }
-        }
-
-        if !reserved_cover {
-            return Err(CarveoutAllocatorEvidenceError::MissingReservedCover { vm_id });
-        }
-    }
-    Ok(())
-}
-
-#[cfg(feature = "host-carveout-allocator-evidence")]
-fn emit_host_vm_carveout_allocator_evidence() {
-    use ax_hal::mem::{MemRegionFlags, memory_regions, vm_carveouts};
-
-    let carveouts = vm_carveouts();
-    validate_host_vm_carveout_allocator_evidence(
-        carveouts.iter().copied(),
-        memory_regions,
-        |carveout| (carveout.vm_id, carveout.physical_start, carveout.size),
-        |region| {
-            (
-                region.paddr.as_usize(),
-                region.size,
-                region.flags.contains(MemRegionFlags::RESERVED),
-                region.flags.contains(MemRegionFlags::FREE),
-            )
-        },
-    )
-    .unwrap_or_else(|error| {
-        panic!("AxVisor host VM carveout allocator evidence validation failed: {error:?}")
-    });
-
-    // Do not emit a success marker until every carveout has passed the complete
-    // reserved-cover and free-overlap scan above.
-    for carveout in carveouts {
-        ax_println!(
-            "\nAXVISOR_HOST_VM_CARVEOUT_ALLOCATOR_EXCLUDED vm={} hpa={:#x} size={:#x} \
-             reserved_cover=1 free_overlap=0 phase=before-global-allocator-init",
-            carveout.vm_id,
-            carveout.physical_start,
-            carveout.size,
-        );
-    }
-}
-
-#[cfg(feature = "host-dma-guard-allocator-evidence")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum DmaGuardAllocatorEvidenceError {
-    EmptyGuardRange {
-        guard_index: usize,
-    },
-    GuardRangeOverflow {
-        guard_index: usize,
-    },
-    RegionRangeOverflow,
-    MissingReservedCover {
-        guard_index: usize,
-    },
-    FreeRegionOverlap {
-        guard_index: usize,
-    },
-    GuardOverlap {
-        first_guard_index: usize,
-        second_guard_index: usize,
-    },
-}
-
-#[cfg(feature = "host-dma-guard-allocator-evidence")]
-fn checked_dma_guard_end(
-    guard_index: usize,
-    guard_start: usize,
-    guard_size: usize,
-) -> Result<usize, DmaGuardAllocatorEvidenceError> {
-    if guard_size == 0 {
-        return Err(DmaGuardAllocatorEvidenceError::EmptyGuardRange { guard_index });
-    }
-    range_end(guard_start, guard_size)
-        .ok_or(DmaGuardAllocatorEvidenceError::GuardRangeOverflow { guard_index })
-}
-
-/// Validates allocator exclusion evidence without allocating memory.
-///
-/// The guard and region suppliers are restartable so every guard can be
-/// compared with every later guard and every memory region before a caller
-/// emits any success marker.
-#[cfg(feature = "host-dma-guard-allocator-evidence")]
-fn validate_host_dma_guard_allocator_evidence<
-    G,
-    R,
-    Guards,
-    GuardIter,
-    Regions,
-    RegionIter,
-    GuardRange,
-    RegionRange,
->(
-    guards: Guards,
-    regions: Regions,
-    guard_range: GuardRange,
-    region_range: RegionRange,
-) -> Result<(), DmaGuardAllocatorEvidenceError>
-where
-    G: Copy,
-    R: Copy,
-    Guards: Fn() -> GuardIter,
-    GuardIter: IntoIterator<Item = G>,
-    Regions: Fn() -> RegionIter,
-    RegionIter: IntoIterator<Item = R>,
-    GuardRange: Fn(G) -> (usize, usize),
-    RegionRange: Fn(R) -> (usize, usize, bool, bool),
-{
-    for (guard_index, guard) in guards().into_iter().enumerate() {
-        let (guard_start, guard_size) = guard_range(guard);
-        let guard_end = checked_dma_guard_end(guard_index, guard_start, guard_size)?;
-
-        for (other_guard_index, other_guard) in guards().into_iter().enumerate() {
-            if other_guard_index <= guard_index {
-                continue;
-            }
-            let (other_start, other_size) = guard_range(other_guard);
-            let other_end = checked_dma_guard_end(other_guard_index, other_start, other_size)?;
-            if ranges_overlap(guard_start, guard_end, other_start, other_end) {
-                return Err(DmaGuardAllocatorEvidenceError::GuardOverlap {
-                    first_guard_index: guard_index,
-                    second_guard_index: other_guard_index,
-                });
-            }
-        }
-
-        let mut reserved_cover = false;
-        for region in regions() {
-            let (region_start, region_size, is_reserved, is_free) = region_range(region);
-            let region_end = range_end(region_start, region_size)
-                .ok_or(DmaGuardAllocatorEvidenceError::RegionRangeOverflow)?;
-            if is_reserved && region_start <= guard_start && guard_end <= region_end {
-                reserved_cover = true;
-            }
-            if is_free && ranges_overlap(guard_start, guard_end, region_start, region_end) {
-                return Err(DmaGuardAllocatorEvidenceError::FreeRegionOverlap { guard_index });
-            }
-        }
-
-        if !reserved_cover {
-            return Err(DmaGuardAllocatorEvidenceError::MissingReservedCover { guard_index });
-        }
-    }
-    Ok(())
-}
-
-#[cfg(feature = "host-dma-guard-allocator-evidence")]
-fn emit_host_dma_guard_allocator_evidence() {
-    use ax_hal::mem::{DmaGuard, MemRegionFlags, dma_guards, memory_regions};
-
-    let guards = dma_guards();
-    // Complete validation deliberately precedes the marker loop: an invalid
-    // manifest panics without printing a partial success record.
-    validate_host_dma_guard_allocator_evidence(
-        || guards.iter().copied(),
-        memory_regions,
-        |guard: DmaGuard| (guard.physical_start, guard.size),
-        |region| {
-            (
-                region.paddr.as_usize(),
-                region.size,
-                region.flags.contains(MemRegionFlags::RESERVED),
-                region.flags.contains(MemRegionFlags::FREE),
-            )
-        },
-    )
-    .unwrap_or_else(|error| {
-        panic!("AxVisor host DMA guard allocator evidence validation failed: {error:?}")
-    });
-
-    for guard in guards {
-        ax_println!(
-            "\nAXVISOR_HOST_DMA_GUARD_ALLOCATOR_EXCLUDED hpa={:#x} size={:#x} reserved_cover=1 \
-             free_overlap=0 phase=before-global-allocator-init",
-            guard.physical_start,
-            guard.size,
-        );
-    }
-}
-
 #[cfg(feature = "irq")]
 fn init_interrupt() {
     init_percpu_irq(ax_hal::percpu::this_cpu_id());
@@ -672,7 +424,10 @@ fn init_interrupt() {
     ax_hal::asm::enable_irqs();
 
     #[cfg(feature = "ipi")]
-    ax_ipi::mark_current_cpu_ready();
+    {
+        ax_hal::asm::flush_tlb(None);
+        ax_ipi::mark_current_cpu_ready();
+    }
 }
 
 #[cfg(feature = "irq")]
@@ -699,7 +454,7 @@ unsafe fn ax_ipi_run_on_cpu_sync(
     f: unsafe fn(*mut ()),
     arg: *mut (),
 ) -> Result<(), ax_hal::irq::IrqError> {
-    unsafe { ax_ipi::run_on_cpu_sync_raw(cpu, f, arg) }
+    unsafe { ax_ipi::call_on_cpu(ax_hal::irq::CpuId(cpu), f, arg) }
 }
 
 #[cfg(feature = "irq")]
@@ -766,7 +521,9 @@ fn program_next_timer() {
         with_periodic_deadline(|pin| NEXT_PERIODIC_DEADLINE_NANOS.write_current(pin, deadline));
     }
     #[cfg(feature = "multitask")]
-    if let Some(task_deadline) = ax_task::next_timer_deadline_nanos() {
+    let task_deadline = ax_task::next_timer_deadline_nanos();
+    #[cfg(feature = "multitask")]
+    if let Some(task_deadline) = task_deadline {
         deadline = core::cmp::min(deadline, task_deadline);
     }
 
@@ -778,6 +535,10 @@ fn program_next_timer() {
 #[cfg(feature = "irq")]
 fn timer_irq_handler(ctx: ax_hal::irq::IrqContext) -> ax_hal::irq::IrqReturn {
     let _ = ctx;
+    // SAFETY: the local timer IRQ excludes migration and nested local
+    // scheduler-clock publication for this complete stamp.
+    unsafe { ax_hal::time::scheduler_clock_tick() }
+        .expect("current CPU scheduler clock must be online before timer IRQs");
     #[cfg(feature = "multitask")]
     let scheduler_tick = advance_periodic_timer(ax_hal::time::monotonic_time_nanos());
     #[cfg(not(feature = "multitask"))]
@@ -790,7 +551,12 @@ fn timer_irq_handler(ctx: ax_hal::irq::IrqContext) -> ax_hal::irq::IrqReturn {
 
 #[cfg(all(feature = "irq", feature = "ipi"))]
 fn ipi_irq_handler(_ctx: ax_hal::irq::IrqContext) -> ax_hal::irq::IrqReturn {
-    ax_ipi::ipi_handler();
+    ax_ipi::claim_current_delivery();
+    #[cfg(all(feature = "multitask", feature = "smp"))]
+    ax_task::handle_ipi_reschedule();
+    ax_ipi::drain_hard_calls()
+        .unwrap_or_else(|error| panic!("failed to continue hard-call draining: {error:?}"));
+    ax_ipi::legacy::drain_current_callbacks();
     ax_hal::irq::IrqReturn::Handled
 }
 
@@ -811,413 +577,6 @@ fn init_tls() {
 mod tests {
     #[test]
     fn fs_init_accepts_bootargs_without_fs_feature() {
-        crate::fs::init(Some("root=/dev/vda"));
-    }
-
-    #[cfg(feature = "host-carveout-allocator-evidence")]
-    mod host_carveout_allocator_evidence {
-        use super::super::{
-            CarveoutAllocatorEvidenceError, validate_host_vm_carveout_allocator_evidence,
-        };
-
-        #[derive(Clone, Copy)]
-        struct Carveout {
-            vm_id: u32,
-            start: usize,
-            size: usize,
-        }
-
-        #[derive(Clone, Copy)]
-        struct Region {
-            start: usize,
-            size: usize,
-            reserved: bool,
-            free: bool,
-        }
-
-        fn validate(
-            carveouts: &[Carveout],
-            regions: &[Region],
-        ) -> Result<(), CarveoutAllocatorEvidenceError> {
-            validate_host_vm_carveout_allocator_evidence(
-                carveouts.iter().copied(),
-                || regions.iter().copied(),
-                |carveout| (carveout.vm_id, carveout.start, carveout.size),
-                |region| (region.start, region.size, region.reserved, region.free),
-            )
-        }
-
-        #[test]
-        fn accepts_complete_reserved_cover_without_free_overlap() {
-            assert_eq!(
-                validate(
-                    &[Carveout {
-                        vm_id: 7,
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x0,
-                            size: 0x4000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x4000,
-                            size: 0x1000,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Ok(())
-            );
-        }
-
-        #[test]
-        fn rejects_missing_reserved_cover() {
-            assert_eq!(
-                validate(
-                    &[Carveout {
-                        vm_id: 7,
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[Region {
-                        start: 0x1000,
-                        size: 0x0800,
-                        reserved: true,
-                        free: false,
-                    }],
-                ),
-                Err(CarveoutAllocatorEvidenceError::MissingReservedCover { vm_id: 7 })
-            );
-        }
-
-        #[test]
-        fn rejects_one_byte_free_overlap() {
-            assert_eq!(
-                validate(
-                    &[Carveout {
-                        vm_id: 7,
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x1000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x1fff,
-                            size: 1,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Err(CarveoutAllocatorEvidenceError::FreeRegionOverlap { vm_id: 7 })
-            );
-        }
-
-        #[test]
-        fn accepts_adjacent_free_region() {
-            assert_eq!(
-                validate(
-                    &[Carveout {
-                        vm_id: 7,
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x1000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x2000,
-                            size: 0x1000,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Ok(())
-            );
-        }
-
-        #[test]
-        fn rejects_overflowing_carveout() {
-            assert_eq!(
-                validate(
-                    &[Carveout {
-                        vm_id: 7,
-                        start: usize::MAX,
-                        size: 1,
-                    }],
-                    &[],
-                ),
-                Err(CarveoutAllocatorEvidenceError::CarveoutRangeOverflow { vm_id: 7 })
-            );
-        }
-
-        #[test]
-        fn checks_each_carveout_in_input_order() {
-            assert_eq!(
-                validate(
-                    &[
-                        Carveout {
-                            vm_id: 9,
-                            start: 0x4000,
-                            size: 0x1000,
-                        },
-                        Carveout {
-                            vm_id: 3,
-                            start: 0x1000,
-                            size: 0x1000,
-                        },
-                    ],
-                    &[
-                        Region {
-                            start: 0x4000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x1000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                    ],
-                ),
-                Ok(())
-            );
-        }
-    }
-
-    #[cfg(feature = "host-dma-guard-allocator-evidence")]
-    mod host_dma_guard_allocator_evidence {
-        use super::super::{
-            DmaGuardAllocatorEvidenceError, validate_host_dma_guard_allocator_evidence,
-        };
-
-        #[derive(Clone, Copy)]
-        struct Guard {
-            start: usize,
-            size: usize,
-        }
-
-        #[derive(Clone, Copy)]
-        struct Region {
-            start: usize,
-            size: usize,
-            reserved: bool,
-            free: bool,
-        }
-
-        fn validate(
-            guards: &[Guard],
-            regions: &[Region],
-        ) -> Result<(), DmaGuardAllocatorEvidenceError> {
-            validate_host_dma_guard_allocator_evidence(
-                || guards.iter().copied(),
-                || regions.iter().copied(),
-                |guard| (guard.start, guard.size),
-                |region| (region.start, region.size, region.reserved, region.free),
-            )
-        }
-
-        #[test]
-        fn accepts_complete_reserved_cover_without_free_overlap() {
-            assert_eq!(
-                validate(
-                    &[Guard {
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x0,
-                            size: 0x4000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x4000,
-                            size: 0x1000,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Ok(())
-            );
-        }
-
-        #[test]
-        fn rejects_missing_reserved_cover() {
-            assert_eq!(
-                validate(
-                    &[Guard {
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[Region {
-                        start: 0x1000,
-                        size: 0x0800,
-                        reserved: true,
-                        free: false,
-                    }],
-                ),
-                Err(DmaGuardAllocatorEvidenceError::MissingReservedCover { guard_index: 0 })
-            );
-        }
-
-        #[test]
-        fn rejects_one_byte_free_overlap() {
-            assert_eq!(
-                validate(
-                    &[Guard {
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x1000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x1fff,
-                            size: 1,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Err(DmaGuardAllocatorEvidenceError::FreeRegionOverlap { guard_index: 0 })
-            );
-        }
-
-        #[test]
-        fn accepts_adjacent_free_region() {
-            assert_eq!(
-                validate(
-                    &[Guard {
-                        start: 0x1000,
-                        size: 0x1000,
-                    }],
-                    &[
-                        Region {
-                            start: 0x1000,
-                            size: 0x1000,
-                            reserved: true,
-                            free: false,
-                        },
-                        Region {
-                            start: 0x2000,
-                            size: 0x1000,
-                            reserved: false,
-                            free: true,
-                        },
-                    ],
-                ),
-                Ok(())
-            );
-        }
-
-        #[test]
-        fn rejects_overflowing_guard_range() {
-            assert_eq!(
-                validate(
-                    &[Guard {
-                        start: usize::MAX,
-                        size: 1,
-                    }],
-                    &[],
-                ),
-                Err(DmaGuardAllocatorEvidenceError::GuardRangeOverflow { guard_index: 0 })
-            );
-        }
-
-        #[test]
-        fn rejects_duplicate_guard_range() {
-            assert_eq!(
-                validate(
-                    &[
-                        Guard {
-                            start: 0x1000,
-                            size: 0x1000,
-                        },
-                        Guard {
-                            start: 0x1000,
-                            size: 0x1000,
-                        },
-                    ],
-                    &[Region {
-                        start: 0x0,
-                        size: 0x4000,
-                        reserved: true,
-                        free: false,
-                    }],
-                ),
-                Err(DmaGuardAllocatorEvidenceError::GuardOverlap {
-                    first_guard_index: 0,
-                    second_guard_index: 1,
-                })
-            );
-        }
-
-        #[test]
-        fn validation_before_marker_loop_is_all_or_none() {
-            let guards = [
-                Guard {
-                    start: 0x1000,
-                    size: 0x1000,
-                },
-                Guard {
-                    start: 0x3000,
-                    size: 0x1000,
-                },
-            ];
-            let regions = [
-                Region {
-                    start: 0x1000,
-                    size: 0x1000,
-                    reserved: true,
-                    free: false,
-                },
-                Region {
-                    start: 0x5000,
-                    size: 0x1000,
-                    reserved: false,
-                    free: true,
-                },
-            ];
-
-            // This mirrors the production validation-before-loop boundary:
-            // the second guard invalidates the manifest, so the marker phase
-            // cannot receive even the first guard.
-            let marker_count = validate(&guards, &regions).map(|()| guards.len());
-            assert_eq!(
-                marker_count,
-                Err(DmaGuardAllocatorEvidenceError::MissingReservedCover { guard_index: 1 })
-            );
-        }
-
-        #[test]
-        fn accepts_empty_manifest_without_marker_candidates() {
-            let guards = [];
-            assert_eq!(validate(&guards, &[]), Ok(()));
-            assert_eq!(guards.len(), 0);
-        }
+        crate::fs::init(Some("root=/dev/nvme0n1"));
     }
 }

@@ -1,0 +1,19 @@
+{
+  "binaryPath": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.bin",
+  "binarySha256": "e4a3ece0263f37cc0d22331184530fe6f23e742985538dad7f8f45268b81e3c0",
+  "binarySize": 37008,
+  "elfPath": "/root/contest-builds/zephyr-dual-15df1f6/zephyr/zephyr.elf",
+  "elfSha256": "02acbf378037b2e25e0f971945cd34fcc5dcd34381a346d729b43597cdcd72b6",
+  "entryPhysical": "0x00000000400010b4",
+  "entryVirtual": "0x00000000400010b4",
+  "executableSegmentPhysical": "0x0000000040000000",
+  "executableSegmentVirtual": "0x0000000040000000",
+  "generatedConfigPath": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/results/baseline/runs/phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31/prepared/zephyr.resolved.toml",
+  "generatedConfigSha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb",
+  "kernelLoadAddress": "0x0000000040000000",
+  "memoryRegionEndExclusive": "0x0000000048000000",
+  "memoryRegionStart": "0x0000000040000000",
+  "schemaVersion": 1,
+  "templatePath": "/mnt/f/project/\u6cc9\u57ce\u5b9e\u9a8c\u5ba4/tgoskits/os/axvisor/configs/vms/qemu/aarch64/zephyr-smp1-dual.toml",
+  "templateSha256": "3813c8451727e25cbd41dd2b9d10a4f36428ad154063fc0855cd3a1cb3d67647"
+}

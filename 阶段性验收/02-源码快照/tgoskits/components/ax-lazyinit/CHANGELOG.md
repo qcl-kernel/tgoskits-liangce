@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.10](https://github.com/rcore-os/tgoskits/compare/ax-lazyinit-v0.4.9...ax-lazyinit-v0.4.10) - 2026-08-09
+
+### Other
+
+- updated the following local packages: axtest
+
+## [0.4.9](https://github.com/rcore-os/tgoskits/compare/ax-lazyinit-v0.4.8...ax-lazyinit-v0.4.9) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
 ## [0.4.8](https://github.com/rcore-os/tgoskits/compare/ax-lazyinit-v0.4.7...ax-lazyinit-v0.4.8) - 2026-06-03
 
 ### Other

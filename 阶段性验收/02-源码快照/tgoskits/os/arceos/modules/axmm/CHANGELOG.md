@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.31](https://github.com/rcore-os/tgoskits/compare/ax-mm-v0.5.30...ax-mm-v0.5.31) - 2026-08-09
+
+### Other
+
+- *(memory)* unify page-table execution on page-table-generic ([#1911](https://github.com/rcore-os/tgoskits/pull/1911))
+
+## [0.5.30](https://github.com/rcore-os/tgoskits/compare/ax-mm-v0.5.29...ax-mm-v0.5.30) - 2026-08-03
+
+### Other
+
+- updated the following local packages: ax-kspin, ax-lazyinit, ax-memory-addr, ax-errno, ax-memory-set, ax-hal, ax-page-table-multiarch, ax-alloc
+
+## [0.5.29](https://github.com/rcore-os/tgoskits/compare/ax-mm-v0.5.28...ax-mm-v0.5.29) - 2026-07-23
+
+### Other
+
+- updated the following local packages: ax-alloc, ax-hal
+
 ## [0.5.28](https://github.com/rcore-os/tgoskits/compare/ax-mm-v0.5.27...ax-mm-v0.5.28) - 2026-07-10
 
 ### Other

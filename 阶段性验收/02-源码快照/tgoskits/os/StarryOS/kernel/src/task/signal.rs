@@ -1,24 +1,25 @@
+use alloc::sync::Arc;
 #[cfg(target_arch = "riscv64")]
 use core::mem::{MaybeUninit, align_of, size_of};
 use core::{future::poll_fn, task::Poll};
 
-use ax_errno::{AxError, AxResult};
 use ax_runtime::hal::cpu::uspace::UserContext;
 use ax_task::{
-    TaskInner, current,
+    AxTaskRef, TaskInner, current,
     future::{block_on, interruptible},
 };
 use axpoll::IoEvents;
 use linux_raw_sys::general::{CLD_CONTINUED, CLD_STOPPED, CLD_TRAPPED};
-use starry_process::Pid;
 use starry_signal::{SignalInfo, SignalOSAction, SignalSet, Signo};
 #[cfg(target_arch = "riscv64")]
 use starry_vm::vm_read_slice;
 
 use super::{
-    AsThread, ProcessData, Thread, do_exit, get_process_data, get_process_group, get_task,
-    is_zombie_pid,
+    AsThread, PgidNumber, PidIdentity, ProcessData, ProcessGroup, TgidNumber, Thread, TidNumber,
+    do_exit, get_process_data_by_number, get_process_group_by_number, get_task_by_number,
+    signal_publication::publish_before_fatal_stop_release,
 };
+use crate::{StarryError, StarryResult};
 
 /// Information needed to restart a syscall if SA_RESTART applies.
 pub struct SyscallRestartInfo {
@@ -186,27 +187,29 @@ pub fn ptrace_stop_current(
     signo: Signo,
     uctx: &mut UserContext,
 ) -> Option<Option<Signo>> {
-    ptrace_stop_current_impl(thr, signo, uctx, false)
+    ptrace_stop_current_impl(thr, signo, uctx, None)
 }
 
 pub fn ptrace_syscall_stop_current(
     thr: &Thread,
     signo: Signo,
     uctx: &mut UserContext,
+    syscall_no: usize,
 ) -> Option<Option<Signo>> {
-    ptrace_stop_current_impl(thr, signo, uctx, true)
+    ptrace_stop_current_impl(thr, signo, uctx, Some(syscall_no))
 }
 
 pub fn wait_existing_ptrace_stop_current(thr: &Thread, uctx: &mut UserContext) {
-    let tid = thr.tid();
+    let tid = thr.tid_number();
     if let Some(signo) = thr.proc_data.ptrace_stop_signo_for(tid) {
         notify_ptrace_waiter(thr, signo);
     }
     wait_ptrace_resume(thr, tid, uctx);
 }
 
-fn wait_ptrace_resume(thr: &Thread, tid: u32, uctx: &mut UserContext) {
-    current().clear_interrupt();
+fn wait_ptrace_resume(thr: &Thread, tid: TidNumber, uctx: &mut UserContext) {
+    let stale_interrupts = current().interrupt_snapshot();
+    current().acknowledge_interrupt(stale_interrupts);
     let wait_result = block_on(interruptible(poll_fn(|cx| {
         if thr.proc_data.ptrace_stop_signo_for(tid).is_none() {
             Poll::Ready(())
@@ -232,13 +235,13 @@ fn ptrace_stop_current_impl(
     thr: &Thread,
     signo: Signo,
     uctx: &mut UserContext,
-    is_syscall_stop: bool,
+    syscall_no: Option<usize>,
 ) -> Option<Option<Signo>> {
     if !thr.proc_data.is_ptrace_traceme() && !thr.proc_data.is_ptrace_attached() {
         return None;
     }
 
-    let tid = thr.tid();
+    let tid = thr.tid_number();
     while !thr.proc_data.claim_ptrace_stop(tid) {
         block_on(poll_fn(|cx| {
             if !thr.proc_data.has_ptrace_stop(tid) {
@@ -263,8 +266,9 @@ fn ptrace_stop_current_impl(
     {
         thr.proc_data.save_current_fp_for_ptrace(tid);
     }
-    if is_syscall_stop {
-        thr.proc_data.set_ptrace_syscall_stop(tid, signo, uctx);
+    if let Some(syscall_no) = syscall_no {
+        thr.proc_data
+            .set_ptrace_syscall_stop(tid, signo, uctx, syscall_no);
     } else {
         thr.proc_data.set_ptrace_stop(tid, signo, uctx);
     }
@@ -275,20 +279,22 @@ fn ptrace_stop_current_impl(
 }
 
 fn notify_ptrace_waiter(thr: &Thread, signo: Signo) {
-    let waiter_pid = thr
+    let waiter = thr
         .proc_data
-        .ptrace_tracer_pid()
-        .or_else(|| thr.proc_data.proc.parent().map(|parent| parent.pid()));
-    if let Some(waiter_pid) = waiter_pid
-        && let Ok(parent_data) = get_process_data(waiter_pid)
+        .ptrace_tracer_identity()
+        .or_else(|| thr.proc_data.proc.parent().map(|parent| parent.identity()));
+    if let Some(waiter) = waiter
+        && let Some(parent_data) = waiter.live_data()
     {
-        let sigchld = SignalInfo::new_sigchld(
-            thr.proc_data.proc.pid(),
-            thr.cred().uid,
-            CLD_TRAPPED as i32,
-            signo as i32,
-        );
-        let _ = send_signal_to_process(waiter_pid, Some(sigchld));
+        let child_pid = thr
+            .proc_data
+            .identity()
+            .visible_number(&parent_data.identity().active_namespace())
+            .expect("ptrace child must be visible to its waiter")
+            .get();
+        let sigchld =
+            SignalInfo::new_sigchld(child_pid, thr.cred().uid, CLD_TRAPPED as i32, signo as i32);
+        let _ = send_signal_to_process_data(&parent_data, Some(sigchld));
         // Ptrace stop report is published before waking waiters.
         unsafe { parent_data.child_exit_event.wake(axpoll::IoEvents::IN) };
     }
@@ -322,7 +328,7 @@ pub fn check_signals(
                 // later iterations pass `None`, so the restart adjustment remains
                 // single-shot.
                 if let Some(info) = restart_info
-                    && (uctx.retval() as isize) == -(ax_errno::LinuxError::EINTR.code() as isize)
+                    && (uctx.retval() as isize) == -(crate::Errno::EINTR.into_raw() as isize)
                     && restartable
                 {
                     let new_ip = uctx.ip() - uctx.syscall_insn_len();
@@ -348,14 +354,14 @@ pub fn check_signals(
     if signo != Signo::SIGKILL
         && !thr
             .proc_data
-            .take_ptrace_resume_signal_bypass_for(thr.tid(), signo)
+            .take_ptrace_resume_signal_bypass_for(thr.tid_number(), signo)
         && let Some(resume_signo) = ptrace_stop_current(thr, signo, uctx)
     {
         match resume_signo {
             None => return true,
             Some(new_signo) if new_signo != signo => {
                 thr.proc_data
-                    .set_ptrace_resume_signal_bypass_for(thr.tid(), new_signo);
+                    .set_ptrace_resume_signal_bypass_for(thr.tid_number(), new_signo);
                 let _ = thr.signal.send_signal(SignalInfo::new_kernel(new_signo));
                 return true;
             }
@@ -395,7 +401,7 @@ pub fn check_signals(
             }
             do_exit(128 + signo as i32, true);
         }
-        SignalOSAction::Stop => do_job_stop(thr, signo),
+        SignalOSAction::Stop => do_job_stop(thr, signo, uctx),
         SignalOSAction::Continue => {}
         SignalOSAction::NoFurtherAction => {}
     }
@@ -414,11 +420,16 @@ fn notify_parent_job_change(proc_data: &ProcessData, code: i32, status: i32) {
         .threads()
         .into_iter()
         .next()
-        .and_then(|tid| get_task(tid).ok())
+        .and_then(|tid| get_task_by_number(tid).ok())
         .map_or(0, |task| task.as_thread().cred().uid);
-    let sig = SignalInfo::new_sigchld(proc.pid(), child_uid, code, status);
-    let _ = send_signal_to_process(parent.pid(), Some(sig));
-    if let Ok(data) = get_process_data(parent.pid()) {
+    let child_pid = proc
+        .identity()
+        .visible_number(&parent.identity().active_namespace())
+        .expect("child process must be visible to its parent")
+        .get();
+    let sig = SignalInfo::new_sigchld(child_pid, child_uid, code, status);
+    let _ = send_signal_to_process(parent.pid_number(), Some(sig));
+    if let Ok(data) = get_process_data_by_number(parent.pid_number()) {
         // Job-control report is published before waking waiters.
         unsafe { data.child_exit_event.wake(axpoll::IoEvents::IN) };
     }
@@ -426,7 +437,8 @@ fn notify_parent_job_change(proc_data: &ProcessData, code: i32, status: i32) {
 
 /// Enter a job-control stop: record the stop, notify the parent, then park the
 /// current thread until `SIGCONT` clears the stop (or `SIGKILL` force-resumes it
-/// so the kill can proceed).
+/// so the kill can proceed). A seized tracer may wake this loop solely to
+/// publish `PTRACE_EVENT_STOP`; that wake does not release the job stop.
 ///
 /// Uses a plain block — not [`interruptible`](ax_task::future::interruptible) —
 /// because an ordinary signal must **not** wake a stopped process; only
@@ -444,31 +456,63 @@ fn notify_parent_job_change(proc_data: &ProcessData, code: i32, status: i32) {
 /// - Only the thread that dequeues the stop signal parks; sibling threads of a
 ///   multi-threaded process keep running until they next hit a stop signal.
 ///   Linux stops every thread in the group.
-fn do_job_stop(thr: &Thread, signo: Signo) {
+fn do_job_stop(thr: &Thread, signo: Signo, uctx: &mut UserContext) {
     let proc_data = &thr.proc_data;
     // Snapshot before recording the stop so a racing SIGCONT (which advances the
     // generation) cancels this stop.
     let continue_gen = proc_data.continue_generation();
-    if !proc_data.set_job_stopped(signo, continue_gen) {
+    let tid = thr.tid_number();
+    if !proc_data.set_job_stopped(signo, continue_gen, tid) {
         return;
     }
     notify_parent_job_change(proc_data, CLD_STOPPED as i32, signo as i32);
 
+    let tid = thr.tid();
     let cont_event = proc_data.cont_event();
-    block_on(poll_fn(|cx| {
-        if !proc_data.is_job_stopped() {
-            return Poll::Ready(());
+    while proc_data.is_job_stopped() {
+        if proc_data.has_ptrace_pending_event_for(tid) {
+            let resume_signo = ptrace_stop_current(thr, signo, uctx).flatten();
+            match resume_signo {
+                // Linux re-reports a seized group stop after a tracer supplies
+                // SIGCONT to resume its PTRACE_EVENT_STOP. The signal is not a
+                // signal-delivery stop, so it must not release the job stop yet.
+                Some(Signo::SIGCONT) => {
+                    proc_data.set_ptrace_pending_event(
+                        tid,
+                        crate::syscall::ptrace::PTRACE_EVENT_STOP,
+                        0,
+                    );
+                }
+                // A subsequent zero-signal ptrace resume leaves the group stop
+                // and resumes user execution. There is no user-visible SIGCONT
+                // delivery to enqueue on this path.
+                None if proc_data.set_job_continued() => {
+                    notify_parent_job_change(
+                        proc_data,
+                        CLD_CONTINUED as i32,
+                        Signo::SIGCONT as i32,
+                    );
+                }
+                _ => {}
+            }
+            continue;
         }
-        // Registration happens from the stopped task context.
-        unsafe { cont_event.register(cx.waker(), axpoll::IoEvents::IN) };
-        // Re-check after registering to avoid a lost wakeup if the continue
-        // landed between the check above and registration.
-        if proc_data.is_job_stopped() {
-            Poll::Pending
-        } else {
-            Poll::Ready(())
-        }
-    }));
+
+        block_on(poll_fn(|cx| {
+            if !proc_data.is_job_stopped() || proc_data.has_ptrace_pending_event_for(tid) {
+                return Poll::Ready(());
+            }
+            // Registration happens from the stopped task context.
+            unsafe { cont_event.register(cx.waker(), axpoll::IoEvents::IN) };
+            // Re-check after registering to avoid a lost wakeup if the continue
+            // or ptrace interrupt landed between the checks and registration.
+            if proc_data.is_job_stopped() && !proc_data.has_ptrace_pending_event_for(tid) {
+                Poll::Pending
+            } else {
+                Poll::Ready(())
+            }
+        }));
+    }
 }
 
 pub fn block_next_signal() {
@@ -481,8 +525,8 @@ pub fn unblock_next_signal() -> bool {
 
 pub fn with_blocked_signals<R>(
     blocked: Option<SignalSet>,
-    f: impl FnOnce() -> AxResult<R>,
-) -> AxResult<R> {
+    f: impl FnOnce() -> StarryResult<R>,
+) -> StarryResult<R> {
     let curr = current();
     let sig = &curr.as_thread().signal;
 
@@ -507,15 +551,37 @@ pub(super) fn send_signal_thread_inner(task: &TaskInner, thr: &Thread, sig: Sign
 }
 
 /// Sends a signal to a thread.
-pub fn send_signal_to_thread(tgid: Option<Pid>, tid: Pid, sig: Option<SignalInfo>) -> AxResult<()> {
-    let task = get_task(tid)?;
-    let thread = task.try_as_thread().ok_or(AxError::OperationNotPermitted)?;
-    if tgid.is_some_and(|tgid| thread.proc_data.proc.pid() != tgid) {
-        return Err(AxError::NoSuchProcess);
+pub fn send_signal_to_thread(
+    tgid: Option<TgidNumber>,
+    tid: TidNumber,
+    sig: Option<SignalInfo>,
+) -> StarryResult<()> {
+    let task = get_task_by_number(tid)?;
+    let expected_process = tgid.map(get_process_data_by_number).transpose()?;
+    send_signal_to_task(
+        &task,
+        expected_process.as_ref().map(|data| data.identity()),
+        sig,
+    )
+}
+
+/// Sends a signal to one already-resolved stable thread generation.
+pub(crate) fn send_signal_to_task(
+    task: &AxTaskRef,
+    expected_process: Option<Arc<PidIdentity>>,
+    sig: Option<SignalInfo>,
+) -> StarryResult<()> {
+    let thread = task
+        .try_as_thread()
+        .ok_or(StarryError::OperationNotPermitted)?;
+    if expected_process
+        .is_some_and(|expected| !Arc::ptr_eq(&expected, &thread.proc_data.identity()))
+    {
+        return Err(StarryError::NoSuchProcess);
     }
 
     if let Some(sig) = sig {
-        info!("Send signal {:?} to thread {}", sig.signo(), tid);
+        info!("Send signal {:?} to thread {}", sig.signo(), thread.tid());
         // Only wake the target thread when the signal is deliverable
         // (not blocked/not ignored).  Sending a blocked signal via
         // tkill/tgkill must NOT interrupt the target per POSIX; the signal
@@ -532,20 +598,31 @@ pub fn send_signal_to_thread(tgid: Option<Pid>, tid: Pid, sig: Option<SignalInfo
 }
 
 /// Sends a signal to a process.
-pub fn send_signal_to_process(pid: Pid, sig: Option<SignalInfo>) -> AxResult<()> {
-    let proc_data = match get_process_data(pid) {
+pub fn send_signal_to_process(tgid: TgidNumber, sig: Option<SignalInfo>) -> StarryResult<()> {
+    let proc_data = match get_process_data_by_number(tgid) {
         Ok(proc_data) => proc_data,
         Err(_) => {
             // A zombie process has exited but not yet been reaped by waitpid().
             // Its ProcessData is gone, but the PID still exists: kill(pid, 0)
             // must return 0, and signals are silently dropped (no live threads).
-            if is_zombie_pid(pid) {
+            if crate::task::ROOT_PID_NS
+                .lookup(tgid.pid_number())
+                .is_some_and(|identity| identity.is_zombie())
+            {
                 return Ok(());
             }
-            return Err(AxError::NoSuchProcess);
+            return Err(StarryError::NoSuchProcess);
         }
     };
 
+    send_signal_to_process_data(&proc_data, sig)
+}
+
+/// Sends a signal to one already-resolved stable process generation.
+pub(crate) fn send_signal_to_process_data(
+    proc_data: &Arc<ProcessData>,
+    sig: Option<SignalInfo>,
+) -> StarryResult<()> {
     // Job-control side effects must run at send time: a stopped process is
     // parked in the kernel and cannot dequeue SIGCONT itself.
     if let Some(sig) = &sig {
@@ -559,50 +636,31 @@ pub fn send_signal_to_process(pid: Pid, sig: Option<SignalInfo>) -> AxResult<()>
             // without scrubbing the pending queue — and returns whether the
             // process had actually been stopped; only then do we notify the parent.
             Signo::SIGCONT if proc_data.set_job_continued() => {
-                notify_parent_job_change(&proc_data, CLD_CONTINUED as i32, Signo::SIGCONT as i32);
+                notify_parent_job_change(proc_data, CLD_CONTINUED as i32, Signo::SIGCONT as i32);
             }
-            Signo::SIGKILL => proc_data.clear_job_stop_for_kill(),
             _ => {}
         }
     }
 
     if let Some(sig) = sig {
         let signo = sig.signo();
-        info!("Send signal {signo:?} to process {pid}");
-        if signo == Signo::SIGKILL && proc_data.ptrace_stop_signo().is_some() {
-            proc_data.clear_ptrace_stop();
-        }
-        if let Some(tid) = proc_data.signal.send_signal(sig) {
-            // A thread was found that doesn't have the signal blocked.
-            // Mark it interrupted so blocking syscalls wrapped by
-            // `future::interruptible` can return EINTR promptly.
-            if let Ok(task) = get_task(tid) {
-                task.interrupt();
-            }
+        info!("Send signal {signo:?} to process {}", proc_data.proc.pid());
+        let ptrace_stop_tid = (signo == Signo::SIGKILL)
+            .then(|| proc_data.selected_ptrace_stop_tid())
+            .flatten();
+        if signo == Signo::SIGKILL {
+            let _wake_tid = publish_before_fatal_stop_release(
+                || publish_process_signal(proc_data, sig, ptrace_stop_tid),
+                ptrace_stop_tid.map(|_| || proc_data.clear_ptrace_stop()),
+                || proc_data.clear_job_stop_for_kill(),
+            );
         } else {
-            // All threads have this signal blocked — the signal is now pending
-            // at the process level.  Only wake threads that are sleeping
-            // in rt_sigtimedwait/sigwaitinfo waiting for this specific signal:
-            // those are the only threads that can dequeue a blocked signal.
-            // Waking other threads (e.g. ones blocked in waitpid) would cause
-            // spurious EINTR.
-            for tid in proc_data.proc.threads() {
-                if let Ok(task) = get_task(tid)
-                    && task
-                        .as_thread()
-                        .signal
-                        .sigwait_set
-                        .lock()
-                        .is_some_and(|s| s.has(signo))
-                {
-                    ax_task::wake_task(&task);
-                }
-            }
+            let _wake_tid = publish_process_signal(proc_data, sig, ptrace_stop_tid);
         }
         // Wake signalfd waiters on every thread: even blocked process-level
         // signals must be visible from signalfd in an epoll event loop.
         for tid in proc_data.proc.threads() {
-            if let Ok(task) = get_task(tid)
+            if let Ok(task) = get_task_by_number(tid)
                 && let Some(thr) = task.try_as_thread()
             {
                 unsafe { thr.signalfd_waker.wake(IoEvents::IN) };
@@ -613,16 +671,73 @@ pub fn send_signal_to_process(pid: Pid, sig: Option<SignalInfo>) -> AxResult<()>
     Ok(())
 }
 
-/// Sends a signal to a process group.
-pub fn send_signal_to_process_group(pgid: Pid, sig: Option<SignalInfo>) -> AxResult<()> {
-    let pg = get_process_group(pgid)?;
+fn publish_process_signal(
+    proc_data: &ProcessData,
+    sig: SignalInfo,
+    ptrace_stop_tid: Option<TidNumber>,
+) -> Option<TidNumber> {
+    let signo = sig.signo();
+    let wake_tid = proc_data
+        .signal
+        .send_signal(sig)
+        .and_then(|tid| TidNumber::try_from(tid).ok());
+    if let Some(tid) = wake_tid
+        && let Ok(task) = get_task_by_number(tid)
+    {
+        // The pending signal is visible before the direct scheduler wake.
+        task.interrupt();
+    }
+    if let Some(tid) = ptrace_stop_tid
+        && Some(tid) != wake_tid
+        && let Ok(task) = get_task_by_number(tid)
+    {
+        // A fatal signal must abort the exact traced thread even when the
+        // process signal manager selected an unblocked sibling.
+        task.interrupt();
+    }
+    if wake_tid.is_none() {
+        // All threads have this signal blocked — the signal is now pending at
+        // the process level. Only wake threads that are sleeping in
+        // rt_sigtimedwait/sigwaitinfo for this signal; waking unrelated
+        // waitpid callers would cause spurious EINTR.
+        for tid in proc_data.proc.threads() {
+            if let Ok(task) = get_task_by_number(tid)
+                && task
+                    .as_thread()
+                    .signal
+                    .sigwait_set
+                    .lock()
+                    .is_some_and(|set| set.has(signo))
+            {
+                ax_task::wake_task(&task);
+            }
+        }
+    }
+    wake_tid
+}
 
+/// Sends a signal to a process group.
+pub fn send_signal_to_process_group(pgid: PgidNumber, sig: Option<SignalInfo>) -> StarryResult<()> {
+    let pg = get_process_group_by_number(pgid)?;
+
+    send_signal_to_process_group_ref(&pg, sig)
+}
+
+/// Sends a signal to one already-resolved process-group identity.
+pub(crate) fn send_signal_to_process_group_ref(
+    pg: &Arc<ProcessGroup>,
+    sig: Option<SignalInfo>,
+) -> StarryResult<()> {
     if let Some(sig) = sig {
-        info!("Send signal {:?} to process group {}", sig.signo(), pgid);
+        info!(
+            "Send signal {:?} to process group {}",
+            sig.signo(),
+            pg.pgid()
+        );
         for proc in pg.processes() {
             // A zombie's ProcessData may already be freed; skip it so live
             // siblings still receive the signal.
-            if let Err(e) = send_signal_to_process(proc.pid(), Some(sig.clone())) {
+            if let Err(e) = send_signal_to_process(proc.pid_number(), Some(sig.clone())) {
                 debug!(
                     "send_signal_to_process_group: skipped pid {}: {:?}",
                     proc.pid(),
@@ -646,7 +761,7 @@ pub fn send_signal_to_process_group(pgid: Pid, sig: Option<SignalInfo>) -> AxRes
 /// Process-wide fatal signals (signals raised on someone else's
 /// behalf) still go through [`send_signal_to_process`] and can land
 /// on any unmasked thread.
-pub fn raise_signal_fatal(sig: SignalInfo, uctx: &UserContext) -> AxResult<()> {
+pub fn raise_signal_fatal(sig: SignalInfo, uctx: &UserContext) -> StarryResult<()> {
     let curr = current();
     let thread = curr.as_thread();
     let signo = sig.signo();

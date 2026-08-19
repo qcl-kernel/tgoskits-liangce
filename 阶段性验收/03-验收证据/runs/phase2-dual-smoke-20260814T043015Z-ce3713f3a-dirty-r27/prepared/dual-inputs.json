@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "prepared-inputs-only",
+  "status": "dual_guest_smoke_inputs_prepared",
+  "proofScope": "one-run-linux-zephyr-dual-guest-smoke-input-bundle",
+  "doesNotProve": [
+    "QEMU was launched",
+    "either guest booted",
+    "DMA isolation",
+    "thirty-minute stability",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "bootId": "dual-20260814T043015Z-ac2efac0071f6973",
+  "sources": {
+    "linuxKernel": {
+      "path": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/qemu-aarch64",
+      "sha256": "d8127a4ce952ae9bfa539d3535260b8d67973b766e51a3de0b97b526bfd6722c"
+    },
+    "sourceRootfs": {
+      "path": "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/rootfs.img",
+      "sha256": "178f81bf40c1a0723a75e0b0f18b70e09b09ceae2b91ce1a990e5f7a792a224c"
+    },
+    "zephyrBinary": {
+      "path": "/root/contest-builds/zephyr-dual-ce3713f3/zephyr/zephyr.bin",
+      "sha256": "079ea9fc9de6560f8e5bc9a73e046e8e64e866ec8c2e94ebbdf6f4aa62ec05b9"
+    }
+  },
+  "outputs": {
+    "linux.resolved.toml": {
+      "path": "linux.resolved.toml",
+      "size": 852,
+      "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21"
+    },
+    "zephyr.resolved.toml": {
+      "path": "zephyr.resolved.toml",
+      "size": 1521,
+      "sha256": "16d2520cc5eacd37a40b7b177799e27a394c550792aa24e0c65e7773700fe1a6"
+    },
+    "qemu.no-dataplane.toml": {
+      "path": "qemu.no-dataplane.toml",
+      "size": 857,
+      "sha256": "2009e39aef313bdf9c1497215a02a152ad19868d6e7c6288735d674d25c2a15b"
+    },
+    "linux-console-rootfs.ext4": {
+      "path": "linux-console-rootfs.ext4",
+      "size": 33554432,
+      "sha256": "aed86e1ef2b8da41ff1c60876d92413649312fe64153bb918b06afe5215986e6"
+    },
+    "linux-rootfs-plan.json": {
+      "path": "linux-rootfs-plan.json",
+      "size": 1740,
+      "sha256": "3ea05b62ba5b49287ccd394278940ff6fc51c3e415b0d9006a863f67712fe9bd"
+    },
+    "zephyr-build-manifest.json": {
+      "path": "zephyr-build-manifest.json",
+      "size": 641,
+      "sha256": "6e25750e385e752255e9df6a4b123bf7b90e5f6bdfbc44c5ee83e19f29d7b108"
+    }
+  },
+  "resolvedZephyr": {
+    "vmId": 2,
+    "cpuNum": 1,
+    "physCpuIds": [
+      2
+    ]
+  },
+  "init": {
+    "size": 1285,
+    "sha256": "6805a7c49e35c1bb0316a3044b3ee449c6c8acf992526fee129ede46d621c7ee"
+  }
+}

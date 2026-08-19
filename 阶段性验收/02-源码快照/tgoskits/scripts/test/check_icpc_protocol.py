@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import os
+import secrets
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -23,12 +23,13 @@ def main() -> int:
         else WORKSPACE_ROOT / "target" / "contract-tests"
     )
     temporary_root.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix="icpc-protocol-", dir=temporary_root
-    ) as temporary_directory:
-        executable = Path(temporary_directory) / executable_name()
-        compile_protocol(compiler, executable)
-        subprocess.run([str(executable)], cwd=WORKSPACE_ROOT, check=True)
+    work_directory = temporary_root / (
+        f"icpc-protocol-{os.getpid()}-{secrets.token_hex(8)}"
+    )
+    work_directory.mkdir()
+    executable = work_directory / executable_name()
+    compile_protocol(compiler, executable)
+    subprocess.run([str(executable)], cwd=WORKSPACE_ROOT, check=True)
     return 0
 
 

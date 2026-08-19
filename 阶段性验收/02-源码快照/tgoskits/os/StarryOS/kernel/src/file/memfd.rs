@@ -11,16 +11,16 @@
 //!   - `F_SEAL_SHRINK`  — file size cannot shrink (enforced in ftruncate)
 //!   - `F_SEAL_GROW`    — file size cannot grow   (enforced in ftruncate)
 //!   - `F_SEAL_WRITE`   — no further writes via write(); also rejects new
-//!     `MAP_SHARED|PROT_WRITE` mmap calls
+//!     `MAP_SHARED|PROT_WRITE` mmap calls; adding it fails with `EBUSY`
+//!     while any live shared writable mapping exists
+//!   - `F_SEAL_FUTURE_WRITE` — like `F_SEAL_WRITE` for every future write
+//!     path (write/pwrite/writev, fallocate, new `MAP_SHARED|PROT_WRITE`
+//!     mmap), but mappings created before the seal keep write access, so
+//!     adding it never returns `EBUSY`
 //!
-//! Remaining gap vs. Linux (will be addressed in a follow-up PR):
-//!   - `F_SEAL_WRITE` does not revoke write access on extant
-//!     `MAP_SHARED|PROT_WRITE` mappings — the seal only blocks new mmap
-//!     calls. Implementing live-mapping revocation needs a registry of
-//!     installed VMAs and a way to call `aspace.protect` from the seal
-//!     path; deferred to keep this PR focused on the seal mask itself.
-//!
-//! Wayland's `wl_shm` requires `F_SEAL_SHRINK`, which is fully enforced.
+//! Wayland's `wl_shm` requires `F_SEAL_SHRINK`, which is fully enforced;
+//! Chromium/Firefox seal read-only shared-memory snapshots with
+//! `F_SEAL_FUTURE_WRITE` after populating them.
 
 use alloc::{borrow::Cow, format, string::String, sync::Arc, vec::Vec};
 use core::{
@@ -28,25 +28,36 @@ use core::{
     task::Context,
 };
 
-use ax_errno::{AxError, AxResult};
 use ax_fs_ng::vfs::FileFlags;
 use ax_io::{IoBuf, SeekFrom, prelude::*};
 use ax_memory_addr::VirtAddr;
 use ax_memory_set::MemoryArea;
 use ax_runtime::hal::paging::MappingFlags;
-use ax_sync::Mutex;
 use axpoll::{IoEvents, Pollable};
 
 use super::{File, FileLike, IoDst, IoSrc, Kstat, get_file_like};
-use crate::mm::{AddrSpace, Backend};
+use crate::{
+    StarryError, StarryResult,
+    mm::{AddrSpace, Backend},
+    sync::Mutex,
+};
 
 pub const F_SEAL_SEAL: u32 = 0x0001;
 pub const F_SEAL_SHRINK: u32 = 0x0002;
 pub const F_SEAL_GROW: u32 = 0x0004;
 pub const F_SEAL_WRITE: u32 = 0x0008;
+pub const F_SEAL_FUTURE_WRITE: u32 = 0x0010;
 
 /// Mask of bits that can ever appear in a seal mask.
-pub const F_SEAL_ALL: u32 = F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE;
+pub const F_SEAL_ALL: u32 =
+    F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE | F_SEAL_FUTURE_WRITE;
+
+/// Seals that reject a fresh write, matching Linux's
+/// `seals & (F_SEAL_WRITE | F_SEAL_FUTURE_WRITE)` guard in `mm/shmem.c`.
+/// `F_SEAL_FUTURE_WRITE` blocks the same write paths as `F_SEAL_WRITE`;
+/// the two only differ in whether adding the seal tolerates pre-existing
+/// shared writable mappings (handled in `add_seals`).
+pub const F_SEAL_ANY_WRITE: u32 = F_SEAL_WRITE | F_SEAL_FUTURE_WRITE;
 
 #[derive(Clone)]
 pub struct MemfdRef(pub Arc<Memfd>);
@@ -94,9 +105,9 @@ impl Memfd {
         self.seals.load(Ordering::Acquire)
     }
 
-    pub fn check_write_seal(&self) -> AxResult {
-        if self.get_seals() & F_SEAL_WRITE != 0 {
-            Err(AxError::OperationNotPermitted)
+    pub fn check_write_seal(&self) -> StarryResult {
+        if self.get_seals() & F_SEAL_ANY_WRITE != 0 {
+            Err(StarryError::OperationNotPermitted)
         } else {
             Ok(())
         }
@@ -106,9 +117,9 @@ impl Memfd {
     /// if `F_SEAL_SEAL` is already set (so the mask is frozen), or
     /// `InvalidInput` if the requested seal bits are outside the supported
     /// mask.
-    pub fn add_seals(&self, add: u32) -> AxResult {
+    pub fn add_seals(&self, add: u32) -> StarryResult {
         if add & !F_SEAL_ALL != 0 {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         }
         // Hold `truncate_mtx` across the seal publish so in-flight
         // `set_len_sealed` calls either finish before we set the seal (and
@@ -122,13 +133,13 @@ impl Memfd {
         let mut prev = self.seals.load(Ordering::Acquire);
         loop {
             if prev & F_SEAL_SEAL != 0 {
-                return Err(AxError::OperationNotPermitted);
+                return Err(StarryError::OperationNotPermitted);
             }
             if add & F_SEAL_WRITE != 0
                 && prev & F_SEAL_WRITE == 0
                 && self.shared_writable_mmap_count.load(Ordering::SeqCst) > 0
             {
-                return Err(AxError::ResourceBusy);
+                return Err(StarryError::ResourceBusy);
             }
             let new = prev | add;
             match self
@@ -144,13 +155,13 @@ impl Memfd {
 
     /// Check `F_SEAL_SHRINK`/`F_SEAL_GROW` against a proposed new size.
     /// Returns `Err(OperationNotPermitted)` if the operation is disallowed.
-    fn check_truncate(&self, current_len: u64, new_len: u64) -> AxResult {
+    fn check_truncate(&self, current_len: u64, new_len: u64) -> StarryResult {
         let seals = self.get_seals();
         if new_len < current_len && seals & F_SEAL_SHRINK != 0 {
-            return Err(AxError::OperationNotPermitted);
+            return Err(StarryError::OperationNotPermitted);
         }
         if new_len > current_len && seals & F_SEAL_GROW != 0 {
-            return Err(AxError::OperationNotPermitted);
+            return Err(StarryError::OperationNotPermitted);
         }
         Ok(())
     }
@@ -160,7 +171,7 @@ impl Memfd {
     /// window: without this lock, two concurrent `ftruncate` calls could
     /// both read the pre-shrink size, both pass `check_truncate`, and
     /// both race on `set_len`, with only the last write observed.
-    pub fn set_len_sealed(&self, new_len: u64) -> AxResult {
+    pub fn set_len_sealed(&self, new_len: u64) -> StarryResult {
         let _guard = self.truncate_mtx.lock();
         let current_len = self.inner.inner().backend()?.location().len()?;
         self.check_truncate(current_len, new_len)?;
@@ -183,7 +194,7 @@ impl Memfd {
     /// the seal and performing the write — without that ordering,
     /// the unsealed fast path could escape into a write that grows
     /// the file after the seal landed.
-    pub fn write_at(&self, data: &[u8], offset: u64) -> AxResult<usize> {
+    pub fn write_at(&self, data: &[u8], offset: u64) -> StarryResult<usize> {
         // Zero-length pwrite/pwritev succeeds unconditionally on Linux,
         // even on a sealed memfd, and does not advance the file size.
         // Short-circuit before any seal check (verified against
@@ -195,11 +206,11 @@ impl Memfd {
         let f = self.inner.inner().access(FileFlags::WRITE)?;
         let _guard = self.truncate_mtx.lock();
         let seals = self.get_seals();
-        if seals & F_SEAL_WRITE != 0 {
-            return Err(AxError::OperationNotPermitted);
+        if seals & F_SEAL_ANY_WRITE != 0 {
+            return Err(StarryError::OperationNotPermitted);
         }
         if seals & F_SEAL_GROW == 0 {
-            return f.write_at(data, offset);
+            return Ok(f.write_at(data, offset)?);
         }
         // F_SEAL_GROW Linux semantics (verified against memfd_create +
         // F_ADD_SEALS(F_SEAL_GROW) on a stock host):
@@ -209,13 +220,13 @@ impl Memfd {
         // rejects every write; F_SEAL_GROW only rejects growth.
         let cur_len = self.inner.inner().backend()?.location().len()?;
         if offset >= cur_len {
-            return Err(AxError::OperationNotPermitted);
+            return Err(StarryError::OperationNotPermitted);
         }
         let writable = (cur_len - offset).min(data.len() as u64) as usize;
         if writable == 0 {
-            return Err(AxError::OperationNotPermitted);
+            return Err(StarryError::OperationNotPermitted);
         }
-        f.write_at(&data[..writable], offset)
+        Ok(f.write_at(&data[..writable], offset)?)
     }
 }
 
@@ -271,11 +282,45 @@ fn apply_shared_writable_count_delta(memfd: &Memfd, delta: i32) {
     }
 }
 
-pub fn check_write_seal_for_shared_file_backend(backend: &Backend) -> AxResult {
+pub fn check_write_seal_for_shared_file_backend(backend: &Backend) -> StarryResult {
     let Some(memfd) = memfd_from_file_backend(backend) else {
         return Ok(());
     };
     memfd.check_write_seal()
+}
+
+/// Punch a hole in a shared file-backed (memfd) mapping's backing store by
+/// zeroing `[file_offset, file_offset+len)` so a `MAP_SHARED` mapping reads
+/// zero afterwards. Backs `madvise(MADV_REMOVE)` (Linux `vfs_fallocate`
+/// `FALLOC_FL_PUNCH_HOLE` on shmem, mm/madvise.c `madvise_remove`). Returns
+/// `Ok(false)` when the backend is not a shared file map, so the caller can
+/// report `EINVAL` for anonymous ranges (Linux requires file backing).
+/// Honors `F_SEAL_WRITE` via `write_at` (a sealed memfd punch yields `EPERM`,
+/// matching `shmem_fallocate`).
+pub(crate) fn punch_shared_file_backend(
+    backend: &Backend,
+    file_offset: u64,
+    len: usize,
+) -> StarryResult<bool> {
+    let Some(memfd) = memfd_from_file_backend(backend) else {
+        return Ok(false);
+    };
+    if len == 0 {
+        return Ok(true);
+    }
+    let zeros = alloc::vec![0u8; len.min(64 * 1024)];
+    let mut off = file_offset;
+    let mut remaining = len;
+    while remaining > 0 {
+        let chunk = remaining.min(zeros.len());
+        let n = memfd.write_at(&zeros[..chunk], off)?;
+        if n == 0 {
+            break;
+        }
+        off += n as u64;
+        remaining -= n;
+    }
+    Ok(true)
 }
 
 pub(crate) fn apply_shared_writable_delta_for_backend(
@@ -386,11 +431,11 @@ pub(crate) fn on_aspace_replace_metadata(
 }
 
 impl FileLike for Memfd {
-    fn read(&self, dst: &mut IoDst) -> AxResult<usize> {
+    fn read(&self, dst: &mut IoDst) -> StarryResult<usize> {
         self.inner.read(dst)
     }
 
-    fn write(&self, src: &mut IoSrc) -> AxResult<usize> {
+    fn write(&self, src: &mut IoSrc) -> StarryResult<usize> {
         // Zero-length write(2)/writev(2) (including pwritev2 with an
         // empty iov, sys_splice's zero-byte output probe, and similar)
         // succeeds unconditionally on Linux even against a sealed memfd
@@ -408,8 +453,8 @@ impl FileLike for Memfd {
         // publishing.
         let _guard = self.truncate_mtx.lock();
         let seals = self.get_seals();
-        if seals & F_SEAL_WRITE != 0 {
-            return Err(AxError::OperationNotPermitted);
+        if seals & F_SEAL_ANY_WRITE != 0 {
+            return Err(StarryError::OperationNotPermitted);
         }
         if seals & F_SEAL_GROW == 0 {
             return self.inner.write(src);
@@ -429,7 +474,7 @@ impl FileLike for Memfd {
         let cur_len = self.inner.inner().backend()?.location().len()?;
         let cursor = self.inner.inner().seek(SeekFrom::Current(0))?;
         if cursor >= cur_len {
-            return Err(AxError::OperationNotPermitted);
+            return Err(StarryError::OperationNotPermitted);
         }
         let max_writable = (cur_len - cursor) as usize;
         let want = src.remaining().min(max_writable);
@@ -452,7 +497,7 @@ impl FileLike for Memfd {
         Ok(written)
     }
 
-    fn stat(&self) -> AxResult<Kstat> {
+    fn stat(&self) -> StarryResult<Kstat> {
         self.inner.stat()
     }
 
@@ -464,7 +509,7 @@ impl FileLike for Memfd {
         format!("/memfd:{}", self.name).into()
     }
 
-    fn file_mmap(&self) -> AxResult<(ax_fs_ng::vfs::FileBackend, ax_fs_ng::vfs::FileFlags)> {
+    fn file_mmap(&self) -> StarryResult<(ax_fs_ng::vfs::FileBackend, ax_fs_ng::vfs::FileFlags)> {
         // Reuse the inner File's mmap path so file-backed shared/private
         // mappings on memfd fds work the same as on regular files. Seal
         // enforcement for `MAP_SHARED|PROT_WRITE` runs in `sys_mmap`
@@ -472,7 +517,7 @@ impl FileLike for Memfd {
         self.inner.file_mmap()
     }
 
-    fn ioctl(&self, cmd: u32, arg: usize) -> AxResult<usize> {
+    fn ioctl(&self, cmd: u32, arg: usize) -> StarryResult<usize> {
         self.inner.ioctl(cmd, arg)
     }
 
@@ -484,11 +529,11 @@ impl FileLike for Memfd {
         self.inner.nonblocking()
     }
 
-    fn set_nonblocking(&self, non_blocking: bool) -> AxResult {
+    fn set_nonblocking(&self, non_blocking: bool) -> StarryResult {
         self.inner.set_nonblocking(non_blocking)
     }
 
-    fn from_fd(fd: core::ffi::c_int) -> AxResult<Arc<Self>>
+    fn from_fd(fd: core::ffi::c_int) -> StarryResult<Arc<Self>>
     where
         Self: Sized + 'static,
     {
@@ -497,7 +542,7 @@ impl FileLike for Memfd {
             return Ok(memfd);
         }
         let Some(file) = any.downcast_ref::<File>() else {
-            return Err(AxError::InvalidInput);
+            return Err(StarryError::InvalidInput);
         };
         file.inner()
             .backend()?
@@ -505,7 +550,7 @@ impl FileLike for Memfd {
             .user_data()
             .get::<MemfdRef>()
             .map(|memfd| memfd.0.clone())
-            .ok_or(AxError::InvalidInput)
+            .ok_or(StarryError::InvalidInput)
     }
 }
 

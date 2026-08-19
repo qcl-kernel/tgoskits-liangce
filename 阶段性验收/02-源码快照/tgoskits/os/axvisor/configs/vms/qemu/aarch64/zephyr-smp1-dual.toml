@@ -1,53 +1,41 @@
-# Contest Linux+Zephyr static ownership contract.
-# status: blocked_dma_console
-# Slot 2 is intentionally excluded until passthrough DMA and console gates close.
+# Contest Linux+Zephyr dual-Guest VM: Zephyr (VM 2).
+#
+# Official-baseline format: the mediated VirtIO-net frontend is declared as
+# a `[[devices.virtual]]` model "virtio-net" with the fixed contest MAC.
+# MMIO/IRQ are resolved by the device graph (`ResourceRequest::Auto`) and
+# are emitted into the final guest DTB by the runtime FDT patch; they are
+# not written here. The Zephyr image path is resolved by the P4 runner
+# from the build manifest.
 
 [base]
-# Zephyr is VM 2 and owns only pCPU 2.
 id = 2
 name = "zephyr-qemu-dual"
-vm_type = 1
+guest_type = "virtualized"
 cpu_num = 1
 phys_cpu_ids = [2]
 
 [kernel]
-entry_point = 0x4000_10b4
+entry_point = 0x4000_117c
 image_location = "memory"
 kernel_path = "/path/to/zephyr.bin"
 kernel_load_addr = 0x4000_0000
 dtb_load_addr = 0x47e0_0000
 
-# MapAlloc remains the validated single-guest RAM mode and is why DMA is gated.
+# System RAM 128M MAP_ALLOC (Zephyr qemu_cortex_a53 link contract).
 memory_regions = [
   [0x4000_0000, 0x0800_0000, 0x7, 0],
 ]
 
+#
+# Device specifications
+#
+
+# Physical-device selection. Virtual platform devices are machine-owned.
 [devices]
-interrupt_mode = "passthrough"
+passthrough = []
+disabled = []
 
-# GPPT GIC plus a VM-owned TX-only polling PL011. The console has no HPA,
-# delivered IRQ, RX, DMA, or backend argument and does not close the gate.
-emu_devices = [
-  ["gppt-gicd", 0x0800_0000, 0x1_0000, 0, 0x21, []],
-  ["gppt-gicr", 0x080a_0000, 0x2_0000, 0, 0x20, [1, 0x2_0000, 2]],
-  ["zephyr", 0x0900_0000, 0x1000, 0, 0x2, []],
-]
-
-# Zephyr currently receives only CPU-control, timer, and interrupt structure.
-passthrough_devices = [
-  ["/psci"],
-  ["/timer"],
-  ["/intc@8000000"],
-]
-
-passthrough_addresses = []
-
-# The ITS and host PL011 are never shared. All virtio slots stay excluded while
-# slot 2 lacks a safe DMA mapping and the independent console runtime gate is unvalidated.
-excluded_devices = [
-  ["/intc@8000000/its@8080000"],
-  ["/pl011@9000000"],
-  ["/virtio_mmio@a000000"],
-  ["/virtio_mmio@a000200"],
-  ["/virtio_mmio@a000400"],
-]
+[[devices.virtual]]
+id = "virtnet0"
+model = "virtio-net"
+guest_mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x02]

@@ -1,4 +1,0 @@
-features = ["guest-fdt-evidence"]
-log = "Info"
-target = "aarch64-unknown-none-softfloat"
-vm_configs = []

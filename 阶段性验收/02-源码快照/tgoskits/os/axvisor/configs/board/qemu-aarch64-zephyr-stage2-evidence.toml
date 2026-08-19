@@ -1,6 +1,0 @@
-# Disposable measurement profile. Keep the canonical Zephyr smoke profile
-# limited to Guest-DTB evidence so baseline runs remain directly comparable.
-features = ["guest-fdt-evidence", "stage2-hpa-evidence"]
-log = "Info"
-target = "aarch64-unknown-none-softfloat"
-vm_configs = []

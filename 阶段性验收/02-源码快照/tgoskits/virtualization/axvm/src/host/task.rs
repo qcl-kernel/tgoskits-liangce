@@ -18,6 +18,10 @@ pub(crate) fn spawn_task(task: TaskInner) -> AxTaskRef {
     arceos::spawn_task(task)
 }
 
+pub(crate) fn spawn_task_with(task: TaskInner, initialize: impl FnOnce(&AxTaskRef)) -> AxTaskRef {
+    arceos::spawn_task_with(task, initialize)
+}
+
 pub(crate) fn yield_now() {
     arceos::yield_now();
 }
@@ -32,6 +36,15 @@ pub(crate) fn wait_queue_wait_until(queue: &WaitQueueHandle, condition: impl Fn(
 
 pub(crate) fn wait_queue_wake(queue: &WaitQueueHandle, count: u32) {
     arceos::wait_queue_wake(queue, count);
+}
+
+#[cfg(any(not(test), target_arch = "aarch64"))]
+pub(crate) fn run_on_cpu_sync(
+    cpu_id: usize,
+    f: unsafe fn(*mut ()),
+    arg: *mut (),
+) -> Result<(), arceos::ArceOsIrqError> {
+    arceos::run_on_cpu_sync(cpu_id, f, arg)
 }
 
 pub(crate) fn send_ipi(cpu_id: usize) {

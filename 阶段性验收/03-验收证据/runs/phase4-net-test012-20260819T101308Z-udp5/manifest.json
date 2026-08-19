@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "run-complete",
+  "status": "guest_network_completed",
+  "proofScope": "one-identity-bound-dual-guest-mediated-network-session",
+  "doesNotProve": [
+    "DMA isolation",
+    "hardware DMA",
+    "AI closed loop",
+    "real-time improvement",
+    "outer-QEMU networking"
+  ],
+  "inputs": {
+    "buildConfig": {
+      "path": "os/axvisor/configs/board/qemu-aarch64-contest-network.toml",
+      "sha256": "02538af38175c03cc79b179dc9e0833f86cd79caf66c25a88f675bc0e1e0849a"
+    },
+    "qemuConfig": {
+      "path": "configs/contest/qemu-aarch64-linux-zephyr-dual.toml",
+      "sha256": "ba106d1b41b4de92fd093087b536425993e6a134836d0c450cade68627e11739"
+    },
+    "linuxVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test012-20260819T101308Z-udp5/configs/linux.resolved.toml",
+      "sha256": "682fb085529c3faa8fac03f5ccd3797f43ffcc9cd567af9a33bbce274fc79677"
+    },
+    "zephyrVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test012-20260819T101308Z-udp5/configs/zephyr.resolved.toml",
+      "sha256": "00414ea777519d9f812c02d2782b479f024ec088ba41816f6f34644c17ec6e84"
+    },
+    "linuxRootfs": {
+      "path": "tmp/contest/p4/linux-network-udp.ext4",
+      "sha256": "3d83db6a3b36d065899244170ff3511eb2ddb524e3053468c29085ebce62ba38"
+    },
+    "zephyrImage": {
+      "path": "tmp/contest/p4/zephyr-network/zephyr.bin",
+      "sha256": "acacb50a1bb183d8af32ff505aa7253f1dd09602d18894578ba4a25cf42b0ff0"
+    },
+    "profile": {
+      "path": "tmp/contest/p4/test-012-nofault-v1.json",
+      "sha256": "ea59d5c19c8399d3106a932ebc96a9f816cbc60c6a2cdef3692a825c1d4c8251"
+    }
+  },
+  "session": {
+    "schemaVersion": 1,
+    "runId": "phase4-net-test012-20260819T101308Z-udp5",
+    "scenario": "test-012",
+    "sessionNonce": "be8a009d7a9b1f4544eb49849d4bb80b",
+    "bootId": "p4net-20260819T101311Z-be8a009d",
+    "qemuName": "axvisor-dual-smoke-be8a009d7a9b1f4544eb49849d4bb80b",
+    "startedAtUtc": "2026-08-19T10:13:11Z"
+  }
+}

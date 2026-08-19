@@ -10,12 +10,9 @@ pub mod mmu;
 pub(crate) mod ram;
 pub(crate) mod region;
 
+pub use mmu::{MemAttributes, PteConfig};
 pub use page_table_generic::*;
 
-pub use crate::fdt::{
-    dma_guard::{DmaGuard, dma_guards},
-    vm_carveout::{VmCarveout, vm_carveouts},
-};
 use crate::{ArchTrait, DCacheOp, arch::Arch, smp::cpu_area_region};
 
 pub const KB: usize = 1024;
@@ -29,7 +26,7 @@ static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
 /// Load address of the kernel start
 static mut KIMAGE_START: Option<PhysAddr> = None;
 /// Load address of the kernel end
-static mut KIMAGE_END: PhysAddr = PhysAddr::new(0);
+static mut KIMAGE_END: PhysAddr = PhysAddr::from_usize(0);
 
 const MEMORY_MAP_CAPACITY: usize = 512;
 
@@ -42,9 +39,9 @@ pub(crate) fn setup_entry(
 ) {
     unsafe {
         KIMAGE_START = Some(kernel_start);
-        KIMAGE_END = kernel_end.raw().align_up(KIMAGE_MAP_ALIGN).into();
+        KIMAGE_END = kernel_end.as_usize().align_up(KIMAGE_MAP_ALIGN).into();
 
-        VM_LOAD_OFFSET = kernel_start.raw() as isize - kernel_start_link.raw() as isize;
+        VM_LOAD_OFFSET = kernel_start.as_usize() as isize - kernel_start_link.as_usize() as isize;
     }
 }
 
@@ -103,7 +100,11 @@ pub fn dma_coherent_after_mapping_update() {
     Arch::dma_coherent_after_mapping_update();
 }
 
-#[cfg(any(test, all(target_arch = "riscv64", feature = "thead-mae")))]
+#[cfg(any(
+    test,
+    all(axtest, feature = "axtest"),
+    all(target_arch = "riscv64", feature = "thead-mae")
+))]
 pub(crate) fn cache_line_range(
     addr: usize,
     size: usize,
@@ -114,6 +115,36 @@ pub(crate) fn cache_line_range(
     }
     let end = addr.checked_add(size)?;
     Some((addr & !(line_size - 1), end))
+}
+
+#[cfg(all(axtest, feature = "axtest"))]
+pub(crate) fn mem_constants_and_cache_line_rules_hold_for_test() -> bool {
+    // KB/MB/GB constants
+    assert!(KB == 1024);
+    assert!(MB == 1024 * KB);
+    assert!(GB == 1024 * MB);
+
+    // KIMAGE_MAP_ALIGN
+    assert!(KIMAGE_MAP_ALIGN == 2 * MB);
+
+    // cache_line_range: valid inputs
+    let result = cache_line_range(0x1000, 64, 64).unwrap();
+    assert!(result.0 == 0x1000); // aligned down
+    assert!(result.1 == 0x1040); // addr + size
+
+    // cache_line_range: zero size returns None
+    assert!(cache_line_range(0x1000, 0, 64).is_none());
+
+    // cache_line_range: zero line_size returns None
+    assert!(cache_line_range(0x1000, 64, 0).is_none());
+
+    // cache_line_range: non-power-of-2 line_size returns None
+    assert!(cache_line_range(0x1000, 64, 63).is_none());
+
+    // cache_line_range: overflow returns None
+    assert!(cache_line_range(usize::MAX, 1, 64).is_none());
+
+    true
 }
 
 /// 物理RAM实际转换为的内核虚拟地址
@@ -204,7 +235,7 @@ pub(crate) fn kimage_range() -> core::ops::Range<usize> {
             panic!("Kernel image start is not set");
         };
         let end = KIMAGE_END;
-        start.raw()..end.raw()
+        start.as_usize()..end.as_usize()
     }
 }
 
@@ -274,4 +305,29 @@ mod tests {
         assert_eq!(cache_line_range(0x1000, 1, 63), None);
         assert_eq!(cache_line_range(usize::MAX, 2, 64), None);
     }
+}
+
+#[cfg(all(axtest, feature = "axtest"))]
+pub(crate) fn mem_constants_and_types_hold_for_test() -> bool {
+    // Test memory constants
+    assert_eq!(KB, 1024);
+    assert_eq!(MB, 1024 * 1024);
+    assert_eq!(GB, 1024 * 1024 * 1024);
+    assert_eq!(KIMAGE_MAP_ALIGN, 2 * MB);
+
+    // Test MemoryMap capacity
+    assert_eq!(MEMORY_MAP_CAPACITY, 512);
+
+    true
+}
+
+#[cfg(all(axtest, feature = "axtest"))]
+pub(crate) fn mem_byte_unit_types_hold_for_test() -> bool {
+    // Test byte_unit types exist
+    use byte_unit::Byte;
+
+    // Test that Byte can be created
+    let _byte = Byte::from_u64(1024);
+
+    true
 }

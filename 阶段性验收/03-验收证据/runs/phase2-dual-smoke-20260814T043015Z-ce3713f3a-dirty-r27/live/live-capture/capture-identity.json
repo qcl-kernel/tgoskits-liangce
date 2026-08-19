@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "capture-generated-unreviewed",
+  "status": "qmp_peer_process_and_pause_window_bound",
+  "proofScope": "qmp-socket-pid-start-boot-uid-exe-cmdline-name-nonce-continuity",
+  "doesNotProve": [
+    "the AxVisor log writer belongs to QEMU when stdout is relayed through tee",
+    "Guest boot success",
+    "passthrough DMA isolation",
+    "Linux and Zephyr IP connectivity"
+  ],
+  "sessionNonce": "b9e32521198f2a4d5f3e446431e9e54d",
+  "qemuName": "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+  "qmpQueryName": "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+  "pidfile": {
+    "path": "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+    "pid": 1991
+  },
+  "qmpSocket": {
+    "path": "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock",
+    "device": 2096,
+    "inode": 380105,
+    "uid": 0,
+    "gid": 0
+  },
+  "qmpPeerCredentials": {
+    "pid": 1991,
+    "uid": 0,
+    "gid": 0
+  },
+  "qmpStates": [
+    "running",
+    "paused",
+    "running"
+  ],
+  "processCheckpoints": {
+    "beforeConnect": {
+      "pid": 1991,
+      "startTimeTicks": 255341,
+      "bootId": "aaae8d78-31dd-4bbe-9a6d-179393eb9a70",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-m",
+        "8g",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4",
+        "-device",
+        "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0",
+        "-append",
+        "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+        "-qmp",
+        "unix:/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+        "-name",
+        "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "2ed99eea1127f86d4f698bd7f991dec5d6e5d184ac3549735faa5cb6388a8b2e"
+    },
+    "afterConnect": {
+      "pid": 1991,
+      "startTimeTicks": 255341,
+      "bootId": "aaae8d78-31dd-4bbe-9a6d-179393eb9a70",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-m",
+        "8g",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4",
+        "-device",
+        "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0",
+        "-append",
+        "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+        "-qmp",
+        "unix:/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+        "-name",
+        "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "2ed99eea1127f86d4f698bd7f991dec5d6e5d184ac3549735faa5cb6388a8b2e"
+    },
+    "paused": {
+      "pid": 1991,
+      "startTimeTicks": 255341,
+      "bootId": "aaae8d78-31dd-4bbe-9a6d-179393eb9a70",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-m",
+        "8g",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4",
+        "-device",
+        "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0",
+        "-append",
+        "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+        "-qmp",
+        "unix:/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+        "-name",
+        "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "2ed99eea1127f86d4f698bd7f991dec5d6e5d184ac3549735faa5cb6388a8b2e"
+    },
+    "postPmemsave": {
+      "pid": 1991,
+      "startTimeTicks": 255341,
+      "bootId": "aaae8d78-31dd-4bbe-9a6d-179393eb9a70",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-m",
+        "8g",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4",
+        "-device",
+        "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0",
+        "-append",
+        "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+        "-qmp",
+        "unix:/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+        "-name",
+        "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "2ed99eea1127f86d4f698bd7f991dec5d6e5d184ac3549735faa5cb6388a8b2e"
+    },
+    "resumed": {
+      "pid": 1991,
+      "startTimeTicks": 255341,
+      "bootId": "aaae8d78-31dd-4bbe-9a6d-179393eb9a70",
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "executable": "/usr/bin/qemu-system-aarch64",
+      "processName": "qemu-system-aar",
+      "argv": [
+        "qemu-system-aarch64",
+        "-nographic",
+        "-cpu",
+        "cortex-a72",
+        "-machine",
+        "virt,virtualization=on,gic-version=3",
+        "-smp",
+        "4",
+        "-m",
+        "8g",
+        "-drive",
+        "id=disk0,if=none,format=raw,file=/mnt/f/project/泉城实验室/tgoskits/results/baseline/runs/phase2-dual-smoke-20260814T043015Z-ce3713f3a-dirty-r27/prepared/linux-console-rootfs.ext4",
+        "-device",
+        "virtio-blk-device,id=linux-root,drive=disk0,bus=virtio-mmio-bus.0",
+        "-append",
+        "root=/dev/vda rw init=/init console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000 keep_bootcon",
+        "-qmp",
+        "unix:/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/tmp/axdual-b9e32521198f2a4d5f3e446431e9e54d/qemu.pid",
+        "-name",
+        "axvisor-dual-smoke-b9e32521198f2a4d5f3e446431e9e54d",
+        "-kernel",
+        "/mnt/f/project/泉城实验室/tgoskits/target/aarch64-unknown-linux-musl/release/axvisor.bin"
+      ],
+      "cmdlineSha256": "2ed99eea1127f86d4f698bd7f991dec5d6e5d184ac3549735faa5cb6388a8b2e"
+    }
+  },
+  "sources": {
+    "readyPrefix": {
+      "path": "axvisor-ready-prefix.log",
+      "size": 21354,
+      "sha256": "f3bc8206951ddd438c485c360fb1f8de3f2bdacd82809a6880e89f47596ab509"
+    },
+    "capturePlan": {
+      "path": "capture-plan.json",
+      "sha256": "5529455aaf74a04e758241487067fd483fb645d0c0241ba6b0e1cdd228a1a9c8"
+    },
+    "captureExecution": {
+      "path": "capture-execution.json",
+      "sha256": "fd366b72ea38816e4e9d117b056d9d366136c301bf3954ce0b20c5ef9923dbaa"
+    }
+  }
+}

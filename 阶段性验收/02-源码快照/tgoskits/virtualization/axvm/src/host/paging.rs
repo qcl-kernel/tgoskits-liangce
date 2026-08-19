@@ -65,8 +65,3 @@ impl PagingHandler for HostPagingHandler {
 pub(crate) fn virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
     default_host().virt_to_phys(vaddr)
 }
-
-/// Converts a host physical address through the host's direct-map policy.
-pub(crate) fn phys_to_virt(paddr: PhysAddr) -> VirtAddr {
-    default_host().phys_to_virt(paddr)
-}

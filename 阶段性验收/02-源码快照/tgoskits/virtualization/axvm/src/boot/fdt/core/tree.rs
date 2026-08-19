@@ -1,4 +1,4 @@
-use alloc::{format, string::String, vec::Vec};
+use std::{format, string::String, vec::Vec};
 
 use fdt_edit::{Fdt, Node, NodeId, Property};
 use fdt_raw::{Header, RegInfo};
@@ -125,18 +125,25 @@ impl FdtTree {
         Ok(())
     }
 
-    pub(crate) fn patch_chosen(&mut self, initrd_start_size: Option<(u64, u64)>) -> AxVmResult {
+    pub(crate) fn patch_chosen(
+        &mut self,
+        initrd_start_size: Option<(u64, u64)>,
+        explicit_cmdline: Option<&str>,
+    ) -> AxVmResult {
         let chosen_id = self.ensure_path("/chosen")?;
         let chosen = self
             .fdt
             .node_mut(chosen_id)
             .ok_or_else(|| ax_err_type!(InvalidData, "/chosen node is missing"))?;
 
-        if let Some(bootargs) = chosen
-            .get_property("bootargs")
-            .and_then(|prop| prop.as_str())
-            .map(sanitize_bootargs)
-        {
+        let bootargs = explicit_cmdline
+            .or_else(|| {
+                chosen
+                    .get_property("bootargs")
+                    .and_then(|prop| prop.as_str())
+            })
+            .map(sanitize_bootargs);
+        if let Some(bootargs) = bootargs {
             chosen.set_property(prop_string("bootargs", &bootargs));
         }
 
@@ -154,20 +161,21 @@ impl FdtTree {
         source: &Fdt,
         source_id: NodeId,
         dest_parent: NodeId,
-        skip_cpu_cache_props: bool,
+        filter_guest_cpu_props: bool,
     ) -> AxVmResult<NodeId> {
         let source_node = source
             .node(source_id)
             .ok_or_else(|| ax_err_type!(InvalidData, "source FDT node id is invalid"))?;
         let dest_id = self.add_node(dest_parent, Node::new(source_node.name()));
         copy_properties(
+            source,
             source_node,
             self.fdt.node_mut(dest_id).unwrap(),
-            skip_cpu_cache_props,
+            filter_guest_cpu_props,
         );
 
         for child_id in source_node.children() {
-            self.copy_subtree_from(source, *child_id, dest_id, skip_cpu_cache_props)?;
+            self.copy_subtree_from(source, *child_id, dest_id, filter_guest_cpu_props)?;
         }
 
         Ok(dest_id)
@@ -185,7 +193,12 @@ impl FdtTree {
         let root = source
             .node(root_id)
             .ok_or_else(|| ax_err_type!(InvalidData, "source FDT root is missing"))?;
-        copy_properties(root, dest.fdt.node_mut(dest.fdt.root_id()).unwrap(), false);
+        copy_properties(
+            source,
+            root,
+            dest.fdt.node_mut(dest.fdt.root_id()).unwrap(),
+            false,
+        );
 
         let mut stack = Vec::new();
         for child in root.children().iter().rev() {
@@ -201,6 +214,7 @@ impl FdtTree {
             let next_parent = if node_kept {
                 let new_id = dest.add_node(dest_parent, Node::new(source_node.name()));
                 copy_properties(
+                    source,
                     source_node,
                     dest.fdt.node_mut(new_id).unwrap(),
                     path.starts_with("/cpus/"),
@@ -219,7 +233,7 @@ impl FdtTree {
     }
 
     fn remove_paths_deepest_first(&mut self, mut paths: Vec<String>) {
-        paths.sort_by_key(|path| core::cmp::Reverse(path.matches('/').count()));
+        paths.sort_by_key(|path| std::cmp::Reverse(path.matches('/').count()));
         for path in paths {
             self.fdt.remove_by_path(&path);
         }
@@ -229,6 +243,12 @@ impl FdtTree {
 pub(crate) fn prop_u64(name: &str, value: u64) -> Property {
     let mut prop = Property::new(name, Vec::new());
     prop.set_u64(value);
+    prop
+}
+
+pub(crate) fn prop_u32_list(name: &str, values: &[u32]) -> Property {
+    let mut prop = Property::new(name, Vec::new());
+    prop.set_u32_ls(values);
     prop
 }
 
@@ -244,11 +264,11 @@ pub(crate) fn host_fdt_bytes_from_ptr(ptr: *const u8) -> Option<&'static [u8]> {
     }
 
     let header = unsafe {
-        let bytes = core::slice::from_raw_parts(ptr, core::mem::size_of::<Header>());
+        let bytes = std::slice::from_raw_parts(ptr, std::mem::size_of::<Header>());
         Header::from_bytes(bytes).ok()?
     };
 
-    Some(unsafe { core::slice::from_raw_parts(ptr, header.totalsize as usize) })
+    Some(unsafe { std::slice::from_raw_parts(ptr, header.totalsize as usize) })
 }
 
 pub(crate) fn sanitize_bootargs(bootargs: &str) -> String {
@@ -295,16 +315,34 @@ pub(crate) fn sanitize_bootargs(bootargs: &str) -> String {
     sanitized.join(" ")
 }
 
-pub(crate) fn should_skip_guest_cpu_prop(prop_name: &str) -> bool {
+fn should_skip_guest_cpu_prop(source: &Fdt, prop_name: &str) -> bool {
     matches!(
         prop_name,
         "riscv,cbop-block-size" | "riscv,cboz-block-size" | "riscv,cbom-block-size"
-    )
+    ) || (is_roc_rk3568(source)
+        && matches!(
+            prop_name,
+            "operating-points-v2" | "#cooling-cells" | "dynamic-power-coefficient" | "cpu-supply"
+        ))
 }
 
-fn copy_properties(source: &Node, dest: &mut Node, skip_cpu_cache_props: bool) {
+fn is_roc_rk3568(source: &Fdt) -> bool {
+    source
+        .node(source.root_id())
+        .and_then(|root| root.get_property("compatible"))
+        .is_some_and(|compatible| {
+            compatible.as_str_iter().any(|value| {
+                matches!(
+                    value,
+                    "rockchip,rk3568-firefly-roc-pc" | "rockchip,rk3568-firefly-roc-pc-se"
+                )
+            })
+        })
+}
+
+fn copy_properties(source_fdt: &Fdt, source: &Node, dest: &mut Node, filter_cpu_props: bool) {
     for prop in source.properties() {
-        if skip_cpu_cache_props && should_skip_guest_cpu_prop(prop.name()) {
+        if filter_cpu_props && should_skip_guest_cpu_prop(source_fdt, prop.name()) {
             continue;
         }
         dest.set_property(prop.clone());
