@@ -33,6 +33,7 @@
 #include <zephyr/sys/printk.h>
 
 #include "icpc/icpc.h"
+#include "plant.h"
 
 #define PEER_IP "10.77.0.1"
 #define UDP_PORT 46000
@@ -95,14 +96,46 @@ static int udp_echo_thread(void)
 		return -1;
 	}
 	printk("TGOS_ZEPHYR_UDP_ECHO_READY port=%d\n", UDP_PORT);
+	/* P5-AI-B: DEC-008 plant driving the real STATUS payload. */
+	struct plant_state plant;
+	plant_reset(&plant);
+	/* P5-AI-Q (TEST-018): 500 ms watchdog.  The socket is polled every
+	 * 100 ms (poll does not consume data and does not disturb the netstack
+	 * like a short recvfrom timeout does); when no valid new CONTROL
+	 * arrived for >= 500 ms the plant duty is forced to zero and
+	 * SAFE|NETWORK_TIMEOUT is reported. Any new valid CONTROL resumes
+	 * normal operation (new session/seq). */
+	int64_t last_control_ms = k_uptime_get();
+	struct zsock_pollfd pfd = {0};
+	pfd.fd = sock;
+	pfd.events = ZSOCK_POLLIN;
 	/* Per-session ICPC state (CONTROL -> ACK + STATUS). */
 	uint32_t zseq = 1;
+	ssize_t n = -1;
 	for (;;) {
-		ssize_t n = zsock_recvfrom(sock, buf, sizeof(buf), 0,
-				     (struct sockaddr *)&from, &from_len);
-		if (n < 0) {
+		int poll_r = zsock_poll(&pfd, 1, 100);
+		if (poll_r > 0 && (pfd.revents & ZSOCK_POLLIN)) {
+			n = zsock_recvfrom(sock, buf, sizeof(buf), 0,
+					     (struct sockaddr *)&from, &from_len);
+			if (n < 0) {
+				continue;
+			}
+			goto have_packet;
+		}
+		/* Poll timeout / error: run the 500 ms watchdog. */
+		{
+			int64_t now_ms = k_uptime_get();
+			if (!plant.safe && now_ms - last_control_ms >= 500) {
+				plant_enter_safe(&plant);
+				printk("TGOS_ZEPHYR_SAFE|NETWORK_TIMEOUT "
+				       "last_control_ms=%lld now_ms=%lld duty=%d\n",
+				       (long long)last_control_ms, (long long)now_ms,
+				       plant.duty_q16_16);
+			}
 			continue;
 		}
+	have_packet:
+		;
 		char peer[16];
 		net_addr_ntop(AF_INET, &from.sin_addr, peer, sizeof(peer));
 		if (strcmp(peer, PEER_IP) != 0) {
@@ -117,6 +150,9 @@ static int udp_echo_thread(void)
 			    ICPC_STATUS_OK &&
 		    rh.message_type == ICPC_MESSAGE_CONTROL &&
 		    rh.session_id != 0U) {
+			/* P5-AI-Q: any valid new CONTROL (new session/seq) resumes the
+			 * plant from the watchdog safe state and refreshes the timer. */
+			last_control_ms = k_uptime_get();
 			struct icpc_header ack;
 			memset(&ack, 0, sizeof(ack));
 			ack.message_type = ICPC_MESSAGE_ACK;
@@ -128,10 +164,18 @@ static int udp_echo_thread(void)
 			ack.error_code = ICPC_ERROR_NONE;
 			uint8_t ackbuf[ICPC_HEADER_SIZE + 4];
 			size_t alen = 0;
+			(void)rh.sequence;
 			if (icpc_encode(ackbuf, sizeof(ackbuf), &ack, NULL, 0, &alen) ==
 			    ICPC_STATUS_OK) {
-				(void)zsock_sendto(sock, ackbuf, alen, 0,
+				ssize_t ar = zsock_sendto(sock, ackbuf, alen, 0,
 					   (struct sockaddr *)&from, from_len);
+				if (ar < 0) {
+					static int once;
+					if (once < 5) { once++;
+					    printk("TGOS_ZEPHYR_ACK_SEND_FAIL err=%d n=%zd rseq=%u\n",
+						   errno, ar, rh.sequence);
+					}
+				}
 			}
 			struct icpc_header st;
 			memset(&st, 0, sizeof(st));
@@ -142,11 +186,32 @@ static int udp_echo_thread(void)
 			st.ack_sequence = 0;
 			st.timestamp_ms = (uint64_t)rh.timestamp_ms;
 			st.error_code = ICPC_ERROR_NONE;
-			uint8_t stpay[12];
-			memset(stpay, 0x44, sizeof(stpay));
-			stpay[0] = 1; /* plant applied */
-			stpay[1] = (uint8_t)(rh.sequence & 0xff);
-			uint8_t stbuf[ICPC_HEADER_SIZE + 12 + 4];
+			/* P5-AI-B: apply the decoded CONTROL duty to the DEC-008 plant and
+			 * report the real plant state in the 32-byte icpc_status_payload. */
+			int32_t duty = 0;
+			uint32_t req_id = 0;
+			if (rlen >= 12) memcpy(&duty, rpay + 8, sizeof(duty));
+			if (rlen >= 8) memcpy(&req_id, rpay + 4, sizeof(req_id));
+			(void)plant_apply_duty(&plant, duty);
+			struct plant_step_result spr = plant_step(&plant);
+			if (spr.status != PLANT_STATUS_OK) {
+				plant_enter_safe(&plant);
+			}
+			uint8_t stpay[32];
+			memset(stpay, 0, sizeof(stpay));
+			stpay[0] = 1; /* schema_version */
+			stpay[1] = 1; /* control_mode = MLP */
+			memcpy(stpay + 4, &req_id, 4);   /* applied_request_id */
+			uint64_t sample = plant.tick_index;
+			memcpy(stpay + 8, &sample, 8);   /* sample_index */
+			int32_t measured = plant.temperature_mC;
+			int32_t target = PLANT_TARGET_TEMPERATURE_MC;
+			int32_t cerr = target - (int32_t)plant.temperature_mC;
+			memcpy(stpay + 16, &measured, 4);
+			memcpy(stpay + 20, &target, 4);
+			memcpy(stpay + 24, &plant.duty_q16_16, 4);
+			memcpy(stpay + 28, &cerr, 4);
+			uint8_t stbuf[ICPC_HEADER_SIZE + 32];
 			size_t slen = 0;
 			if (icpc_encode(stbuf, sizeof(stbuf), &st, stpay, sizeof(stpay),
 					 &slen) == ICPC_STATUS_OK) {
@@ -155,6 +220,19 @@ static int udp_echo_thread(void)
 			}
 			(void)rh.sequence; /* per-CONTROL printk removed: console slows replies */
 			continue;
+		}
+		/* Non-CONTROL ICPC frames (ACK/STATUS echoed by the peer) must NOT be
+		 * echoed back: that would create an unbounded echo loop between the
+		 * two guests and keep the poll busy, starving the watchdog.
+		 * Everything else (probe, plain UDP) is echoed as before. */
+		{
+			struct icpc_header rh2;
+			const uint8_t *rpay2;
+			size_t rlen2 = 0;
+			if (icpc_decode((const uint8_t *)buf, (size_t)n, &rh2, &rpay2,
+					 &rlen2) == ICPC_STATUS_OK) {
+				continue;
+			}
 		}
 		(void)zsock_sendto(sock, buf, n, 0, (struct sockaddr *)&from, from_len);
 		printk("TGOS_ZEPHYR_UDP_ECHO peer=%s bytes=%zd\n", peer, n);

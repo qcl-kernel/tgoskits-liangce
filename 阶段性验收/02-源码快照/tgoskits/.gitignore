@@ -73,3 +73,6 @@ loongarch64-axvisor-guest-tests.md
 /logs/offline-monitor/
 /images/linux-qemu/
 offline-monitor-analysis*.html
+
+# Contest app build artifacts (reproduced from manifests; never tracked)
+apps/contest/*/build/

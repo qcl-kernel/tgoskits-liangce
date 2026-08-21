@@ -6,7 +6,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use axdevice::*;
 use axdevice_base::{
-    BusAccess, BusKind, BusResponse, Device, DeviceAccess, DeviceError, DmaGrant, InterruptSharing,
+    BusKind, Device, DeviceAccess, DeviceContext, DeviceError, DmaGrant, InterruptSharing,
     InterruptTrigger, IrqLine, Resource,
 };
 use axvirtio_common::{GuestMemory, NoGuestMemoryAccessor, VirtioError};
@@ -23,6 +23,21 @@ const MMIO_SLOT: &str = "mmio";
 const IRQ_SLOT: &str = "irq";
 const MMIO_SIZE: u64 = 0x200;
 const INGRESS_CAPACITY: usize = 64;
+
+/// Lowercase hex dump of an Ethernet frame for the Guest-runtime v2 evidence
+/// path (P4-EVID-01B). The host-side publisher parses
+/// `virtio-net frame vm=.. dir=tx len=.. hex=..` lines into frames.jsonl and
+/// capture.pcap; the exact bytes let the qualification validator verify
+/// per-frame SHA-256 and PCAP content instead of trusting log substrings.
+fn hex_dump(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
+}
 
 static NEXT_PORT_ID: AtomicUsize = AtomicUsize::new(0);
 static INTERNAL_SWITCH: Mutex<Option<Arc<VirtualSwitch>>> = Mutex::new(None);
@@ -110,6 +125,11 @@ struct VirtioNetModel {
 
 impl DeviceModel for VirtioNetModel {
     fn requirements(&self) -> DeviceManagerResult<DeviceRequirements> {
+        // Contest: resolve MMIO and the wired IRQ through the resolved device
+        // graph (Auto) instead of the fixed 0x0a000000 / INTID 48. The Linux
+        // guest passes through a root block at 0x0a000000/INTID 48, so a fixed
+        // net request would collide; Auto lets the AArch64 resource pool pick
+        // an address outside of passthrough/Guest RAM/reserved regions.
         DeviceRequirements::new()
             .with_mmio(
                 ResourceSlot::new(MMIO_SLOT)?,
@@ -211,6 +231,9 @@ struct SwitchBackend {
 
 impl NetworkBackend for SwitchBackend {
     fn transmit(&self, frame: &[u8]) -> Result<(), NetworkBackendError> {
+        // Contest diagnostics: log the exact frame direction/length/MACs and
+        // any bounded-switch egress drop. This is evidence for the internal
+        // vnet0 L2 path and must be kept distinct from an outer NIC.
         info!(
             "virtio-net TX from vm={} len={} dst={:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} src={:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self.endpoint.id().vm_id,
@@ -227,6 +250,14 @@ impl NetworkBackend for SwitchBackend {
             frame[9],
             frame[10],
             frame[11]
+        );
+        // P4-EVID-01B evidence: the exact guest->switch frame bytes (the
+        // host publisher turns this line into frames.jsonl/capture.pcap).
+        info!(
+            "virtio-net frame vm={} dir=tx len={} hex={}",
+            self.endpoint.id().vm_id,
+            frame.len(),
+            hex_dump(frame)
         );
         let outcome = self.switch.switch_from_port(self.endpoint.id(), frame);
         if let EgressOutcome::Dropped(reason) = outcome {
@@ -335,19 +366,19 @@ impl SwitchPort for PortEndpoint {
 }
 
 struct ScopedDeviceMemory<'a> {
-    access: &'a mut dyn DeviceAccess,
+    context: &'a mut dyn DeviceContext,
     grant: &'a DmaGrant,
 }
 
 impl GuestMemory for ScopedDeviceMemory<'_> {
     fn read(&mut self, guest_addr: GuestPhysAddr, data: &mut [u8]) -> Result<(), VirtioError> {
-        self.access
+        self.context
             .read_guest_memory(self.grant, guest_addr, data)
             .map_err(|_| VirtioError::InvalidAddress)
     }
 
     fn write(&mut self, guest_addr: GuestPhysAddr, data: &[u8]) -> Result<(), VirtioError> {
-        self.access
+        self.context
             .write_guest_memory(self.grant, guest_addr, data)
             .map_err(|_| VirtioError::InvalidAddress)
     }
@@ -371,34 +402,51 @@ impl Device for VirtioNetRuntimeDevice {
         &self.resources
     }
 
-    fn access(
+    fn read(
         &self,
-        access: &BusAccess,
-        context: &mut dyn DeviceAccess,
-    ) -> Result<BusResponse, DeviceError> {
-        if access.kind != BusKind::Mmio {
-            return Err(DeviceError::OutOfRange { addr: access.addr });
+        access: &DeviceAccess,
+        _context: &mut dyn DeviceContext,
+    ) -> Result<u64, DeviceError> {
+        if access.bus() != BusKind::Mmio {
+            return Err(DeviceError::OutOfRange {
+                addr: access.address(),
+            });
         }
-        let address = GuestPhysAddr::from(access.addr as usize);
-        if access.is_read {
-            return self
-                .model
-                .mmio_read(address, access.width)
-                .map(|value| BusResponse::Read {
-                    value: value as u64,
-                })
-                .map_err(map_virtio_error);
+        self.model
+            .mmio_read(
+                GuestPhysAddr::from(access.address() as usize),
+                access.width(),
+            )
+            .map(|value| value as u64)
+            .map_err(map_virtio_error)
+    }
+
+    fn write(
+        &self,
+        access: &DeviceAccess,
+        value: u64,
+        context: &mut dyn DeviceContext,
+    ) -> Result<(), DeviceError> {
+        if access.bus() != BusKind::Mmio {
+            return Err(DeviceError::OutOfRange {
+                addr: access.address(),
+            });
         }
         let mut memory = ScopedDeviceMemory {
-            access: context,
+            context,
             grant: &self.grant,
         };
         let event = self
             .model
-            .mmio_write_with_memory(address, access.width, access.data as usize, &mut memory)
+            .mmio_write_with_memory(
+                GuestPhysAddr::from(access.address() as usize),
+                access.width(),
+                value as usize,
+                &mut memory,
+            )
             .map_err(map_virtio_error)?;
         self.pulse_if_pending(event)?;
-        Ok(BusResponse::Write)
+        Ok(())
     }
 }
 
@@ -406,16 +454,21 @@ impl DmaPollableDeviceOps for VirtioNetRuntimeDevice {
     fn poll_dma(
         &self,
         _now_ns: u64,
-        access: &mut dyn DeviceAccess,
+        context: &mut dyn DeviceContext,
         grant: &DmaGrant,
     ) -> DeviceManagerResult {
-        let mut memory = ScopedDeviceMemory { access, grant };
+        let mut memory = ScopedDeviceMemory { context, grant };
         let mut delivered = 0usize;
         while let Some(frame) = self.endpoint.pop_ingress() {
             match self.model.receive_frame_with_memory(&frame, &mut memory) {
                 Ok(RxOutcome::Delivered { notify, .. }) => {
                     delivered += 1;
                     if notify {
+                        // Contest level-triggered semantics: keep the line
+                        // asserted until the guest ACKs InterruptStatus
+                        // (deassert rides on the next MMIO write / poll).
+                        // Zephyr's virtio-net driver expects a level source;
+                        // a one-shot edge pulse wakes it only rarely.
                         info!(
                             "virtio-net RX delivered={delivered} to mac={:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}, asserting IRQ",
                             self.endpoint.mac[0],
@@ -425,9 +478,6 @@ impl DmaPollableDeviceOps for VirtioNetRuntimeDevice {
                             self.endpoint.mac[4],
                             self.endpoint.mac[5]
                         );
-                        // Level-triggered: keep the line asserted until the
-                        // guest ACKs InterruptStatus (deassert rides on the
-                        // next MMIO write / poll).
                         self.irq
                             .assert()
                             .map_err(|error| DeviceManagerError::InvalidState {

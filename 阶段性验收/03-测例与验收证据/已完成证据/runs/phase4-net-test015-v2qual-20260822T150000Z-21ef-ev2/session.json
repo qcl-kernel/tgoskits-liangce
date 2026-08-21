@@ -1,0 +1,68 @@
+{
+  "clock_domain": "monotonic_ns",
+  "endpoints": {
+    "linux": {
+      "connected_route": "10.77.0.0/24",
+      "default_route": false,
+      "dns": [],
+      "gateway": null,
+      "ip": "10.77.0.1",
+      "mac": "02:00:00:00:00:01",
+      "port": 0,
+      "prefix_length": 24,
+      "tcp_port": 46001,
+      "udp_port": 46000,
+      "vm_id": 1
+    },
+    "zephyr": {
+      "connected_route": "10.77.0.0/24",
+      "default_route": false,
+      "dns": [],
+      "gateway": null,
+      "ip": "10.77.0.2",
+      "mac": "02:00:00:00:00:02",
+      "port": 1,
+      "prefix_length": 24,
+      "tcp_port": 46001,
+      "udp_port": 46000,
+      "vm_id": 2
+    }
+  },
+  "evidence_level": "L7 Guest-IP",
+  "execution": {
+    "guest_runtime": true,
+    "host_only": false,
+    "qemu": true,
+    "wsl": true
+  },
+  "host_only": false,
+  "identity": {
+    "nonce": "72f39269622c6730e2fa812564425a22",
+    "producer": "p4-network-guest",
+    "run_id": "phase4-net-test015-v2qual-20260822T150000Z-21ef-ev2",
+    "session_id": "p4net-20260821T103906Z-72f39269"
+  },
+  "manifest_sha256": "dcae3135da0dc6ddebf1eb0331b0340ddda6185e05bc6d2e4d333e026c859631",
+  "network": {
+    "bridge": false,
+    "cidr": "10.77.0.0/24",
+    "default_route": false,
+    "dns": [],
+    "gateway": null,
+    "host_uplink": false,
+    "mtu": 1500,
+    "name": "vnet0",
+    "nat": false,
+    "outer_nic": false,
+    "proxy": false,
+    "tap": false
+  },
+  "nonce": "72f39269622c6730e2fa812564425a22",
+  "profile_id": "test-015-v2",
+  "run_id": "phase4-net-test015-v2qual-20260822T150000Z-21ef-ev2",
+  "scenario": "icpc-qualification",
+  "schema_version": "p4-network-session-v2",
+  "session_id": "p4net-20260821T103906Z-72f39269",
+  "test_id": "TEST-015",
+  "transport": "udp"
+}

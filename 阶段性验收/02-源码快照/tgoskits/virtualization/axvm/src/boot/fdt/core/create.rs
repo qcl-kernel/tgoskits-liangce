@@ -322,6 +322,26 @@ pub fn update_fdt(
 
 fn load_patched_fdt(vm: AxVMRef, new_fdt_bytes: Vec<u8>) -> AxVmResult {
     let dest_addr = calculate_dtb_load_addr(vm.clone(), new_fdt_bytes.len())?;
+    // Contest evidence (P4-EVID-01B): the host-side QMP collector needs the
+    // host physical address of the final Guest DTB to pmemsave it. Log the
+    // mapping explicitly so the collector does not have to guess.
+    let host_phys = vm
+        .memory_regions()
+        .iter()
+        .find(|region| {
+            dest_addr.as_usize() >= region.gpa.as_usize()
+                && dest_addr.as_usize() < region.gpa.as_usize() + region.size()
+        })
+        .map(|region| {
+            region.host_paddr().as_usize() + (dest_addr.as_usize() - region.gpa.as_usize())
+        });
+    info!(
+        "contest dtb evidence: vm={} gpa=0x{:x} size=0x{:x} hpa=0x{:x}",
+        vm.id(),
+        dest_addr.as_usize(),
+        new_fdt_bytes.len(),
+        host_phys.unwrap_or(0)
+    );
     debug!(
         "New FDT will be loaded at {:x}, size: 0x{:x}",
         dest_addr,

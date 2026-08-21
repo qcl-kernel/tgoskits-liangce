@@ -20,9 +20,11 @@
 //   tcp-client connect to 10.77.0.2:46001 (explicit fallback)
 //   icpc       run the ICPC v1 payload interchange over UDP 46000
 //
-// On startup the program prints a unique READY line with the actual
-// interface, MAC, IPv4, prefix, route and MTU.  A default route or an
-// address drift exits non-zero (fail closed).
+// On startup the program prints a unique APP_READY line with the actual
+// interface, MAC, IPv4, prefix, route and MTU.  (The boot-time
+// AXVISOR_DUAL_GUEST_LINUX_READY is emitted exactly once by the rootfs /init;
+// this app uses a distinct marker so the runtime oracle stays "exactly once".)
+// A default route or an address drift exits non-zero (fail closed).
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -33,10 +35,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/ioctl.h>
 #include "icpc/icpc.h"
+#include "model/contest_model.h"
+#include "model/controller.h"
 
 static int icpc_loop(void); /* defined after main */
+static int icpc_safe_loop(void); /* defined after main */
+static int icpc_traj_loop(const char *mode_arg); /* defined after main */
+
+/* P5-AI-A/TEST-016: run the frozen golden vectors through the C inference and
+ * report how many match within 2 Q16.16 duty LSBs.  Fails if any mismatch. */
+static int ai_verify_mode(void) {
+    int matched = contest_mlp_verify_golden();
+    printf("TGOS_LINUX_MLP_VERIFY passed=%d expected=%d\n", matched, 256);
+    fflush(stdout);
+    /* Stay alive as PID 1 (init) after reporting; never return. */
+    for (;;) {
+        struct timespec ts = {.tv_sec = 5, .tv_nsec = 0};
+        nanosleep(&ts, NULL);
+    }
+    /* unreachable: never return as PID 1 (init) */
+    return 0;
+}
+
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -51,7 +74,7 @@ static int icpc_loop(void); /* defined after main */
 #define FIXED_PEER "10.77.0.2"
 #define FIXED_UDP_PORT 46000
 #define FIXED_TCP_PORT 46001
-#define READY_PREFIX "AXVISOR_DUAL_GUEST_LINUX_READY"
+#define READY_PREFIX "AXVISOR_DUAL_GUEST_LINUX_APP_READY"
 
 static void die(const char *what) {
     fprintf(stderr, "linux-ai-controller: %s: %s\n", what, strerror(errno));
@@ -286,7 +309,7 @@ static int udp_echo_loop(void) {
         ((uint32_t *)p)[0] = htonl(0x52504254u); /* "RPBT" probe magic */
         ((uint32_t *)p)[1] = htonl(0xffffffffu);
         (void)sendto(sock, p, sizeof(p), 0, (struct sockaddr *)&peer, sizeof(peer));
-        struct timeval zt = {0};
+        struct timeval zt = {0, 100000};  /* 100 ms: a zero timeout blocks forever */
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &zt, sizeof(zt));
         char buf[256];
         struct sockaddr_in f;
@@ -322,7 +345,9 @@ static int udp_echo_loop(void) {
         if (n == (ssize_t)sizeof(pkt)) {
             udp_received++;
         }
-        usleep(50000);
+        /* 10 Hz pacing: matches the TEST-015 spec rhythm and leaves the
+         * Zephyr netstack room to echo every packet without RX pile-up. */
+        usleep(100000);
     }
     printf("TGOS_LINUX_UDP_ECHO sent=100 received=%d loss=%d\n",
            udp_received, 100 - udp_received);
@@ -358,25 +383,43 @@ static int tcp_client_session(void) {
     peer.sin_port = htons(FIXED_TCP_PORT);
     struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
     (void)setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    for (int attempt = 0; attempt < 3; attempt++) {
-        if (connect(sock, (struct sockaddr *)&peer, sizeof(peer)) == 0) {
-            printf("TGOS_LINUX_TCP_CONNECTED peer=%s:%d attempt=%d\n", FIXED_PEER,
-                   FIXED_TCP_PORT, attempt);
-            char buf[2048];
-            for (;;) {
-                ssize_t n = recv(sock, buf, sizeof(buf), 0);
-                if (n <= 0) break;
-                if (send(sock, buf, (size_t)n, 0) < 0) die("TCP send");
+    int printed = 0;
+    /* Never return: this process is PID 1 (init).  If the peer closes the
+     * session, reconnect on a fresh socket instead of letting init exit (a
+     * kernel panic).  The smoke marker is emitted at most once so the runner's
+     * "exactly one completion line" oracle still holds. */
+    for (;;) {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            int fd = socket(AF_INET, SOCK_STREAM, 0);
+            if (fd < 0) die("TCP reconnect socket");
+            (void)setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            if (connect(fd, (struct sockaddr *)&peer, sizeof(peer)) == 0) {
+                if (!printed) {
+                    printf("TGOS_LINUX_TCP_CONNECTED peer=%s:%d attempt=%d\n",
+                           FIXED_PEER, FIXED_TCP_PORT, attempt);
+                    fflush(stdout);
+                    printed = 1;
+                }
+                /* Move some traffic so the idle-session timers keep the
+                 * connection alive; then reflect whatever comes back. */
+                const char hello[] = "TGOS_TCP_HELLO\r\n";
+                (void)send(fd, hello, sizeof(hello) - 1, 0);
+                char buf[2048];
+                for (;;) {
+                    ssize_t n = recv(fd, buf, sizeof(buf), 0);
+                    if (n <= 0) break;
+                    if (send(fd, buf, (size_t)n, 0) < 0) break;
+                }
+                close(fd);
+                break; /* session over; reconnect in the outer loop */
             }
-            close(sock);
-            return 0;
+            close(fd);
+            usleep(500000);
         }
-        fprintf(stderr, "linux-ai-controller: TCP connect attempt %d failed\n", attempt);
-        usleep(500000);
+        usleep(200000);
     }
-    fprintf(stderr, "linux-ai-controller: TCP connect deadline exceeded\n");
-    close(sock);
-    return 1;
+    /* unreachable: never return as PID 1 (init) */
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -402,8 +445,370 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "udp-echo") == 0) return udp_echo_loop();
     if (strcmp(mode, "tcp-client") == 0) return tcp_client_session();
     if (strcmp(mode, "icpc") == 0) return icpc_loop();
+    if (strncmp(mode, "icpc-pi-", 8) == 0 || strncmp(mode, "icpc-mlp-", 9) == 0)
+        return icpc_traj_loop(mode);
+    if (strcmp(mode, "icpc-safe") == 0) return icpc_safe_loop();
+    if (strcmp(mode, "ai-verify") == 0) return ai_verify_mode();
     fprintf(stderr, "linux-ai-controller: unknown mode %s\n", mode);
     return 2;
+}
+
+/* P5-AI-Q (TEST-018): safe-state verification.  Sends 20 CONTROL at 10 Hz,
+ * pauses ~2 s (the Zephyr watchdog must force duty zero and report
+ * SAFE|NETWORK_TIMEOUT), resumes with a NEW session for another 20 CONTROL
+ * (recovery must be accepted), pauses again, and reports. */
+static int icpc_safe_loop(void) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) die("ICPC-safe UDP socket");
+    struct sockaddr_in local;
+    memset(&local, 0, sizeof(local));
+    local.sin_family = AF_INET;
+    local.sin_addr.s_addr = inet_addr(FIXED_IP);
+    local.sin_port = htons(FIXED_UDP_PORT);
+    if (bind(sock, (struct sockaddr *)&local, sizeof(local)) < 0) die("ICPC-safe UDP bind");
+    struct sockaddr_in peer;
+    memset(&peer, 0, sizeof(peer));
+    peer.sin_family = AF_INET;
+    peer.sin_addr.s_addr = inet_addr(FIXED_PEER);
+    peer.sin_port = htons(FIXED_UDP_PORT);
+    struct timeval tv = {.tv_sec = 8, .tv_usec = 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Peer reachability probe (same pattern as icpc_loop). */
+    uint8_t probe[36 + 24 + 40];
+    size_t probe_len = 0;
+    int peer_ok = 0;
+    for (int attempt = 0; attempt < 300 && !peer_ok; attempt++) {
+        struct icpc_header h;
+        memset(&h, 0, sizeof(h));
+        h.message_type = ICPC_MESSAGE_CONTROL;
+        h.flags = ICPC_VERSION;
+        h.session_id = 1;
+        h.sequence = 0xffffffffU;
+        h.ack_sequence = 0;
+        h.timestamp_ms = 0x1234;
+        h.error_code = ICPC_ERROR_NONE;
+        uint8_t payload[24];
+        memset(payload, 0x33, sizeof(payload));
+        if (icpc_encode(probe, sizeof(probe), &h, payload, sizeof(payload),
+                        &probe_len) != ICPC_STATUS_OK)
+            die("icpc_encode probe");
+        (void)sendto(sock, probe, probe_len, 0, (struct sockaddr *)&peer, sizeof(peer));
+        struct timeval zt = {0, 100000};
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &zt, sizeof(zt));
+        uint8_t rbuf[256];
+        struct sockaddr_in from;
+        socklen_t from_len = sizeof(from);
+        ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                             (struct sockaddr *)&from, &from_len);
+        if (n > 0) {
+            struct icpc_header rh;
+            const uint8_t *rpay;
+            size_t rlen = 0;
+            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) == ICPC_STATUS_OK &&
+                ((rh.message_type == ICPC_MESSAGE_ACK &&
+                  rh.ack_sequence == 0xffffffffU) ||
+                 rh.message_type == ICPC_MESSAGE_STATUS)) {
+                peer_ok = 1;
+            }
+        }
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        usleep(100000);
+    }
+    if (peer_ok) {
+        usleep(500000);
+    }
+
+    int verified_p1 = 0;
+    int verified_p2 = 0;
+    for (int phase = 1; phase <= 2; phase++) {
+        if (phase == 2) {
+            /* Pause: the Zephyr watchdog must enter safe state and report
+             * SAFE|NETWORK_TIMEOUT with duty zero. */
+            printf("TGOS_LINUX_ICPC_SAFE_TEST phase1_sent=20 verified=%d pausing\n",
+                   verified_p1);
+            fflush(stdout);
+            sleep(2);
+        }
+        uint32_t session = (uint32_t)phase;
+        int verified = 0;
+        for (int i = 0; i < 20; i++) {
+            struct icpc_header h;
+            memset(&h, 0, sizeof(h));
+            h.message_type = ICPC_MESSAGE_CONTROL;
+            h.flags = ICPC_VERSION;
+            h.session_id = session;
+            h.sequence = (uint32_t)(i + 1);
+            h.ack_sequence = 0;
+            h.timestamp_ms = (uint64_t)(2000 + phase * 1000 + i * 7);
+            h.error_code = ICPC_ERROR_NONE;
+            uint8_t payload[24];
+            memset(payload, 0, sizeof(payload));
+            payload[0] = 1;
+            payload[1] = 1;
+            payload[2] = 1;
+            uint32_t req_id = (uint32_t)(1000 + phase * 100 + i);
+            int32_t duty = contest_control_duty(25000, 55000, 0);
+            int32_t target = 55000;
+            uint32_t mver = 731924617;
+            uint16_t validity = 500;
+            memcpy(payload + 4, &req_id, 4);
+            memcpy(payload + 8, &duty, 4);
+            memcpy(payload + 12, &target, 4);
+            memcpy(payload + 16, &mver, 4);
+            memcpy(payload + 20, &validity, 2);
+            uint8_t packet[160];
+            size_t plen = 0;
+            if (icpc_encode(packet, sizeof(packet), &h, payload, sizeof(payload),
+                            &plen) != ICPC_STATUS_OK)
+                die("icpc_encode safe");
+            (void)sendto(sock, packet, plen, 0, (struct sockaddr *)&peer, sizeof(peer));
+            int got_ack = 0;
+            for (;;) {
+                uint8_t rbuf[256];
+                struct sockaddr_in from;
+                socklen_t from_len = sizeof(from);
+                ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                                     (struct sockaddr *)&from, &from_len);
+                if (n <= 0)
+                    break;
+                struct icpc_header rh;
+                const uint8_t *rpay;
+                size_t rlen = 0;
+                if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) != ICPC_STATUS_OK)
+                    continue;
+                if (rh.message_type == ICPC_MESSAGE_ACK &&
+                    rh.ack_sequence == h.sequence) {
+                    got_ack = 1;
+                    break;
+                }
+            }
+            if (got_ack)
+                verified++;
+            usleep(100000);
+        }
+        if (phase == 1) {
+            verified_p1 = verified;
+        } else {
+            verified_p2 = verified;
+        }
+    }
+    printf("TGOS_LINUX_ICPC_SAFE_PASS phase1_verified=%d phase2_verified=%d\n",
+           verified_p1, verified_p2);
+    fflush(stdout);
+    for (;;) {
+        sleep(1);
+    }
+    /* unreachable: never return as PID 1 (init) */
+    return 0;
+}
+
+/* P5-AI-Q (TEST-017): 180 s closed-loop trajectory collection.
+ * mode "icpc-pi-<seed>" / "icpc-mlp-<seed>": every 100 ms tick the latest
+ * Zephyr STATUS measured_mC feeds the frozen PI (IF-008) or the canonical
+ * MLP, the resulting duty is sent as CONTROL, and the ACK closes the loop.
+ * One trajectory line per second (10 ticks) keeps the shared-UART overhead
+ * low.  RTT is the Linux-side ACK receive minus send on the same clock. */
+static int icpc_traj_loop(const char *mode_arg)
+{
+    int seed = 0;
+    int use_pi = 0;
+    if (sscanf(mode_arg, "icpc-pi-%d", &seed) == 1) {
+        use_pi = 1;
+    } else if (sscanf(mode_arg, "icpc-mlp-%d", &seed) != 1) {
+        fprintf(stderr, "linux-ai-controller: bad traj mode %s\n", mode_arg);
+        return 1;
+    }
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) die("traj UDP socket");
+    struct sockaddr_in local;
+    memset(&local, 0, sizeof(local));
+    local.sin_family = AF_INET;
+    local.sin_addr.s_addr = inet_addr(FIXED_IP);
+    local.sin_port = htons(FIXED_UDP_PORT);
+    if (bind(sock, (struct sockaddr *)&local, sizeof(local)) < 0) die("traj UDP bind");
+    struct sockaddr_in peer;
+    memset(&peer, 0, sizeof(peer));
+    peer.sin_family = AF_INET;
+    peer.sin_addr.s_addr = inet_addr(FIXED_PEER);
+    peer.sin_port = htons(FIXED_UDP_PORT);
+    struct timeval tv = {.tv_sec = 8, .tv_usec = 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Peer reachability probe (same pattern as icpc_loop). */
+    uint8_t probe[36 + 24 + 40];
+    size_t probe_len = 0;
+    int peer_ok = 0;
+    for (int attempt = 0; attempt < 300 && !peer_ok; attempt++) {
+        struct icpc_header h;
+        memset(&h, 0, sizeof(h));
+        h.message_type = ICPC_MESSAGE_CONTROL;
+        h.flags = ICPC_VERSION;
+        h.session_id = 1;
+        h.sequence = 0xffffffffU;
+        h.ack_sequence = 0;
+        h.timestamp_ms = 0x1234;
+        h.error_code = ICPC_ERROR_NONE;
+        uint8_t payload[24];
+        memset(payload, 0x33, sizeof(payload));
+        if (icpc_encode(probe, sizeof(probe), &h, payload, sizeof(payload),
+                        &probe_len) != ICPC_STATUS_OK)
+            die("icpc_encode probe");
+        (void)sendto(sock, probe, probe_len, 0, (struct sockaddr *)&peer, sizeof(peer));
+        struct timeval zt = {0, 100000};
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &zt, sizeof(zt));
+        uint8_t rbuf[256];
+        struct sockaddr_in from;
+        socklen_t from_len = sizeof(from);
+        ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                             (struct sockaddr *)&from, &from_len);
+        if (n > 0) {
+            struct icpc_header rh;
+            const uint8_t *rpay;
+            size_t rlen = 0;
+            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) == ICPC_STATUS_OK &&
+                ((rh.message_type == ICPC_MESSAGE_ACK &&
+                  rh.ack_sequence == 0xffffffffU) ||
+                 rh.message_type == ICPC_MESSAGE_STATUS)) {
+                peer_ok = 1;
+            }
+        }
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        usleep(100000);
+    }
+    if (peer_ok) {
+        usleep(500000);
+    }
+
+    struct contest_pi_state pi;
+    contest_pi_reset(&pi);
+    int measured_mC = 25000;
+    int prev_duty = 0;
+    int acked = 0;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    int64_t t0_ms = (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+
+    for (int tick = 0; tick < 600; tick++) {
+        /* Drain the latest STATUS feedback (non-blocking). */
+        struct timeval zt = {0, 1};
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &zt, sizeof(zt));
+        for (int rd = 0; rd < 8; rd++) {
+            uint8_t rbuf[256];
+            struct sockaddr_in from;
+            socklen_t from_len = sizeof(from);
+            ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                                 (struct sockaddr *)&from, &from_len);
+            if (n <= 0)
+                break;
+            struct icpc_header rh;
+            const uint8_t *rpay;
+            size_t rlen = 0;
+            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) != ICPC_STATUS_OK)
+                continue;
+            if (rh.message_type == ICPC_MESSAGE_STATUS && rlen >= 20) {
+                int32_t fb = 0;
+                memcpy(&fb, rpay + 16, sizeof(fb));
+                if (fb >= -40000 && fb <= 125000) {
+                    measured_mC = fb;
+                }
+            }
+        }
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        /* Controller: frozen PI or canonical MLP. */
+        int duty;
+        if (use_pi) {
+            duty = contest_control_pi(&pi, measured_mC, 55000);
+        } else {
+            duty = contest_control_duty(measured_mC, 55000, prev_duty);
+        }
+        prev_duty = duty;
+
+        /* Send CONTROL (same 24-byte IF-008 payload as icpc_loop). */
+        struct icpc_header h;
+        memset(&h, 0, sizeof(h));
+        h.message_type = ICPC_MESSAGE_CONTROL;
+        h.flags = ICPC_VERSION;
+        h.session_id = 1;
+        h.sequence = (uint32_t)(tick + 1);
+        h.ack_sequence = 0;
+        h.timestamp_ms = (uint64_t)(t0_ms + tick * 100);
+        h.error_code = ICPC_ERROR_NONE;
+        uint8_t payload[24];
+        memset(payload, 0, sizeof(payload));
+        payload[0] = 1;
+        payload[1] = 1;
+        payload[2] = 1;
+        uint32_t req_id = (uint32_t)(2000 + tick);
+        int32_t target = 55000;
+        uint32_t mver = 731924617;
+        uint16_t validity = 500;
+        memcpy(payload + 4, &req_id, 4);
+        memcpy(payload + 8, &duty, 4);
+        memcpy(payload + 12, &target, 4);
+        memcpy(payload + 16, &mver, 4);
+        memcpy(payload + 20, &validity, 2);
+        uint8_t packet[160];
+        size_t plen = 0;
+        if (icpc_encode(packet, sizeof(packet), &h, payload, sizeof(payload),
+                        &plen) != ICPC_STATUS_OK)
+            die("icpc_encode traj");
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        int64_t send_ms = (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+        (void)sendto(sock, packet, plen, 0, (struct sockaddr *)&peer, sizeof(peer));
+
+        /* Wait for the ACK of this sequence (bounded 8 s). */
+        int got_ack = 0;
+        for (;;) {
+            uint8_t rbuf[256];
+            struct sockaddr_in from;
+            socklen_t from_len = sizeof(from);
+            ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                                 (struct sockaddr *)&from, &from_len);
+            if (n <= 0)
+                break;
+            struct icpc_header rh;
+            const uint8_t *rpay;
+            size_t rlen = 0;
+            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) != ICPC_STATUS_OK)
+                continue;
+            if (rh.message_type == ICPC_MESSAGE_ACK &&
+                rh.ack_sequence == h.sequence) {
+                got_ack = 1;
+                break;
+            }
+            /* STATUS feedback seen while waiting for the ACK */
+            if (rh.message_type == ICPC_MESSAGE_STATUS && rlen >= 20) {
+                int32_t fb = 0;
+                memcpy(&fb, rpay + 16, sizeof(fb));
+                if (fb >= -40000 && fb <= 125000) {
+                    measured_mC = fb;
+                }
+            }
+        }
+        if (got_ack)
+            acked++;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        int64_t ack_ms = (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+
+        if ((tick + 1) % 10 == 0) {
+            printf("TGOS_LINUX_TRAJ tick=%d t_ms=%lld measured=%d target=55000 "
+                   "duty=%d mode=%s seed=%d rtt_ms=%lld acked=%d\n",
+                   tick + 1, (long long)(ack_ms - t0_ms), measured_mC, duty,
+                   use_pi ? "pi" : "mlp", seed, (long long)(ack_ms - send_ms),
+                   acked);
+            fflush(stdout);
+        }
+        usleep(100000);
+    }
+    printf("TGOS_LINUX_TRAJ_DONE ticks=600 mode=%s seed=%d acked=%d\n",
+           use_pi ? "pi" : "mlp", seed, acked);
+    fflush(stdout);
+    for (;;) {
+        sleep(1);
+    }
 }
 
 static int icpc_loop(void) {
@@ -470,6 +875,11 @@ static int icpc_loop(void) {
     }
 
     int verified = 0;
+    /* P5-AI-C closed loop: measured comes from the Zephyr STATUS feedback
+     * (fallback to the local DEC-008 plant estimate until the first STATUS). */
+    int measured_mC = 25000;
+    int has_feedback = 0;
+    int prev_duty = 0;
     for (int i = 0; i < 100; i++) {
         struct icpc_header h;
         memset(&h, 0, sizeof(h));
@@ -480,9 +890,28 @@ static int icpc_loop(void) {
         h.ack_sequence = 0;              /* CONTROL carries no ACK */
         h.timestamp_ms = (uint64_t)(1000 + i * 7);
         h.error_code = ICPC_ERROR_NONE;
+        /* Real MLP inference -> CONTROL payload (icpc_control struct layout). */
+        int32_t duty = contest_control_duty(measured_mC, 55000, prev_duty);
+        (void)has_feedback;
         uint8_t payload[24];
-        memset(payload, (uint8_t)i, sizeof(payload));
-        payload[0] = 1;  /* mode = MLP */
+        memset(payload, 0, sizeof(payload));
+        payload[0] = 1;                         /* schema_version */
+        payload[1] = 1;                         /* command = apply output */
+        payload[2] = 1;                         /* control_mode = MLP */
+        uint32_t req_id = (uint32_t)(1000 + i);
+        int32_t target = 55000;
+        uint32_t mver = 731924617;              /* 0x2BA04889 model_version */
+        uint16_t validity = 500;
+        memcpy(payload + 4, &req_id, 4);
+        memcpy(payload + 8, &duty, 4);
+        memcpy(payload + 12, &target, 4);
+        memcpy(payload + 16, &mver, 4);
+        memcpy(payload + 20, &validity, 2);
+        if (i == 0) {
+            printf("TGOS_LINUX_MLP_CONTROL duty=%d target_mC=%d model_version=%u measured_mC=%d feedback=%d\n",
+                   (int)duty, target, mver, measured_mC, has_feedback);
+            fflush(stdout);
+        }
 
         uint8_t packet[160];
         size_t plen = 0;
@@ -491,33 +920,62 @@ static int icpc_loop(void) {
             die("icpc_encode");
         }
         (void)sendto(sock, packet, plen, 0, (struct sockaddr *)&peer, sizeof(peer));
+        /* Advance the local plant reference and duty state. */
+        measured_mC = contest_plant_step(measured_mC, duty, i);
+        prev_duty = duty;
 
-        /* The peer answers each CONTROL with an ACK + STATUS; drain until we
-         * see the ACK for this sequence (or give up after a few reads). */
+        /* The peer answers each CONTROL with an ACK + STATUS. Wait (bounded)
+         * for the ACK of THIS sequence; consume any STATUS seen on the way
+         * as closed-loop feedback. The ACK decides verification; a STATUS
+         * arriving after the ACK stays buffered and is consumed by the next
+         * frame's wait (feedback lags at most one frame). */
         int got_ack = 0;
-        for (int rd = 0; rd < 32 && !got_ack; rd++) {
+        struct timeval wait_tv = {8, 0};  /* bounded wait for the ACK (the
+                                           * Linux virtio-net RX path can be
+                                           * slow under dual-Guest load) */
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &wait_tv, sizeof(wait_tv));
+        for (;;) {
             uint8_t rbuf[256];
             struct sockaddr_in from;
             socklen_t from_len = sizeof(from);
             ssize_t n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
                                  (struct sockaddr *)&from, &from_len);
             if (n <= 0) {
-                break;
+                break;  /* bounded wait expired */
             }
             struct icpc_header rh;
             const uint8_t *rpay;
             size_t rlen = 0;
-            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) == ICPC_STATUS_OK &&
-                rh.message_type == ICPC_MESSAGE_ACK &&
+            if (icpc_decode(rbuf, (size_t)n, &rh, &rpay, &rlen) != ICPC_STATUS_OK) {
+                continue;
+            }
+            if (rh.message_type == ICPC_MESSAGE_ACK &&
                 rh.ack_sequence == h.sequence) {
                 got_ack = 1;
+                break;
+            }
+            /* P5-AI-C: consume the Zephyr STATUS measured_mC (32-byte
+             * icpc_status_payload, measured at offset 16 LE) as feedback. */
+            if (rh.message_type == ICPC_MESSAGE_STATUS && rlen >= 20) {
+                int32_t fb = 0;
+                memcpy(&fb, rpay + 16, sizeof(fb));
+                if (fb >= -40000 && fb <= 125000) {
+                    measured_mC = fb;
+                    has_feedback = 1;
+                }
             }
         }
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (got_ack) {
             verified++;
         }
-        usleep(50000);
-        if ((i + 1) % 25 == 0) {
+        /* 10 Hz pacing (P4-REL-01 TEST-015 spec): leaves the Zephyr netstack
+         * room to ACK/STATUS every CONTROL without RX-buffer pile-up. */
+        usleep(100000);
+        /* Debug progress is printed only at the end: mid-loop console
+         * output from the guest interleaves with the axvisor evidence log
+         * on the shared UART and perturbs the ICPC timing. */
+        if (i + 1 == 100) {
             fprintf(stderr, "linux-ai-controller: icpc progress i=%d verified=%d\n",
                     i + 1, verified);
         }

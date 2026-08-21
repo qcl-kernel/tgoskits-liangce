@@ -1,0 +1,9 @@
+{
+ "ack_received": 100,
+ "loss": 0,
+ "scenario": "test-011",
+ "schema_version": "p4-network-metrics-summary-v1",
+ "sent": 100,
+ "success_percent": 100.0,
+ "transport": "icmp"
+}

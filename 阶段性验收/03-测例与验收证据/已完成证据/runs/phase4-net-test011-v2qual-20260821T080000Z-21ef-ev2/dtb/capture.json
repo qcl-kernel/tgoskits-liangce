@@ -1,0 +1,23 @@
+{
+  "dtbs": {
+    "linux": {
+      "gpa": 2147483648,
+      "hpa": 4913627136,
+      "sha256": "c929533e15418e911e020e555d1624c5a42a6048c32b97d60ac0a3daf3003920",
+      "size": 2400
+    },
+    "zephyr": {
+      "gpa": 1205862400,
+      "hpa": 5314183168,
+      "sha256": "d69c661be52d8f6300e9c14d1f3b8cfcff591b2a6db434f07e0a81438fa5c02c",
+      "size": 2132
+    }
+  },
+  "nonce": "f8b424bbaf64f0cabf7020a0f3b0f954",
+  "qemuName": "axvisor-dual-smoke-f8b424bbaf64f0cabf7020a0f3b0f954",
+  "qemuPid": 642,
+  "qmpSocket": "/tmp/axp4-f8b424bbaf64f0cabf7020a0f3b0f954/qmp.sock",
+  "run_id": "phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2",
+  "schema_version": "p4-network-dtb-capture-v1",
+  "session_id": "p4net-20260820T203846Z-f8b424bb"
+}

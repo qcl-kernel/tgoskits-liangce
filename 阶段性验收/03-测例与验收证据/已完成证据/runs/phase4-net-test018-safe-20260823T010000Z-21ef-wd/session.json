@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase4-net-test018-safe-20260823T010000Z-21ef-wd",
+  "scenario": "test-018-safe",
+  "sessionNonce": "6c221d8e2f93d1daea3ced46b7be8174",
+  "bootId": "p4net-20260821T131723Z-6c221d8e",
+  "qemuName": "axvisor-dual-smoke-6c221d8e2f93d1daea3ced46b7be8174",
+  "startedAtUtc": "2026-08-21T13:17:23Z"
+}

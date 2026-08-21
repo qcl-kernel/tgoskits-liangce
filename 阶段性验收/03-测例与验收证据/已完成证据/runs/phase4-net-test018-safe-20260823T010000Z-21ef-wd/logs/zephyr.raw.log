@@ -1,0 +1,5 @@
+[VM 2] *** Booting Zephyr OS build v4.4.0 ***
+[VM 2] AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=p4smoke-20260822-wd5 iface=device mac=02:00:00:00:00:02 ipv4=10.77.0.2 prefix=24 route=10.77.0.0/24 mtu=1500
+[VM 2] TGOS_ZEPHYR_UDP_ECHO_READY port=46000
+[VM 2] TGOS_ZEPHYR_SAFE|NETWORK_TIMEOUT last_control_ms=12100 now_ms=12650 duty=0
+[m[VM 2] TGOS_ZEPHYR_SAFE|NETWORK_TIMEOUT last_control_ms=16330 now_ms=16880 duty=0

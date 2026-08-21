@@ -1,0 +1,15 @@
+{
+ "capture_bytes": 12434,
+ "capture_drops": 0,
+ "capture_frames": 131,
+ "delivered_linux": 83,
+ "delivered_zephyr": 42,
+ "fault_corrupt": 0,
+ "fault_drop": 0,
+ "fault_duplicate": 0,
+ "fault_reorder": 0,
+ "schema_version": "p4-network-counters-v1",
+ "switch_deliver": 125,
+ "switch_drop": 0,
+ "switch_enqueue": 131
+}

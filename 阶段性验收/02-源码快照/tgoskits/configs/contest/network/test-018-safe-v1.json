@@ -1,0 +1,21 @@
+{
+  "schema_version": "p4-network-profile-v1",
+  "profile_id": "test-018-safe-v1",
+  "test_id": "TEST-018",
+  "scenario": "icpc-safe",
+  "host_only": true,
+  "evidence_level": "L2 host",
+  "transport": "udp",
+  "completionMarker": "TGOS_LINUX_ICPC_SAFE_PASS",
+  "oracle": {
+    "requiredMarkers": [
+      "AXVISOR_DUAL_GUEST_LINUX_READY",
+      "AXVISOR_DUAL_GUEST_ZEPHYR_READY"
+    ],
+    "forbidden": [
+      "AXVISOR_LINUX_CONSOLE_FAIL",
+      "kernel panic"
+    ]
+  },
+  "timeoutSeconds": 900
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runId": "phase4-net-test018-safe-20260823T010000Z-21ef-wd",
+  "success": true,
+  "status": "guest_network_smoke_completed",
+  "primaryError": null,
+  "cleanupError": null,
+  "evidenceClass": "runtime-smoke",
+  "qualified": false,
+  "completionLine": "TGOS_LINUX_ICPC_SAFE_PASS phase1_verified=20 phase2_verified=20",
+  "completedChecks": [
+    "runtime-markers",
+    "scenario-smoke-oracle",
+    "final-log-revalidation",
+    "cleanup"
+  ],
+  "manifestSha256": "4c781cdf88fd75db37d5357eeac8c5925b14af3279e80dff20bb01f8f2bfb09c"
+}

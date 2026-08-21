@@ -34,7 +34,7 @@ use crate::{
 pub const FIOCLEX: u32 = 0x5451;
 pub const FIONCLEX: u32 = 0x5450;
 
-#[cfg(axtest)]
+#[cfg(test)]
 pub(crate) fn ctl_ioctl_constants_hold_for_test() -> bool {
     // Verify ioctl command constants
     assert!(FIOCLEX == 0x5451);
@@ -151,7 +151,7 @@ pub fn sys_chroot(path: *const c_char) -> StarryResult<isize> {
     Ok(0)
 }
 
-ktracepoint::define_event_trace!(
+ax_tracepoint::define_event_trace!(
     sys_mkdirat,
     TP_kops(crate::tracepoint::KernelTraceAux),
     TP_system(syscalls),

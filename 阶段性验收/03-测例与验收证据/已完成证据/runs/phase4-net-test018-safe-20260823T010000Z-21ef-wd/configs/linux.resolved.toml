@@ -1,0 +1,49 @@
+# Contest Linux+Zephyr dual-Guest VM: Linux (VM 1).
+#
+# Official-baseline format: the mediated VirtIO-net frontend is declared as
+# a `[[devices.virtual]]` model "virtio-net" with the fixed contest MAC.
+# MMIO/IRQ are resolved by the device graph (`ResourceRequest::Auto`) and
+# are emitted into the final guest DTB by the runtime FDT patch; they are
+# not written here. The Linux rootfs travels as an initramfs (memory +
+# ramdisk), so no outer virtio-blk slot is needed.
+
+[base]
+id = 1
+name = "linux-qemu-smp2-dual"
+guest_type = "virtualized"
+cpu_num = 2
+phys_cpu_ids = [0, 1]
+
+[kernel]
+entry_point = 0x8020_0000
+image_location = "memory"
+kernel_path = "/root/.cache/tgoskits/axvisor-images/qemu_aarch64_linux/qemu-aarch64"
+kernel_load_addr = 0x8020_0000
+ramdisk_path = "/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test018-safe-20260823T010000Z-21ef-wd/configs/linux-initramfs.cpio.gz"
+ramdisk_load_addr = 0x8800_0000
+dtb_load_addr = 0x8000_0000
+cmdline = "console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000"
+# ramdisk_path / ramdisk_load_addr are resolved by the P4 runner.
+
+# System RAM 256M at fixed GPA 0x8000_0000 (MAP_ALLOC). The official
+# baseline treats MapIdentical as "GPA == allocated HPA" and ignores the
+# configured GPA, which would break the fixed kernel/ramdisk load addresses;
+# MAP_ALLOC keeps the configured GPA and is what the official ArceOS guests
+# use.
+memory_regions = [
+  [0x8000_0000, 0x1000_0000, 0x7, 0],
+]
+
+#
+# Device specifications
+#
+
+# Physical-device selection. Virtual platform devices are machine-owned.
+[devices]
+passthrough = []
+disabled = []
+
+[[devices.virtual]]
+id = "virtnet0"
+model = "virtio-net"
+guest_mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01]

@@ -337,6 +337,17 @@ fn current_el_sync_handler(tf: &mut TrapFrame) {
     error!("Exception Class: {ec:#x}");
     error!("Instruction Specific Syndrome: {iss:#x}");
 
+    // Contest diagnostic: capture the faulting address and PC of a host-side
+    // (current-EL) synchronous abort so the fault site can be symbol-resolved.
+    // Only logged on the panic path; harmless to production.
+    let far_el2: u64;
+    let elr_el2: u64;
+    unsafe {
+        core::arch::asm!("mrs {}, FAR_EL2", out(reg) far_el2);
+        core::arch::asm!("mrs {}, ELR_EL2", out(reg) elr_el2);
+    }
+    error!("FAR_EL2: {far_el2:#x} ELR_EL2: {elr_el2:#x}");
+
     panic!(
         "Unhandled synchronous exception from current EL: {:#x?}",
         tf

@@ -1,0 +1,9 @@
+{
+ "ack_received": 1,
+ "loss": 0,
+ "scenario": "test-013",
+ "schema_version": "p4-network-metrics-summary-v1",
+ "sent": 1,
+ "success_percent": 100.0,
+ "transport": "tcp"
+}

@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "runId": "phase4-net-test012-20260819T101308Z-udp5",
-  "scenario": "test-012",
-  "sessionNonce": "be8a009d7a9b1f4544eb49849d4bb80b",
-  "bootId": "p4net-20260819T101311Z-be8a009d",
-  "qemuName": "axvisor-dual-smoke-be8a009d7a9b1f4544eb49849d4bb80b",
-  "startedAtUtc": "2026-08-19T10:13:11Z"
-}

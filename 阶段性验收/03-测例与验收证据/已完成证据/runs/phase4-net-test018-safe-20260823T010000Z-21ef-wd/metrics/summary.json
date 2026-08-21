@@ -1,0 +1,9 @@
+{
+ "ack_received": 0,
+ "loss": 0,
+ "scenario": "test-018-safe",
+ "schema_version": "p4-network-metrics-summary-v1",
+ "sent": 0,
+ "success_percent": 0.0,
+ "transport": "udp"
+}

@@ -1,0 +1,188 @@
+# Contest host/static Python contracts (Liangce team, private delivery).
+#
+# These are deterministic host contracts: they do not create Guest-IP, AI-loop
+# or real-time A/B evidence by themselves. They run unconditionally in the
+# static phase (like the rest of the static manifest), which matches their
+# historical wiring in the pre-v3 workflow. No impact_targets is declared so
+# they are always enforced.
+
+schema_version = 3
+phase = "static"
+group = "Contest"
+default_runner = "qcs"
+
+[[check]]
+id = "contest-mirror-docs"
+name = "Mirror development docs into the repository"
+command = '''
+python3 scripts/test/check_contest_development_mirror.py
+'''
+
+[[check]]
+id = "contest-upstream-p4-baseline"
+name = "Locked upstream P4 integration baseline preflight"
+command = '''
+python3 scripts/test/check_contest_upstream_p4_baseline.py
+'''
+
+[[check]]
+id = "contest-virtio-net-auto-resources"
+name = "virtio-net Auto resource planning contract"
+command = '''
+python3 scripts/test/check_axvisor_virtio_net_auto_resources.py
+'''
+
+[[check]]
+id = "contest-network-qualification"
+name = "Guest-runtime v2 network qualification, fail-closed"
+command = '''
+python3 scripts/test/check_contest_network_qualification.py
+'''
+
+[[check]]
+id = "contest-network-contract"
+name = "Network fault/capture/session host contract"
+command = '''
+python3 scripts/test/check_contest_network_contract.py
+'''
+
+[[check]]
+id = "contest-icpc-protocol"
+name = "Portable ICPC v1 host protocol contract"
+command = '''
+python3 scripts/test/check_icpc_protocol.py
+'''
+
+[[check]]
+id = "contest-icpc-control-payload"
+name = "ICPC CONTROL payload host contract"
+command = '''
+python3 scripts/test/check_icpc_control_payload.py
+'''
+
+[[check]]
+id = "contest-zephyr-control"
+name = "Zephyr control mailbox/watchdog host contract"
+command = '''
+python3 scripts/test/check_contest_zephyr_control.py
+'''
+
+[[check]]
+id = "contest-console-demux"
+name = "Guest console frame demux contract"
+command = '''
+python3 scripts/test/check_axvisor_guest_console_demux.py
+'''
+
+[[check]]
+id = "contest-console-gate"
+name = "Guest console gate contract"
+command = '''
+python3 scripts/test/check_axvisor_guest_console_gate.py
+'''
+
+[[check]]
+id = "contest-dual-soak-generate"
+name = "Dual-Guest soak session generator contract"
+command = '''
+python3 scripts/test/check_axvisor_generate_dual_guest_soak_session.py
+'''
+
+[[check]]
+id = "contest-dual-soak-validate"
+name = "Dual-Guest soak session validator contract"
+command = '''
+python3 scripts/test/check_axvisor_dual_guest_soak_session.py
+'''
+
+[[check]]
+id = "contest-rt-event-schema"
+name = "Real-time event schema contract"
+command = '''
+python3 scripts/test/check_contest_rt_event_schema.py
+'''
+
+[[check]]
+id = "contest-rt-statistics"
+name = "Real-time statistics contract"
+command = '''
+python3 scripts/test/check_contest_rt_statistics.py
+'''
+
+[[check]]
+id = "contest-rt-candidate-selection"
+name = "Real-time candidate selection contract"
+command = '''
+python3 scripts/test/check_contest_rt_candidate_selection.py
+'''
+
+[[check]]
+id = "contest-rt-run-plan"
+name = "Real-time run-plan contract"
+command = '''
+python3 scripts/test/check_contest_rt_run_plan.py
+'''
+
+[[check]]
+id = "contest-rt-probe"
+name = "Zephyr real-time probe template contract"
+command = '''
+python3 scripts/test/check_contest_rt_probe.py
+'''
+
+[[check]]
+id = "contest-ai-model"
+name = "AI model/train/export/verify host contract"
+command = '''
+python3 -m pip install --disable-pip-version-check -q -r scripts/contest/ai/requirements-ci.txt
+python3 scripts/test/check_contest_ai_model.py
+'''
+
+[[check]]
+id = "contest-ai-metrics"
+name = "AI control metrics host contract"
+command = '''
+python3 scripts/test/check_contest_ai_metrics.py
+'''
+
+[[check]]
+id = "contest-virtio-net-upsync"
+name = "virtio-net forward-port (Auto/level/read-write) source contract"
+command = '''
+python3 scripts/test/check_axvisor_virtio_net_upsync.py
+'''
+
+[[check]]
+id = "contest-network-artifacts"
+name = "Structured scenario counters/metrics publisher contract"
+command = '''
+python3 scripts/test/check_contest_network_artifacts.py
+'''
+
+[[check]]
+id = "contest-network-v2-publisher"
+name = "Guest-runtime v2 bundle publisher, fail-closed"
+command = '''
+python3 scripts/test/check_contest_network_v2_publisher.py
+'''
+
+[[check]]
+id = "contest-network-dtb-collector"
+name = "QMP final-DTB collector helpers, fail-closed"
+command = '''
+python3 scripts/test/check_contest_dtb_collector.py
+'''
+
+[[check]]
+id = "contest-ai-golden-c"
+name = "P5 deployment C inference matches 256 golden vectors"
+command = '''
+python3 scripts/test/check_contest_ai_golden_c.py
+'''
+
+[[check]]
+id = "contest-ai-controller"
+name = "P5 MLP control planner trajectory"
+command = '''
+python3 scripts/test/check_contest_ai_controller.py
+'''

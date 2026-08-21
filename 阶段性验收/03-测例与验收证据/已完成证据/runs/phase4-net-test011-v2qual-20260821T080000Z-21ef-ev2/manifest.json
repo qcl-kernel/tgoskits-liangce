@@ -1,0 +1,18 @@
+{
+  "files": {
+    "commands.jsonl": "57766b1bacf244ae298c9ac7618f45d09e11902a64b1e816df80fdfbfc4ca25e",
+    "dtb/linux-final.dtb": "c929533e15418e911e020e555d1624c5a42a6048c32b97d60ac0a3daf3003920",
+    "dtb/linux-final.dts": "472002fba9cc07b7d5e885ba26c149e66880a5ad27fa43aa7629a9be52acfc74",
+    "dtb/zephyr-final.dtb": "d69c661be52d8f6300e9c14d1f3b8cfcff591b2a6db434f07e0a81438fa5c02c",
+    "dtb/zephyr-final.dts": "d589d3f1ee10d08041d1ea7459906d06532d6ce75fb56709d578c754f560da41",
+    "logs/axvisor.raw.log": "9dcb7a563ca7267c4d7c261811d884cd41a3f6da36f7e5a153f8d93fe6d3a3d4",
+    "logs/linux.raw.log": "e5172fe82726d554ad0f1af709c184af4052b95ffb39012d32e7cb70b60b6f1f",
+    "logs/zephyr.raw.log": "0666eac1b7c59415e63de6d7b3320e47af844e7cda243087e37269feec9bd7ba",
+    "metrics/raw.jsonl": "2e4bc8f3d3b2c2b63fcf944e3e4adf8f070b7176133a476e982b653c74b37e29",
+    "metrics/summary.json": "1f74868994606dc5aa75a1fea6e1827775f9aae768c5c7f647c60822da207924",
+    "network/capture.pcap": "ad9e0ed45aa02dc20894f32dcaedbf637dd847166aa6620be56432f98e9dc3b8",
+    "network/counters.json": "e158bacb09fd9938bd9d63082295d35e0928e5858056a33646f9ad57482cf59b",
+    "network/frames.jsonl": "6ec193b76f2f130e1586b189adbe01fa3aef54bfef47f04572ba1d65ae04eb5e"
+  },
+  "schema_version": "p4-network-manifest-v1"
+}

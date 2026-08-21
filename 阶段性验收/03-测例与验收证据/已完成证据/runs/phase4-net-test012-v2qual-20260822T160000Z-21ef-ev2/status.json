@@ -1,0 +1,16 @@
+{
+  "cleanupError": null,
+  "completedChecks": [
+    "cleanup",
+    "hashes",
+    "oracle",
+    "validator"
+  ],
+  "manifestSha256": "db07d66c5ba61327cc36abf8552eab5dff8ffb1aea2668290555b40c8db1f75f",
+  "primaryError": null,
+  "qualified": true,
+  "schema_version": "p4-network-status-v2",
+  "status": "guest_network_qualified",
+  "statusLast": true,
+  "success": true
+}

@@ -1,0 +1,1233 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.43s
+     Running `/mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/debug/xtask qemu --config os/axvisor/configs/board/qemu-aarch64-contest-network.toml --qemu-config results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/qemu.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/linux.resolved.toml --vmconfigs results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/zephyr.resolved.toml`
+[2026-08-20T20:39:06Z INFO  axbuild::context] Workspace root: /mnt/f/project/泉城实验室/tgoskits-upstream-integration
+[2026-08-20T20:39:20Z INFO  axbuild::context] Workspace member dir for axvisor: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor
+Using build config: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml
+[2026-08-20T20:39:35Z INFO  ostool::run::qemu] Using QEMU config file: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/qemu.resolved.toml
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ...
+sh -c /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/prebuild/prebuild-aarch64-unknown-linux-musl-9ee3857e53a3a7ca.sh
+AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar
+AXVISOR_VM_CONFIGS=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/linux.resolved.toml:/mnt/f/project/泉城实验室/tgoskits-upstream-integration/results/baseline/runs/phase4-net-test011-v2qual-20260821T080000Z-21ef-ev2/configs/zephyr.resolved.toml
+AX_ARCH=aarch64
+AX_LOG=info
+AX_TARGET=aarch64-unknown-none-softfloat
+CARGO_UNSTABLE_JSON_TARGET_SPEC=true
+CC_aarch64_unknown_linux_musl=aarch64-linux-musl-cc
+CFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+CXXFLAGS_aarch64_unknown_linux_musl=-mgeneral-regs-only -fno-stack-protector
+cargo build --config /mnt/f/project/泉城实验室/tgoskits-upstream-integration/tmp/axbuild/std/config-aarch64-unknown-linux-musl-dynamic.toml -p axvisor --target scripts/targets/std/pie/aarch64-unknown-linux-musl.json -Z unstable-options --target-dir /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target --features log/release_max_level_info -Z json-target-spec --bin axvisor --release --message-format json-render-diagnostics
+   Compiling axvisor v0.5.24 (/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor)
+warning: unused import: `read_mmio_value`
+  --> virtualization/axvm/src/architecture/mod.rs:14:78
+   |
+14 | pub(crate) use exit::{handle_hypercall, handle_mmio_read, handle_mmio_write, read_mmio_value};
+   |                                                                              ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `read_mmio_value` is never used
+  --> virtualization/axvm/src/architecture/exit.rs:38:15
+   |
+38 | pub(crate) fn read_mmio_value<V: VmArchVcpuOps>(
+   |               ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated function `after_external_interrupt` is never used
+   --> virtualization/axvm/src/architecture/ops.rs:113:8
+    |
+ 12 | pub(crate) trait ArchOps {
+    |                  ------- associated function in this trait
+...
+113 |     fn after_external_interrupt(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `host_console_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:92:15
+   |
+92 | pub(crate) fn host_console_irq() -> Option<modules::ax_hal::irq::IrqId> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `dispatch_host_irq` is never used
+  --> virtualization/axvm/src/host/arceos.rs:96:15
+   |
+96 | pub(crate) fn dispatch_host_irq(vector: usize) {
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `with_vm` is never used
+  --> virtualization/axvm/src/manager.rs:56:15
+   |
+56 | pub(crate) fn with_vm<F, R>(vm_id: VMId, f: F) -> Option<R>
+   |               ^^^^^^^
+
+warning: function `active_vcpu_mask` is never used
+  --> virtualization/axvm/src/manager.rs:65:15
+   |
+65 | pub(crate) fn active_vcpu_mask(vm_id: VMId) -> Option<usize> {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: function `inject_interrupt` is never used
+  --> virtualization/axvm/src/manager.rs:77:15
+   |
+77 | pub(crate) fn inject_interrupt(vm_id: VMId, vcpu_id: usize, vector: usize) -> AxVmResult {
+   |               ^^^^^^^^^^^^^^^^
+
+warning: variant `Generic` is never constructed
+  --> virtualization/axvm/src/runtime/hvc.rs:26:5
+   |
+25 | pub(crate) enum HyperCallAbi {
+   |                 ------------ variant in this enum
+26 |     Generic,
+   |     ^^^^^^^
+   |
+   = note: `HyperCallAbi` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `handle` is never used
+   --> virtualization/axvm/src/timer.rs:169:8
+    |
+124 | impl TimerWheels {
+    | ---------------- method in this implementation
+...
+169 |     fn handle(&self, token: usize) -> Option<VmTimerHandle> {
+    |        ^^^^^^
+
+warning: function `cancel_timer` is never used
+   --> virtualization/axvm/src/timer.rs:247:15
+    |
+247 | pub(crate) fn cancel_timer(token: usize) {
+    |               ^^^^^^^^^^^^
+
+warning: associated items `handle_nested_page_fault` and `debug_nested_page_fault` are never used
+    --> virtualization/axvm/src/vm/mod.rs:1570:19
+     |
+1054 | impl AxVM {
+     | --------- associated items in this implementation
+...
+1570 |     pub(crate) fn handle_nested_page_fault(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1585 |     fn debug_nested_page_fault(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SimpleVmPlan` is never constructed
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:65:19
+   |
+65 | pub(crate) struct SimpleVmPlan(VmDevicePlan);
+   |                   ^^^^^^^^^^^^
+
+warning: associated function `new` is never used
+  --> virtualization/axvm/src/vm/prepare/device_plan/mod.rs:68:25
+   |
+67 | impl SimpleVmPlan {
+   | ----------------- associated function in this implementation
+68 |     pub(crate) const fn new(devices: VmDevicePlan) -> Self {
+   |                         ^^^
+
+warning: `axvm` (lib) generated 14 warnings (run `cargo fix --lib -p axvm` to apply 1 suggestion)
+warning: unused import: `collections::VecDeque`
+ --> os/axvisor/src/virtio_blk.rs:3:13
+  |
+3 | use alloc::{collections::VecDeque, format, string::String, sync::Arc, vec, vec::Vec};
+  |             ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `AtomicUsize`
+ --> os/axvisor/src/virtio_blk.rs:4:38
+  |
+4 | use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+  |                                      ^^^^^^^^^^^
+
+warning: associated functions `create_vm_from_toml` and `start_vm` are never used
+  --> os/axvisor/src/manager.rs:64:12
+   |
+24 | impl AxvmManager {
+   | ---------------- associated functions in this implementation
+...
+64 |     pub fn create_vm_from_toml(raw_cfg: &str) -> Result<VMId> {
+   |            ^^^^^^^^^^^^^^^^^^^
+...
+69 |     pub fn start_vm(vm_id: VMId) -> Result<()> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `can_start_vm` is never used
+  --> os/axvisor/src/shell/command/vm.rs:32:4
+   |
+32 | fn can_start_vm(status: VmStatus) -> Result<(), &'static str> {
+   |    ^^^^^^^^^^^^
+
+warning: function `start_single_vm` is never used
+   --> os/axvisor/src/shell/command/vm.rs:243:4
+    |
+243 | fn start_single_vm(vm: axvm::AxVMRef) -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `start_vm_by_id` is never used
+   --> os/axvisor/src/shell/command/vm.rs:254:4
+    |
+254 | fn start_vm_by_id(vm_id: usize, attach_console: bool) {
+    |    ^^^^^^^^^^^^^^
+
+warning: `axvisor` (bin "axvisor") generated 6 warnings (run `cargo fix --bin "axvisor" -p axvisor` to apply 2 suggestions)
+    Finished `release` profile [optimized] target(s) in 31.55s
+warning: the following packages contain code that will be rejected by a future version of Rust: core v0.0.0 (/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core), memchr v2.8.3
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+Converting ELF to BIN format...
+  elf: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor
+  bin: /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+/root/.rustup/toolchains/nightly-2026-07-15-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-objcopy --strip-all -O binary /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+qemu-system-aarch64 -nographic -nic none -cpu cortex-a72 -machine virt,virtualization=on,gic-version=3 -smp 4 -m 4g -qmp unix:/tmp/axp4-f8b424bbaf64f0cabf7020a0f3b0f954/qmp.sock,server=on,wait=off -pidfile /tmp/axp4-f8b424bbaf64f0cabf7020a0f3b0f954/qemu.pid -name axvisor-dual-smoke-f8b424bbaf64f0cabf7020a0f3b0f954 -kernel /mnt/f/project/泉城实验室/tgoskits-upstream-integration/target/aarch64-unknown-linux-musl/release/axvisor.bin
+Boot entropy source: FDT /chosen/rng-seed
+VM Load @PA:0x40200000
+VM Load Offset: 0xffff0000c0200000
+Memory Map:
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Free   0x00000044000000 - 0x00000140000000 (3.94 GiB)
+Initialize RAM allocator: 0x44000000..0x140000000
+Reserving CPU-local areas
+CPU-local area stride: 0x45000 bytes
+Total CPU-local allocation: 0x114000 bytes (4 CPUs)
+Flushed RAM used range to memory map: 0x44000000..0x44100000, current: 0x44100000
+Flushed RAM used range to memory map: 0x44100000..0x44214000, current: 0x44214000
+CPU-local areas allocated at 0x44100000 - 0x44214000
+EL: 2
+Mapping early memory regions...
+Ram                 : [0x0000000040000000, 0x0000000140000000) -> [0x0000000040000000, 0x0000000140000000) (4 GiB)
+KImage              : [0x0000ffff80000000, 0x0000ffff83e00000) -> [0x0000000040200000, 0x0000000044000000) (62 MiB)
+PerCpu              : [0x0000ff0044100000, 0x0000ff0044214000) -> [0x0000000044100000, 0x0000000044214000) (1.08 MiB)
+Debug serial        : [0x0000000009000000, 0x0000000009001000) -> [0x0000000009000000, 0x0000000009001000) (4 KiB)
+Boot page table at physical address: PA:0x44214000
+Setting up table registers...
+MMU Entry point at physical address: 0x403c6b28
+Trap vector at 0xffff801be800
+Memory Map:
+  MMIO   0x00000009000000 - 0x00000009001000 (4 KiB)
+  Free   0x00000040000000 - 0x00000040200000 (2 MiB)
+  KImg   0x00000040200000 - 0x00000044000000 (62 MiB)
+  Rsv    0x00000044000000 - 0x00000044100000 (1 MiB)
+  PerCPU 0x00000044100000 - 0x00000044214000 (1.08 MiB)
+  Rsv    0x00000044214000 - 0x0000004421e000 (40 KiB)
+  Free   0x0000004421e000 - 0x00000140000000 (3.94 GiB)
+Jumping to main entry point at 0xffff801a3b7c with SP 0x0000ff0044145000
+
+       d8888                            .d88888b.   .d8888b.
+      d88888                           d88P" "Y88b d88P  Y88b
+     d88P888                           888     888 Y88b.
+    d88P 888 888d888  .d8888b  .d88b.  888     888  "Y888b.
+   d88P  888 888P"   d88P"    d8P  Y8b 888     888     "Y88b.
+  d88P   888 888     888      88888888 888     888       "888
+ d8888888888 888     Y88b.    Y8b.     Y88b. .d88P Y88b  d88P
+d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
+
+arch = aarch64
+platform = linux,dummy-virt
+target = aarch64-unknown-none-softfloat
+build_mode = 
+log_level = info
+backtrace = false
+smp = 4
+
+[37max_runtime:229] [32mLogging is enabled.[m
+[m[37max_runtime:230] [32mPrimary CPU 0 started, arg = 0x44000000.[m
+[m[37max_runtime:232] [32mFound physcial memory regions:[m
+[m[37max_runtime:234] [32m  [PA:0x9000000, PA:0x9001000) mmio (READ | WRITE | DEVICE | RESERVED)[m
+[m[37max_runtime:234] [32m  [PA:0x40000000, PA:0x40200000) free memory (READ | WRITE | FREE)[m
+[m[37max_runtime:234] [32m  [PA:0x40200000, PA:0x44000000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37max_runtime:234] [32m  [PA:0x44000000, PA:0x44100000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37max_runtime:234] [32m  [PA:0x44100000, PA:0x44214000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37max_runtime:234] [32m  [PA:0x44214000, PA:0x4421e000) reserved (READ | WRITE | EXECUTE | RESERVED)[m
+[m[37max_runtime:234] [32m  [PA:0x4421e000, PA:0x140000000) free memory (READ | WRITE | FREE)[m
+[m[37max_runtime:385] [32mInitialize global memory allocator...[m
+[m[37max_runtime:386] [32m  use buddy-slab-allocator allocator.[m
+[m[37max_alloc::buddy_slab:158] [32mInitialize global memory allocator, start_vaddr: 0x4421e000, size: 0xfbde2000[m
+[m[37max_alloc::buddy_slab:424] [32mglobal allocator initialized[m
+[m[37max_alloc::buddy_slab:168] [32mAdd memory region, start_vaddr: 0x40000000, size: 0x200000[m
+[m[37mbuddy_slab_allocator::global:151] [32mGlobalAllocator: skip region 0x40000000+0x200000, no allocator-visible memory after 2097152 alignment[m
+[m[37max_runtime:269] [32mkernel aspace: [VA:0x0, VA:0xffffffffffffffff)[m
+[m[37max_mm:107] [32mInitialize virtual memory management...[m
+[m[37max_runtime:281] [32mInitialize platform devices...[m
+[m[37msomeboot::arch::power:23] [32mPower management method : SMC[m
+[m[37msomehal::driver:5] [32mInitializing rdrive with FDT at 0x44000000[m
+[m[37msomehal::arch::gic::v3:274] [32mGICv3 CPU 0 EOI mode: two_step=true[m
+[m[37max_task::api:192] [32mInitialize scheduling...[m
+[m[37max_task::api:200] [32m  use FIFO scheduler.[m
+[m[37max_runtime:310] [32mInitialize interrupt handlers...[m
+[m[37max_runtime::devices:2] [32mProbe platform devices...[m
+[m[37msomehal::arch::gic::v3:274] [32mGICv3 CPU 1 EOI mode: two_step=true[m
+[m[37max_runtime::mp:84] [32mSecondary CPU 1 started.[m
+[m[37max_runtime::mp:116] [32mSecondary CPU 1 init OK.[m
+[m[37msomehal::arch::gic::v3:274] [32mGICv3 CPU 2 EOI mode: two_step=true[m
+[m[37max_runtime::mp:84] [32mSecondary CPU 2 started.[m
+[m[37max_runtime::mp:116] [32mSecondary CPU 2 init OK.[m
+[m[37msomehal::arch::gic::v3:274] [32mGICv3 CPU 3 EOI mode: two_step=true[m
+[m[37max_runtime::mp:84] [32mSecondary CPU 3 started.[m
+[m[37max_runtime:358] [32mPrimary CPU 0 init OK.[m
+[m[37max_runtime::mp:116] [32mSecondary CPU 3 init OK.[m
+[m
+
+       d8888            888     888  d8b
+      d88888            888     888  Y8P
+     d88P888            888     888
+    d88P 888  888  888  Y88b   d88P  888  .d8888b    .d88b.   888d888
+   d88P  888  `Y8bd8P'   Y88b d88P   888  88K       d88""88b  888P"
+  d88P   888    X88K      Y88o88P    888  "Y8888b.  888  888  888
+ d8888888888  .d8""8b.     Y888P     888       X88  Y88..88P  888
+d88P     888  888  888      Y8P      888   88888P'   "Y88P"   888
+
+
+by AxVisor Team
+
+[37maxvisor:80] [32mStarting virtualization...[m
+[m[37maxvm::host::arceos:353] [32mEnabling hardware virtualization support on all cores...[m
+[m[37maxvm::host::arceos:359] [32mCore 0 is initializing hardware virtualization support...[m
+[m[37maxvm::timer:329] [32mInitializing AxVM timer wheel...[m
+[m[37maxvm::host::arceos:361] [32mHardware virtualization support enabled on core 0[m
+[m[37maxvm::host::arceos:387] [32mWaiting for all cores to enable hardware virtualization...[m
+[m[[37[m37axvm::host::arceos37mm:axvm::host::arceos371axvm::host::arceos] [:32371m] [Core :322371m is initializing hardware virtualization support...] [Core [m332
+m is initializing hardware virtualization support...[mCore [m1
+ is initializing hardware virtualization support...[m[m[
+37[[mm37[maxvm::timer37:m329axvm::timer] [:axvm::timer329:] [32932] [m3232mInitializing AxVM timer wheel...mInitializing AxVM timer wheel...Initializing AxVM timer wheel...[m[m[m
+
+
+[m[m[m[[37m37axvm::host::arceosm:axvm::host::arceos[:37437374m] [] [3232maxvm::host::arceosm:Hardware virtualization support enabled on core 374Hardware virtualization support enabled on core 31] [[m32
+m[m[mHardware virtualization support enabled on core 
+2[m[m
+[m[37maxvm::host::arceos:403] [32mAll cores have enabled hardware virtualization support.[m
+[m[37maxvisor::config:90] [32mUsing static VM configs.[m
+[m[37maxvm::arch::aarch64::fdt::core:78] [32mVM[1] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37maxvm::arch::aarch64::fdt::core:92] [32mVM[1] architectural timer follows host firmware PPIs[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37maxvm::arch::aarch64::fdt::core:143] [32mVM[1] DTB not found, generating from the VM configuration[m
+[m[37maxvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37maxvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37maxvisor::config:137] [32mCreating VM[1] "linux-qemu-smp2-dual"[m
+[m[37maxvm::vm:1077] [32mVM created: id=1[m
+[m[37maxvisor::config:149] [32mVM[1] created success, loading images...[m
+[m[37maxvm::boot::images:137] [32mLoading ramdisk image from memory (10388083 bytes) into GPA @0x88000000[m
+[m[37maxvm::arch::aarch64::fdt::core::create:338] [32mcontest dtb evidence: vm=1 gpa=0x80000000 size=0x960 hpa=0x124e00000[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=0[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=1[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=2[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=3[m
+[m[37maxvisor::virtio_net:160] [32mvirtio-net vm=1 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=4[m
+[m[37maxvm::vm::prepare:86] [32mVM setup: id=1[m
+[m[37maxvm::arch::aarch64::fdt::core:78] [32mVM[2] virtual GIC follows host firmware resources: GuestGicProfile { compatible: "arm,gic-v3", node_path: "/intc@8000000", node_phandle: Some(32773), distributor: GuestMmioRegion { base: 134217728, length: 65536 }, cpu_region: Redistributors(GuestGicRedistributorProfile { regions: [GuestMmioRegion { base: 134873088, length: 16121856 }], stride: 131072 }), its: [GuestItsProfile { id: ItsId(0), node_path: "/intc@8000000/its@8080000", node_phandle: Some(32774), registers: GuestMmioRegion { base: 134742016, length: 131072 } }] }[m
+[m[37maxvm::arch::aarch64::fdt::core:92] [32mVM[2] architectural timer follows host firmware PPIs[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@0, node_id: 0x0, hardware_cpu_id: 0x0[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@1, node_id: 0x1, hardware_cpu_id: 0x1[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@2, node_id: 0x2, hardware_cpu_id: 0x2[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:462] [32mCPU node: /cpus/cpu@3, node_id: 0x3, hardware_cpu_id: 0x3[m
+[m[37maxvm::arch::aarch64::fdt::core::parser:469] [32mFound 4 host CPU nodes[m
+[m[37maxvm::arch::aarch64::fdt::core:143] [32mVM[2] DTB not found, generating from the VM configuration[m
+[m[37maxvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37maxvm::arch::aarch64::fdt::core::device:96] [32mFound excluded devices: ["/intc@8000000", "/pl011@9000000", "/timer", "/intc@8000000/its@8080000"][m
+[m[37maxvisor::config:137] [32mCreating VM[2] "zephyr-qemu-dual"[m
+[m[37maxvm::vm:1077] [32mVM created: id=2[m
+[m[37maxvisor::config:149] [32mVM[2] created success, loading images...[m
+[m[37maxvm::arch::aarch64::fdt::core::create:338] [32mcontest dtb evidence: vm=2 gpa=0x47e00000 size=0x854 hpa=0x13cc00000[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=0[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=1[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=2[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=3[m
+[m[37maxvisor::virtio_net:160] [32mvirtio-net vm=2 resolved MMIO=0xb000000+0x200 wired IRQ INTID=32[m
+[m[37maxdevice::device:993] [32mDeviceRuntime: registered device id=4[m
+[m[37maxvm::vm::prepare:86] [32mVM setup: id=2[m
+[m[37maxvm::runtime:42] [32mInitializing VMM...[m
+[m[37maxvm::runtime:53] [32mVMM starting, booting VMs...[m
+[m[37maxvm::vm:1322] [32mStarting VM[1][m
+[m[37maxvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[0][m
+[m[37maxvm::runtime::vcpus:386] [32mVCpu task Task(18, "VM[1]-VCpu[0]") created cpumask: [0, ][m
+[m[37maxvm::runtime:61] [32mVM[1[] boot success37[mm
+axvm::runtime::vcpus[m:440[37] [m32axvm::vmm:1322VM[] [132] VCpu[m0Starting VM[] waiting for running2[m][m
+
+[m[m[37maxvm::runtime::vcpus:369] [32mSpawning task for VM[2] VCpu[0][m
+[m[37maxvm::runtime::vcpus:386] [32mVCpu task Task(20, "VM[2]-VCpu[0]") created cpumask: [2, ][m
+[m[37maxvm::runtime[:3761m] [axvm::runtime::vcpus32:m440VM[] [232] boot successm[mVM[
+2[m] VCpu[0] waiting for running[m
+[m[[3737mmaxvm::runtime::vcpusaxvm::runtime::vcpus::478478] [] [3232mmVM[VM[12] VCpu[] VCpu[0] running on CPU02] running on CPU...0[m...
+[m[m
+[m[37maxvisor:117] [32m[OK] Default guest initialized[m
+[m[37maxvisor:122] [32mshell task on CPU3[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=90 hex=33330000001602000000000286dd600000000024000100000000000000000000000000000000ff0200000000000000000000000000163a000502000000008f006e8b0000000104000000ff020000000000000000000000000001[m
+[m[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=90 dst=33:33:00:00:00:16 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=90 hex=33330000001602000000000286dd600000000024000100000000000000000000000000000000ff0200000000000000000000000000163a000502000000008f006f880000000104000000ff0200000000000000000001ff000002[m
+[m[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=78 dst=33:33:ff:00:00:02 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=78 hex=3333ff00000202000000000286dd6000000000183aff00000000000000000000000000000000ff0200000000000000000001ff00000287007d2300000000fe80000000000000000000fffe000002[m
+[m[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=62 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=62 hex=33330000000202000000000286dd6000000000083aff00000000000000000000000000000000ff02000000000000000000000000000285007bb800000000[m
+[m[VM 1] [    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[VM 2] *** Booting Zephyr OS build cvi-vdec-uapi-v0.1.0-295-gda6b5f5551d8 ***
+[VM 1] [    0.000000] Linux version 6.18.0-rc6-gfd95357fd8c6-dirty (runner@s1lqc) (aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #25 SMP PREEMPT Fri Mar 20 11:22:05 CST 2026
+[VM 1] [    0.000000] KASLR disabled due to lack of seed
+[VM 1] [    0.000000] Machine model: linux,dummy-virt
+[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] earlycon: pl11 at MMIO32 0x0000000009000000 (options '')
+[VM 2] AXVISOR_DUAL_GUEST_ZEPHYR_READY vm=2 boot_id=p4smoke-20260820-21ef iface=device mac=02:00:00:00:00:02 ipv4=10.77.0.2 prefix=24 route=10.77.0.0/24 mtu=1500
+[VM 2] TGOS_ZEPHYR_L3_SMOKE_READY
+[VM 1] [    0.000000] printk: legacy bootconsole [pl11] enabled
+[VM 1] [    0.000000] efi: UEFI not found.
+[VM 1] [    0.000000] OF: reserved mem: Reserved memory: No reserved-memory node in the DT
+[VM 1] [    0.000000] NUMA: Faking a node at [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] NODE_DATA(0) allocated [mem 0x8ff86f40-0x8ff895bf]
+[VM 1] [    0.000000] Zone ranges:
+[VM 1] [    0.000000]   DMA      [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000]   DMA32    empty
+[VM 1] [    0.000000]   Normal   empty
+[VM 1] [    0.000000] Movable zone start for each node
+[VM 1] [    0.000000] Early memory node ranges
+[VM 1] [    0.000000]   node   0: [mem 0x0000000080000000-0x000000008fffffff]
+[VM 1] [    0.000000] Initmem setup node 0 [mem 0x0000000080000000-0x000000008fffffff]
+[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=70 hex=33330000000202000000000286dd6000000000103afffe80000000000000000000fffe000002ff02000000000000000000000000000285007b2a000000000101020000000002[m
+[m[VM 1] [    0.000000] cma: Reserved 32 MiB at 0x000000008da00000
+[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] psci: probing for conduit method from DT.
+[VM 1] [    0.000000] psci: PSCIv1.1 detected in firmware.
+[VM 1] [    0.000000] psci: Using standard PSCI v0.2 function IDs
+[VM 1] [    0.000000] psci: Trusted OS migration not required
+[37maxvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0x80000000[m
+[m[VM 1] [    0.000000] psci: SMC Calling Convention v65535.65535
+[37maxvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000001[m
+[m[37maxvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc400000e[m
+[m[37maxvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000012[m
+[m[37maxvm::runtime::hvc:258] [32mVM[1] PSCI_FEATURES function_id=0xc4000015[m
+[m[VM 1] [    0.000000] percpu: Embedded 25 pages/cpu s62488 r8192 d31720 u102400
+[VM 1] [    0.000000] Detected PIPT I-cache on CPU0
+[VM 1] [    0.000000] CPU features: detected: GICv3 CPU interface
+[VM 1] [    0.000000] CPU features: detected: Spectre-v2
+[VM 1] [    0.000000] CPU features: detected: Spectre-v3a
+[VM 1] [    0.000000] CPU features: detected: Spectre-v4
+[VM 1] [    0.000000] CPU features: detected: Spectre-BHB
+[VM 1] [    0.000000] CPU features: detected: ARM erratum 1742098
+[VM 1] [    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[VM 1] [    0.000000] alternatives: applying boot alternatives
+[VM 1] [    0.000000] Kernel command line: console=ttyAMA0,115200 earlycon=pl011,mmio32,0x9000000
+[VM 1] [    0.000000] printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+[VM 1] [    0.000000] Dentry cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[VM 1] [    0.000000] Inode-cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size adjusted to 0MB
+[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=70 dst=33:33:00:00:00:02 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=70 hex=33330000000202000000000286dd6000000000103afffe80000000000000000000fffe000002ff02000000000000000000000000000285007b2a000000000101020000000002[m
+[m[VM 1] [    0.000000] software IO TLB: area num 2.
+[37maxvisor::virtio_net:494] [33mvirtio-net drops an ingress frame: NotReady[m
+[m[VM 1] [    0.000000] software IO TLB: SWIOTLB bounce buffer size roundup to 0MB
+[VM 1] [    0.000000] software IO TLB: mapped [mem 0x000000008fe5e000-0x000000008fede000] (0MB)
+[VM 1] [    0.000000] Fallback order for Node 0: 0 
+[VM 1] [    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 65536
+[VM 1] [    0.000000] Policy zone: DMA
+[VM 1] [    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[VM 1] [    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[VM 1] [    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[VM 1] [    0.000000] rcu: 	RCU event tracing is enabled.
+[VM 1] [    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=2.
+[VM 1] [    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[VM 1] [    0.000000] 	Tracing variant of Tasks RCU enabled.
+[VM 1] [    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[VM 1] [    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[VM 1] [    0.000000] RCU Tasks: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] RCU Tasks Trace: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[VM 1] [    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[VM 1] [    0.000000] GICv3: 256 SPIs implemented
+[VM 1] [    0.000000] GICv3: 0 Extended SPIs implemented
+[VM 1] [    0.000000] Root IRQ handler: gic_handle_irq
+[VM 1] [    0.000000] GICv3: GICv3 features: 16 PPIs, RSS
+[VM 1] [    0.000000] GICv3: GICD_CTLR.DS=0, SCR_EL3.FIQ=0
+[VM 1] [    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x00000000080a0000
+[VM 1] [    0.000000] ITS [mem 0x08080000-0x0809ffff]
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Devices @83450000 (indirect, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] ITS@0x0000000008080000: allocated 8192 Interrupt Collections @83460000 (flat, esz 8, psz 64K, shr 1)
+[VM 1] [    0.000000] GICv3: using LPI property table @0x0000000083470000
+[VM 1] [    0.000000] GICv3: CPU0: using allocated LPI pending table @0x0000000083480000
+[VM 1] [    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[VM 1] [    0.000000] arch_timer: cp15 timer running at 62.50MHz (virt).
+[VM 1] [    0.000000] clocksource: arch_sys_counter: mask: 0x1ffffffffffffff max_cycles: 0x1cd42e208c, max_idle_ns: 881590405314 ns
+[VM 1] [    0.000084] sched_clock: 57 bits at 63MHz, resolution 16ns, wraps every 4398046511096ns
+[VM 1] [    0.059105] Console: colour dummy device 80x25
+[VM 1] [    0.088060] Calibrating delay loop (skipped), value calculated using timer frequency.. 125.00 BogoMIPS (lpj=250000)
+[VM 1] [    0.140655] pid_max: default: 32768 minimum: 301
+[VM 1] [    0.164094] LSM: initializing lsm=capability
+[VM 1] [    0.187224] Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.222283] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[VM 1] [    0.300322] /cpus/cpu-map/socket0/cluster0/core2: Can't get CPU for leaf core
+[VM 1] [    0.334606] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[VM 1] [    0.411383] rcu: Hierarchical SRCU implementation.
+[VM 1] [    0.432867] rcu: 	Max phase no-delay instances is 1000.
+[VM 1] [    0.466303] Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+[VM 1] [    0.509003] fsl-mc MSI: its@8080000 domain created
+[VM 1] [    0.533104] EFI services will not be available.
+[VM 1] [    0.561376] smp: Bringing up secondary CPUs ...
+[37maxvm::runtime::hvc:272] [32mVM[1] PSCI_CPU_ON target=0x1 entry=0x8203f570 context=0x0[m
+[m[37maxvm::runtime::vcpus:369] [32mSpawning task for VM[1] VCpu[1][m
+[m[37maxvm::runtime::vcpus:386] [32mVCpu task Task(23, "VM[1]-VCpu[1]") created cpumask: [1, ][m
+[m[37maxvm::runtime::vcpus:440] [32mVM[1] VCpu[1] waiting for running[m
+[m[37maxvm::runtime::vcpus:478] [32mVM[1] VCpu[1] running on CPU1...[m
+[m[VM 1] [    0.595265] Detected PIPT I-cache on CPU1
+[VM 1] [    0.597037] GICv3: CPU1: found redistributor 1 region 0:0x00000000080c0000
+[VM 1] [    0.599926] GICv3: CPU1: using allocated LPI pending table @0x0000000083490000
+[VM 1] [    0.603106] CPU1: Booted secondary processor 0x0000000001 [0x410fd083]
+[VM 1] [    0.612552] smp: Brought up 1 node, 2 CPUs
+[VM 1] [    0.761724] SMP: Total of 2 processors activated.
+[VM 1] [    0.784883] CPU: All CPU(s) started at EL1
+[VM 1] [    0.807808] CPU features: detected: 32-bit EL0 Support
+[VM 1] [    0.836379] CPU features: detected: 32-bit EL1 Support
+[VM 1] [    0.863095] CPU features: detected: CRC32 instructions
+[VM 1] [    0.890349] CPU features: detected: PMUv3
+[VM 1] [    0.920784] alternatives: applying system-wide alternatives
+[VM 1] [    0.987389] Memory: 162436K/262144K available (17920K kernel code, 5422K rwdata, 12940K rodata, 11648K init, 690K bss, 64816K reserved, 32768K cma-reserved)
+[VM 1] [    1.115735] devtmpfs: initialized
+[VM 1] [    1.171465] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[VM 1] [    1.224006] posixtimers hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[VM 1] [    1.266082] futex hash table entries: 512 (32768 bytes on 1 NUMA nodes, total 32 KiB, linear).
+[VM 1] [    1.352828] 20544 pages in range for non-PLT usage
+[VM 1] [    1.352910] 512064 pages in range for PLT usage
+[VM 1] [    1.380881] pinctrl core: initialized pinctrl subsystem
+[VM 1] [    1.451478] DMI not present or invalid.
+[VM 1] [    1.558996] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[VM 1] [    1.614285] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[VM 1] [    1.656747] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[VM 1] [    1.704782] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[VM 1] [    1.746009] audit: initializing netlink subsys (disabled)
+[VM 1] [    1.784156] audit: type=2000 audit(0.800:1): state=initialized audit_enabled=0 res=1
+[VM 1] [    1.789647] thermal_sys: Registered thermal governor 'step_wise'
+[VM 1] [    1.851152] thermal_sys: Registered thermal governor 'power_allocator'
+[VM 1] [    1.884522] cpuidle: using governor menu
+[VM 1] [    1.951064] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[VM 1] [    1.986091] ASID allocator initialised with 65536 entries
+[VM 1] [    2.024743] Serial: AMBA PL011 UART driver
+[VM 1] [    2.087339] 9000000.pl011: ttyAMA0 at MMIO 0x9000000 (irq = 13, base_baud = 0) is a PL011 rev1
+[VM 1] [    2.128444] printk: console [ttyAMA0] enabled
+[VM 1] [    2.128444] printk: console [ttyAMA0] enabled
+[VM 1] [    2.171576] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.171576] printk: legacy bootconsole [pl11] disabled
+[VM 1] [    2.267248] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[VM 1] [    2.269169] HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+[VM 1] [    2.269579] HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.269841] HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+[VM 1] [    2.270341] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[VM 1] [    2.270739] HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+[VM 1] [    2.270772] HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+[VM 1] [    2.270780] HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+[VM 1] [    2.426160] ACPI: Interpreter disabled.
+[VM 1] [    2.434306] iommu: Default domain type: Translated
+[VM 1] [    2.434375] iommu: DMA domain TLB invalidation policy: strict mode
+[VM 1] [    2.464888] SCSI subsystem initialized
+[VM 1] [    2.469304] usbcore: registered new interface driver usbfs
+[VM 1] [    2.469589] usbcore: registered new interface driver hub
+[VM 1] [    2.469738] usbcore: registered new device driver usb
+[VM 1] [    2.470984] pps_core: LinuxPPS API ver. 1 registered
+[VM 1] [    2.471000] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[VM 1] [    2.471057] PTP clock support registered
+[VM 1] [    2.472090] EDAC MC: Ver: 3.0.0
+[VM 1] [    2.474026] scmi_core: SCMI protocol bus registered
+[VM 1] [    2.478210] FPGA manager framework
+[VM 1] [    2.506172] vgaarb: loaded
+[VM 1] [    2.523067] clocksource: Switched to clocksource arch_sys_counter
+[VM 1] [    2.540484] VFS: Disk quotas dquot_6.6.0
+[VM 1] [    2.540675] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[VM 1] [    2.572761] pnp: PnP ACPI: disabled
+[VM 1] [    2.617272] NET: Registered PF_INET protocol family
+[VM 1] [    2.620152] IP idents hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[VM 1] [    2.629992] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[VM 1] [    2.630094] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[VM 1] [    2.630241] TCP established hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.630532] TCP bind hash table entries: 2048 (order: 4, 65536 bytes, linear)
+[VM 1] [    2.630738] TCP: Hash tables configured (established 2048 bind 2048)
+[VM 1] [    2.632899] UDP hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.633178] UDP-Lite hash table entries: 256 (order: 2, 16384 bytes, linear)
+[VM 1] [    2.635972] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[VM 1] [    2.643921] RPC: Registered named UNIX socket transport module.
+[VM 1] [    2.643984] RPC: Registered udp transport module.
+[VM 1] [    2.643994] RPC: Registered tcp transport module.
+[VM 1] [    2.644001] RPC: Registered tcp-with-tls transport module.
+[VM 1] [    2.644007] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[VM 1] [    2.644128] PCI: CLS 0 bytes, default 64
+[VM 1] [    2.649529] Unpacking initramfs...
+[VM 1] [    2.665947] kvm [1]: HYP mode not available
+[VM 1] [    2.778073] Initialise system trusted keyrings
+[VM 1] [    2.796258] workingset: timestamp_bits=42 max_order=16 bucket_order=0
+[VM 1] [    2.798750] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[VM 1] [    2.812797] NFS: Registering the id_resolver key type
+[VM 1] [    2.813606] Key type id_resolver registered
+[VM 1] [    2.813660] Key type id_legacy registered
+[VM 1] [    2.814079] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[VM 1] [    2.814152] nfs4flexfilelayout_init: NFSv4 Flexfile Layout Driver Registering...
+[VM 1] [    2.815802] 9p: Installing v9fs 9p2000 file system support
+[VM 1] [    2.955582] Key type asymmetric registered
+[VM 1] [    2.955662] Asymmetric key parser 'x509' registered
+[VM 1] [    2.956047] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 244)
+[VM 1] [    2.956204] io scheduler mq-deadline registered
+[VM 1] [    2.956274] io scheduler kyber registered
+[VM 1] [    2.956630] io scheduler bfq registered
+[VM 1] [    3.023652] ledtrig-cpu: registered to indicate activity on CPUs
+[VM 1] [    3.208609] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[VM 1] [    3.248738] msm_serial: driver initialized
+[VM 1] [    3.249244] SuperH (H)SCI(F) driver initialized
+[VM 1] [    3.249380] STM32 USART driver initialized
+[VM 1] [    3.328217] loop: module loaded
+[VM 1] [    3.337488] megasas: 07.734.00.00-rc1
+[VM 1] [    3.370152] tun: Universal TUN/TAP device driver, 1.6
+[VM 1] [    3.457596] thunder_xcv, ver 1.0
+[VM 1] [    3.457733] thunder_bgx, ver 1.0
+[VM 1] [    3.457837] nicpf, ver 1.0
+[VM 1] [    3.465571] e1000: Intel(R) PRO/1000 Network Driver
+[VM 1] [    3.465597] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[VM 1] [    3.465729] e1000e: Intel(R) PRO/1000 Network Driver
+[VM 1] AXVISOR_LINUX_INIT_ENTER vm=1 boot_id=p4smoke-20260820-21ef[    3.465739] e1000e: Copyright(c) 1999 - 2015 Intel Corporation.
+[VM 1] [    3.465929] igb: Intel(R) Gigabit Ethernet Network Driver
+[VM 1] [    3.465952] igb: Copyright (c) 2007-2014 Intel Corporation.
+[VM 1] 
+[VM 1] [    3.466090] igbvf: Intel(R) Gigabit Virtual Function Network Driver
+[VM 1] [    3.466103] igbvf: Copyright (c) 2009 - 2012 Intel Corporation.
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_READY vm=1 boot_id=p4smoke-20260820-21ef[    3.466713] sky2: driver version 1.30
+[VM 1] [    3.504385] VFIO - User Level meta-driver version: 0.3
+[VM 1] 
+[VM 1] [    3.535778] usbcore: registered new interface driver usb-storage
+[VM 1] [    3.540550] Freeing initrd memory: 10144K
+[VM 1] [    3.545441] i2c_dev: i2c /dev entries driver
+[VM 1] [    3.557334] sdhci: Secure Digital Host Controller Interface driver
+[VM 1] AXVISOR_DUAL_GUEST_LINUX_APP_READY vm=1 boot_id=<boot-id> iface=eth0 mac=02:00:00:00:00:01 ipv4=10.77.0.1 prefix=24 route=10.77.0.0/24 mtu=1500[    3.557359] sdhci: Copyright(c) Pierre Ossman
+[VM 1] [    3.558015] Synopsys Designware Multimedia Card Interface Driver
+[VM 1] 
+[VM 1] [    3.559842] sdhci-pltfm: SDHCI platform and OF driver helper
+[VM 1] [    3.565176] SMCCC: SOC_ID: ARCH_SOC_ID not implemented, skipping ....
+[VM 1] [    3.568688] usbcore: registered new interface driver usbhid
+[VM 1] linux-ai-controller: probe attempt=0 src=10.77.0.1 dst=10.77.0.2[    3.568716] usbhid: USB HID core driver
+[VM 1] [    3.581677] NET: Registered PF_PACKET protocol family
+[VM 1] 
+[VM 1] [    3.583713] 9pnet: Installing 9P2000 support
+[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=42 dst=ff:ff:ff:ff:ff:ff src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=42 hex=ffffffffffff020000000001080600010800060400010200000000010a4d00010000000000000a4d0002[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=42 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=42 hex=020000000001020000000002080600010800060400020200000000020a4d00020200000000010a4d0001[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] [    3.584087] Key type dns_resolver registered
+[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541919400040010cf40a4d00010a4d00020800adbe4a41ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5be4a41ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] [    3.628871] registered taskstats version 1
+[VM 1] [    3.636102] Loading compiled-in X.509 certificates
+[VM 1] [    3.704217] Demotion targets for Node 0: null
+[VM 1] [    3.712265] clk: Disabling unused clocks
+[VM 1] [    3.712508] PM: genpd: Disabling unused power domains
+[VM 1] [    4.088805] Freeing unused kernel memory: 11648K
+[VM 1] [    4.092678] Run /init as init process
+[VM 1] linux-ai-controller: peer_ok=1 entering 100-echo measurement
+[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541931400040010cdc0a4d00010a4d00020800adbe4a4100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5be4a4100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541937400040010cd60a4d00010a4d00020800adbd4a4100010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5bd4a4100010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054193a400040010cd30a4d00010a4d00020800adbc4a4100020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5bc4a4100020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541940400040010ccd0a4d00010a4d00020800adbb4a4100030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5bb4a4100030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541945400040010cc80a4d00010a4d00020800adba4a4100040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5ba4a4100040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541948400040010cc50a4d00010a4d00020800adb94a4100050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b94a4100050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054194c400040010cc10a4d00010a4d00020800adb84a4100060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b84a4100060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054194f400040010cbe0a4d00010a4d00020800adb74a4100070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b74a4100070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541954400040010cb90a4d00010a4d00020800adb64a4100080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b64a4100080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541956400040010cb70a4d00010a4d00020800adb54a4100090000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b54a4100090000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541957400040010cb60a4d00010a4d00020800adb44a41000a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b44a41000a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054195b400040010cb20a4d00010a4d00020800adb34a41000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b34a41000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054195e400040010caf0a4d00010a4d00020800adb24a41000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b24a41000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541965400040010ca80a4d00010a4d00020800adb14a41000d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b14a41000d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541968400040010ca50a4d00010a4d00020800adb04a41000e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5b04a41000e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054196b400040010ca20a4d00010a4d00020800adaf4a41000f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5af4a41000f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054196d400040010ca00a4d00010a4d00020800adae4a4100100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5ae4a4100100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054196f400040010c9e0a4d00010a4d00020800adad4a4100110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5ad4a4100110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541976400040010c970a4d00010a4d00020800adac4a4100120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5ac4a4100120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541978400040010c950a4d00010a4d00020800adab4a4100130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5ab4a4100130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054197b400040010c920a4d00010a4d00020800adaa4a4100140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5aa4a4100140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541982400040010c8b0a4d00010a4d00020800ada94a4100150000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a94a4100150000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541987400040010c860a4d00010a4d00020800ada84a4100160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a84a4100160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054198e400040010c7f0a4d00010a4d00020800ada74a4100170000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a74a4100170000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541990400040010c7d0a4d00010a4d00020800ada64a4100180000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a64a4100180000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541995400040010c780a4d00010a4d00020800ada54a4100190000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a54a4100190000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541997400040010c760a4d00010a4d00020800ada44a41001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a44a41001a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=020000000002020000000001080045000054199c400040010c710a4d00010a4d00020800ada34a41001b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a34a41001b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419a2400040010c6b0a4d00010a4d00020800ada24a41001c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a24a41001c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419a3400040010c6a0a4d00010a4d00020800ada14a41001d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a14a41001d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419a5400040010c680a4d00010a4d00020800ada04a41001e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5a04a41001e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419ab400040010c620a4d00010a4d00020800ad9f4a41001f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59f4a41001f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419b0400040010c5d0a4d00010a4d00020800ad9e4a4100200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59e4a4100200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419b7400040010c560a4d00010a4d00020800ad9d4a4100210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59d4a4100210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419b8400040010c550a4d00010a4d00020800ad9c4a4100220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59c4a4100220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419b9400040010c540a4d00010a4d00020800ad9b4a4100230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59b4a4100230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419ba400040010c530a4d00010a4d00020800ad9a4a4100240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b59a4a4100240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419bf400040010c4e0a4d00010a4d00020800ad994a4100250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5994a4100250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419c4400040010c490a4d00010a4d00020800ad984a4100260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5984a4100260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419c6400040010c470a4d00010a4d00020800ad974a4100270000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5974a4100270000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419cc400040010c410a4d00010a4d00020800ad964a4100280000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5964a4100280000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419cf400040010c3e0a4d00010a4d00020800ad954a4100290000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5954a4100290000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419d1400040010c3c0a4d00010a4d00020800ad944a41002a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5944a41002a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419d6400040010c370a4d00010a4d00020800ad934a41002b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5934a41002b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419d8400040010c350a4d00010a4d00020800ad924a41002c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5924a41002c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419e1400040010c2c0a4d00010a4d00020800ad914a41002d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5914a41002d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419e6400040010c270a4d00010a4d00020800ad904a41002e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5904a41002e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419e7400040010c260a4d00010a4d00020800ad8f4a41002f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58f4a41002f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419eb400040010c220a4d00010a4d00020800ad8e4a4100300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58e4a4100300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419f2400040010c1b0a4d00010a4d00020800ad8d4a4100310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58d4a4100310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419f8400040010c150a4d00010a4d00020800ad8c4a4100320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58c4a4100320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419fe400040010c0f0a4d00010a4d00020800ad8b4a4100330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58b4a4100330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=02000000000202000000000108004500005419ff400040010c0e0a4d00010a4d00020800ad8a4a4100340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b58a4a4100340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a00400040010c0d0a4d00010a4d00020800ad894a4100350000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5894a4100350000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a02400040010c0b0a4d00010a4d00020800ad884a4100360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5884a4100360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a07400040010c060a4d00010a4d00020800ad874a4100370000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5874a4100370000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a08400040010c050a4d00010a4d00020800ad864a4100380000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5864a4100380000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a0f400040010bfe0a4d00010a4d00020800ad854a4100390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5854a4100390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a13400040010bfa0a4d00010a4d00020800ad844a41003a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5844a41003a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a18400040010bf50a4d00010a4d00020800ad834a41003b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5834a41003b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a1a400040010bf30a4d00010a4d00020800ad824a41003c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5824a41003c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a20400040010bed0a4d00010a4d00020800ad814a41003d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5814a41003d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a24400040010be90a4d00010a4d00020800ad804a41003e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5804a41003e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a28400040010be50a4d00010a4d00020800ad7f4a41003f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57f4a41003f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a2a400040010be30a4d00010a4d00020800ad7e4a4100400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57e4a4100400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a2f400040010bde0a4d00010a4d00020800ad7d4a4100410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57d4a4100410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a30400040010bdd0a4d00010a4d00020800ad7c4a4100420000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57c4a4100420000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a31400040010bdc0a4d00010a4d00020800ad7b4a4100430000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57b4a4100430000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a34400040010bd90a4d00010a4d00020800ad7a4a4100440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b57a4a4100440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a39400040010bd40a4d00010a4d00020800ad794a4100450000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5794a4100450000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a3d400040010bd00a4d00010a4d00020800ad784a4100460000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5784a4100460000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a44400040010bc90a4d00010a4d00020800ad774a4100470000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5774a4100470000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a46400040010bc70a4d00010a4d00020800ad764a4100480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5764a4100480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a48400040010bc50a4d00010a4d00020800ad754a4100490000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5754a4100490000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a4b400040010bc20a4d00010a4d00020800ad744a41004a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5744a41004a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a51400040010bbc0a4d00010a4d00020800ad734a41004b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5734a41004b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a56400040010bb70a4d00010a4d00020800ad724a41004c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5724a41004c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a5a400040010bb30a4d00010a4d00020800ad714a41004d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5714a41004d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a5f400040010bae0a4d00010a4d00020800ad704a41004e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5704a41004e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a61400040010bac0a4d00010a4d00020800ad6f4a41004f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56f4a41004f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a66400040010ba70a4d00010a4d00020800ad6e4a4100500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56e4a4100500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a69400040010ba40a4d00010a4d00020800ad6d4a4100510000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56d4a4100510000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a6d400040010ba00a4d00010a4d00020800ad6c4a4100520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56c4a4100520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a73400040010b9a0a4d00010a4d00020800ad6b4a4100530000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56b4a4100530000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a7a400040010b930a4d00010a4d00020800ad6a4a4100540000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b56a4a4100540000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a7c400040010b910a4d00010a4d00020800ad694a4100550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5694a4100550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a80400040010b8d0a4d00010a4d00020800ad684a4100560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5684a4100560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a85400040010b880a4d00010a4d00020800ad674a4100570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5674a4100570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a88400040010b850a4d00010a4d00020800ad664a4100580000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5664a4100580000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a8c400040010b810a4d00010a4d00020800ad654a4100590000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5654a4100590000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a8e400040010b7f0a4d00010a4d00020800ad644a41005a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5644a41005a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a91400040010b7c0a4d00010a4d00020800ad634a41005b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5634a41005b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a98400040010b750a4d00010a4d00020800ad624a41005c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5624a41005c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a99400040010b740a4d00010a4d00020800ad614a41005d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5614a41005d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541a9b400040010b720a4d00010a4d00020800ad604a41005e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b5604a41005e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541aa1400040010b6c0a4d00010a4d00020800ad5f4a41005f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b55f4a41005f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541aa2400040010b6b0a4d00010a4d00020800ad5e4a4100600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b55e4a4100600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541aa8400040010b650a4d00010a4d00020800ad5d4a4100610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b55d4a4100610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541aaf400040010b5e0a4d00010a4d00020800ad5c4a4100620000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b55c4a4100620000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=0 len=98 dst=02:00:00:00:00:02 src=02:00:00:00:00:01[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=0 dir=tx len=98 hex=0200000000020200000000010800450000541ab5400040010b580a4d00010a4d00020800ad5b4a4100630000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:02, asserting IRQ[m
+[m[37maxvisor::virtio_net:237] [32mvirtio-net TX from vm=1 len=98 dst=02:00:00:00:00:01 src=02:00:00:00:00:02[m
+[m[37maxvisor::virtio_net:256] [32mvirtio-net frame vm=1 dir=tx len=98 hex=020000000001020000000002080045000054000000004001660d0a4d00020a4d00010000b55b4a4100630000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[m
+[m[37maxvisor::virtio_net:472] [32mvirtio-net RX delivered=1 to mac=02:00:00:00:00:01, asserting IRQ[m
+[m[VM 1] TGOS_LINUX_L3_SMOKE sent=100 received=100 loss=0
+qemu-system-aarch64: terminating on signal 2 from pid 419 (python3)
+[axbuild] qemu build+run package=axvisor target=scripts/targets/std/pie/aarch64-unknown-linux-musl.json config=/mnt/f/project/泉城实验室/tgoskits-upstream-integration/os/axvisor/configs/board/qemu-aarch64-contest-network.toml ... done (91.09s)

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "runtime-smoke-complete",
+  "status": "guest_network_smoke_completed",
+  "proofScope": "one-dual-guest-mediated-network-runtime-smoke",
+  "smokeOracle": {
+    "scenario": "test-018-safe",
+    "testId": "TEST-018",
+    "completionLine": "TGOS_LINUX_ICPC_SAFE_PASS phase1_verified=20 phase2_verified=20",
+    "fields": {
+      "p1": 20,
+      "p2": 20
+    },
+    "evidenceClass": "runtime-smoke",
+    "qualified": false,
+    "qualificationStatus": "qualification-pending"
+  },
+  "qualification": {
+    "qualified": false,
+    "status": "qualification-pending",
+    "requiredPublisher": "p4-guest-runtime-v2"
+  },
+  "doesNotProve": [
+    "DMA isolation",
+    "hardware DMA",
+    "AI closed loop",
+    "real-time improvement",
+    "outer-QEMU networking",
+    "TEST-011..015 qualification",
+    "QMP peer identity"
+  ],
+  "inputs": {
+    "buildConfig": {
+      "path": "os/axvisor/configs/board/qemu-aarch64-contest-network.toml",
+      "sha256": "f917885888f6ce096fd44dea2c82f3ede66b4ec1775beb91b51fb2848c664a57"
+    },
+    "qemuConfig": {
+      "path": "configs/contest/qemu-aarch64-linux-zephyr-dual.toml",
+      "sha256": "ecfa7581d4319245092fdce47c0e4696eda0ebba978e5b76cee1cc6f551a139d"
+    },
+    "linuxVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test018-safe-20260823T010000Z-21ef-wd/configs/linux.resolved.toml",
+      "sha256": "d13c6d472636f6d3cb7a0261f88058c43681b3aa2373aa9350c3ee34717ef481"
+    },
+    "zephyrVmconfig": {
+      "path": "results/baseline/runs/phase4-net-test018-safe-20260823T010000Z-21ef-wd/configs/zephyr.resolved.toml",
+      "sha256": "911f6680b76ff3439047d81629ec31e81622650f00b318d639e4e8acf34dc504"
+    },
+    "linuxRootfs": {
+      "path": "tmp/contest/p4-prepared/20260821-21ef/linux-icpc-safe.regular.ext4",
+      "sha256": "a091c7cc5324965d9378129c09787e9149fa0c47bb45f52ca131847ff17f0596"
+    },
+    "zephyrImage": {
+      "path": "tmp/contest/p4-prepared/20260822-21ef/zephyr-network-wd5/zephyr.bin",
+      "sha256": "f06ac70ae25223785e9e6870d04c9c3ae8d611f3d6b68c0cd1d741a3a4148648"
+    },
+    "profile": {
+      "path": "configs/contest/network/test-018-safe-v1.json",
+      "sha256": "96762f9b0b3fb02fa706f2618d0597531ef4ea8c5be58c6681e2b1dc953c5ac7"
+    }
+  },
+  "session": {
+    "schemaVersion": 1,
+    "runId": "phase4-net-test018-safe-20260823T010000Z-21ef-wd",
+    "scenario": "test-018-safe",
+    "sessionNonce": "6c221d8e2f93d1daea3ced46b7be8174",
+    "bootId": "p4net-20260821T131723Z-6c221d8e",
+    "qemuName": "axvisor-dual-smoke-6c221d8e2f93d1daea3ced46b7be8174",
+    "startedAtUtc": "2026-08-21T13:17:23Z"
+  }
+}
