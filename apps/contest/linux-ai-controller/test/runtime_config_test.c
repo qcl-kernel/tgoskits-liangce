@@ -13,7 +13,8 @@ static int expect_valid(void)
         (char *)"/opt/tgos/model.bin", (char *)"--metadata",
         (char *)"/opt/tgos/metadata.json", (char *)"--run-id",
         (char *)"phase5-ai-mlp-s43-test", (char *)"--event-log",
-        (char *)"/run/tgos/linux-events.jsonl", (char *)"--seed=43",
+        (char *)"/run/tgos/linux-events.jsonl", (char *)"--session-id=4",
+        (char *)"--seed=43",
     };
     struct contest_runtime_config config;
     char error[128];
@@ -67,7 +68,8 @@ int main(int argc, char **argv)
         (char *)"--model=/opt/tgos/model.bin",
         (char *)"--metadata=/opt/tgos/metadata.json",
         (char *)"--run-id=phase5-ai-mlp-s43-test",
-        (char *)"--event-log=/run/tgos/linux-events.jsonl", (char *)"--seed=43",
+        (char *)"--event-log=/run/tgos/linux-events.jsonl",
+        (char *)"--session-id=4", (char *)"--seed=43",
     };
     char *missing[] = {
         (char *)"linux-ai-controller", (char *)"--mode=mlp",
@@ -75,7 +77,8 @@ int main(int argc, char **argv)
         (char *)"--udp-port=46000", (char *)"--tcp-port=46001",
         (char *)"--model=/opt/tgos/model.bin",
         (char *)"--metadata=/opt/tgos/metadata.json",
-        (char *)"--run-id=phase5-ai-mlp-s43-test", (char *)"--seed=43",
+        (char *)"--run-id=phase5-ai-mlp-s43-test",
+        (char *)"--session-id=4", (char *)"--seed=43",
     };
     char *unknown[] = {(char *)"linux-ai-controller", (char *)"--silent"};
 

@@ -44,7 +44,6 @@ REQUIRED_TOKENS = (
     'path.open("x"',
     "shutil.rmtree(output",
     "runtime_input_dir",
-    "P5_GUEST_OBSERVATION_PASS",
     "p5-ai-observation-v1",
     "observation package already has a terminal status",
     "p5-ai-execution-v1",

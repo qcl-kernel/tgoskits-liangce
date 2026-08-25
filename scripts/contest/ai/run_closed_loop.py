@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -117,6 +118,21 @@ def _regular_bundle_directory(path: Path, label: str) -> Path:
         if entry.is_symlink():
             raise RunnerPlanError(f"{label} contains a symlink: {entry}")
     return candidate.absolute()
+
+
+def _relative_to_bundle(path: Path, root: Path, label: str) -> Path:
+    """Return a bundle-relative path, including across Windows 8.3 aliases."""
+
+    try:
+        return path.relative_to(root)
+    except ValueError:
+        for ancestor in path.parents:
+            try:
+                if os.path.samefile(ancestor, root):
+                    return path.relative_to(ancestor)
+            except OSError:
+                continue
+    raise RunnerPlanError(f"{label} escapes bundle root")
 
 
 def _publisher_output_directory(path: Path, label: str) -> Path:
@@ -758,10 +774,7 @@ def validate_guest_observation_bundle(
         ):
             raise RunnerPlanError(f"{label} claim is malformed")
         path = Path(path_value).absolute()
-        try:
-            path.relative_to(output)
-        except ValueError as error:
-            raise RunnerPlanError(f"{label} escapes observation output") from error
+        _relative_to_bundle(path, output, label)
         actual = _regular_file(path, label)
         if actual.stat().st_size != size or _sha256(actual) != sha256:
             raise RunnerPlanError(f"{label} size/SHA-256 drifted")
@@ -778,7 +791,7 @@ def validate_guest_observation_bundle(
     claimed_paths: set[str] = set()
     for key, claim in raw_files.items():
         path = verify_claim(claim, f"raw capture {key}")
-        claimed_paths.add(path.relative_to(output).as_posix())
+        claimed_paths.add(_relative_to_bundle(path, output, f"raw capture {key}").as_posix())
 
     transcripts = value.get("event_transcripts")
     if not isinstance(transcripts, dict) or transcripts.get("schema_version") != "p5-ai-event-transcripts-v1":
@@ -788,7 +801,7 @@ def validate_guest_observation_bundle(
         raise RunnerPlanError("event transcript file set is incomplete")
     for guest, claim in transcript_files.items():
         path = verify_claim(claim, f"{guest} event transcript")
-        claimed_paths.add(path.relative_to(output).as_posix())
+        claimed_paths.add(_relative_to_bundle(path, output, f"{guest} event transcript").as_posix())
         lines = path.read_text(encoding="utf-8").splitlines()
         if not lines:
             raise RunnerPlanError(f"{guest} event transcript is empty")
