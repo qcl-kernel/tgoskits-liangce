@@ -1,0 +1,2 @@
+# Locked to the locally verified P5 host-contract environment.
+numpy==1.26.4

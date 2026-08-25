@@ -1,0 +1,35 @@
+{
+  "activation": {
+    "hidden": "relu",
+    "output": "sigmoid"
+  },
+  "dataset_sha256": {
+    "test": "1d343896b913419f7880424828c873a3a4065fbe0e5f52b952935d095b9f9741",
+    "train": "aa8ad500d7300b1bf67ae56f3fecbdf92d382885bd9a9b7220567254a51417a2",
+    "validation": "24c66f6ab451b4de1c0a02918e3b1c6b507c8509ef9e139e7e723b7d51bdff3f"
+  },
+  "golden_vector_count": 256,
+  "model_sha256": "2ba04889fddb129be4fb42c76c595513896ba15b3aee3b65b4d6ff3dca46d50f",
+  "model_size_bytes": 164,
+  "model_version": 731924617,
+  "normalization": "IF-008-v1",
+  "numpy_version": "1.26.4",
+  "python_version": "3.12.3",
+  "quantization": "nearest-half-up-q16.16",
+  "schema_version": "p5-mlp-model-v1",
+  "shape": [
+    3,
+    8,
+    1
+  ],
+  "test_mse": 4.359239392215386e-05,
+  "training": {
+    "batch_size": 256,
+    "epochs": 200,
+    "learning_rate": 0.0010000000474974513,
+    "loss_first_batch": 0.03190970420837402,
+    "loss_last_batch": 1.9318795239087194e-06,
+    "optimizer": "explicit-float32-adam"
+  },
+  "validation_mse": 3.920229937648401e-05
+}
