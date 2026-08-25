@@ -107,9 +107,20 @@ impl VcpuIrqDispatcher {
     /// Called by `VmRuntimeHandle::dispatch_vcpu_interrupt` when an
     /// architecture interrupt router requests delivery to a vCPU.
     pub fn enqueue(&self, vcpu_id: usize, interrupt: PendingVcpuInterrupt) -> AxVmResult<usize> {
+        self.enqueue_with_edge(vcpu_id, interrupt)
+            .map(|(cpu_id, _)| cpu_id)
+    }
+
+    /// Enqueues a pending interrupt and reports whether it changed the target
+    /// queue from empty to non-empty.
+    pub fn enqueue_with_edge(
+        &self,
+        vcpu_id: usize,
+        interrupt: PendingVcpuInterrupt,
+    ) -> AxVmResult<(usize, bool)> {
         let cpu_id = self.lookup_cpu_id(vcpu_id)?;
-        self.queue.push(vcpu_id, interrupt);
-        Ok(cpu_id)
+        let became_nonempty = self.queue.push(vcpu_id, interrupt);
+        Ok((cpu_id, became_nonempty))
     }
 
     fn lookup_cpu_id(&self, vcpu_id: usize) -> AxVmResult<usize> {

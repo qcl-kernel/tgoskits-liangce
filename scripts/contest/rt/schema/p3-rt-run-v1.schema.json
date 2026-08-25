@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "p3-rt-run-v1",
+  "title": "P3 realtime run identity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "matrix_id", "scenario", "seed", "path_id", "feature_state", "status"],
+  "properties": {
+    "schema_version": {"const": "p3-rt-run-v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "matrix_id": {"type": "string", "minLength": 1},
+    "scenario": {"type": "string", "minLength": 1},
+    "seed": {"type": "integer", "enum": [7, 19, 43]},
+    "path_id": {"type": ["string", "null"]},
+    "feature_state": {"type": "string", "enum": ["off", "on"]},
+    "status": {"type": "string", "enum": ["planned", "blocked", "complete", "failed"]}
+  }
+}

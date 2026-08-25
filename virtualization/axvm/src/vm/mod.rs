@@ -406,7 +406,7 @@ impl VmRuntimeHandle {
         &self,
         vcpu_id: usize,
         interrupt: PendingInterrupt,
-    ) -> AxVmResult<usize> {
+    ) -> AxVmResult<(usize, bool)> {
         let task = self
             .vcpu_task_list
             .lock()
@@ -421,13 +421,12 @@ impl VmRuntimeHandle {
         vcpu_id: usize,
         cpu_id: usize,
         interrupt: PendingInterrupt,
-    ) -> AxVmResult<usize> {
-        self.pending_interrupts
-            .lock()
-            .entry(vcpu_id)
-            .or_default()
-            .push(interrupt);
-        Ok(cpu_id)
+    ) -> AxVmResult<(usize, bool)> {
+        let mut pending = self.pending_interrupts.lock();
+        let queue = pending.entry(vcpu_id).or_default();
+        let became_nonempty = queue.is_empty();
+        queue.push(interrupt);
+        Ok((cpu_id, became_nonempty))
     }
 
     pub(crate) fn vcpu_cpu_id(&self, vcpu_id: usize) -> AxVmResult<usize> {
@@ -451,11 +450,14 @@ impl VmRuntimeHandle {
         vcpu_id: usize,
         interrupt: PendingVcpuInterrupt,
     ) -> AxVmResult {
-        dispatch_vcpu_interrupt_with(
-            || self.irq_dispatcher.enqueue(vcpu_id, interrupt),
-            || self.notify_all(),
-            crate::host::task::send_ipi,
-        )
+        let (pcpu_id, became_nonempty) =
+            self.irq_dispatcher.enqueue_with_edge(vcpu_id, interrupt)?;
+        if cfg!(feature = "contest-rt-opt-pending-irq-wake") && !became_nonempty {
+            return Ok(());
+        }
+        self.notify_all();
+        crate::host::task::send_ipi(pcpu_id);
+        Ok(())
     }
 
     /// Called by the vCPU run loop to drain pending interrupts before
