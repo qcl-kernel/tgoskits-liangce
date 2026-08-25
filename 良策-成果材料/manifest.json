@@ -3,7 +3,7 @@
   "package_name": "良策-成果材料",
   "team": "良策",
   "material_revision": "2026-08-25-final-source-02",
-  "status": "latest_upstream_revision_ready_for_private_delivery",
+  "status": "latest_upstream_revision_private_delivered_pr_pending",
   "source_revision": "9b1506144d1502d9d46557ed218f878064688f41",
   "live_upstream_dev": "3049b0c7becf1fd7972243a19b8b24e605b01e9b",
   "open_verification_items": [
@@ -77,7 +77,7 @@
     {
       "id": "DEL-010",
       "name": "private repository delivery and upstream PR",
-      "status": "latest-revision-private-delivery-pending",
+      "status": "latest-revision-private-delivered-pr-pending",
       "non_claims": ["upstream pull requests have not yet been created"]
     },
     {
@@ -101,8 +101,8 @@
     "checksum_scope": "all package files except SHA256SUMS.txt itself"
   },
   "remote_actions": {
-    "uploaded": false,
-    "pushed": false,
+    "uploaded": true,
+    "pushed": true,
     "pull_request_created": false
   }
 }
