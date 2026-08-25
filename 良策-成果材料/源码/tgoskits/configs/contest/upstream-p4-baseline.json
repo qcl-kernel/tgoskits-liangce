@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "preflight-only",
+  "status": "p4_upstream_baseline_locked",
+  "upstreamDevSha": "23a07bfcf17863a5eeaae7536d7c0a55c898f50e",
+  "sourceContestHead": "6692559e772ab2ced748667c48e9b44237fafd8a",
+  "sourceTrackedDirtyPatchGitHashBeforeMigrationDocsSync": "5fcbe0413e3678e6be7492a40301e51ab0b4275d",
+  "sourceUntrackedConverterSha256": "346394cf0aa0b9e562c961658a4b60cbb384771661f7d570786a14060c2071f3",
+  "divergence": {
+    "upstreamOnlyCommits": 198,
+    "contestOnlyCommits": 77
+  },
+  "officialCapabilityCommits": [
+    "547f3266a49c0ffbaa870a3b01a810789f121567",
+    "b34ee847d18b07cb9019981036cd5eb769da8ba6",
+    "39dcbf3303efcfcb9705e17223b032e6e33462dc",
+    "9991019a3f9028e10efbda5f54883bd9df67e020",
+    "5155111ef7290ce59128b99f39d922f71b327612",
+    "42c33ee1ae193991ddb78fb35f7b03e91881603e",
+    "6c703581b6a32f1778856143a23f832f9084b73c",
+    "3afb0b3232804631b4dce5580e1e7dda18c03159",
+    "6b428839300b3081e810df862e65af2fe812aaf9"
+  ],
+  "officialArtifacts": [
+    {"path": "docs/design/axvisor-virtio-net.md", "size": 4814, "sha256": "ffe15725810f718fec8ab399f2c87b604dfa4f5bce1f9f54526595a2b6c5f867"},
+    {"path": "virtualization/axvirtio-net/src/lib.rs", "size": 1355, "sha256": "019b5bb1c3253a206229f8bfe510dfd8e025bd241da40c3c4967be2487496cee"},
+    {"path": "virtualization/axvirtio-net/src/device.rs", "size": 15800, "sha256": "9ed79cd4f2f2e0a01698974009b58907318b6bbbe2c457255b9a53161d530872"},
+    {"path": "virtualization/axvirtio-net/src/switch.rs", "size": 26272, "sha256": "735d4e8864cac07f4a322d6464aa4d50a093fa28458782e1023d393ebe0fb9f2"},
+    {"path": "virtualization/axvirtio-common/src/lib.rs", "size": 1185, "sha256": "317a38ef55d1889d2a2346413b838e17cf4d6589c27661227c51ecfb0d5589f9"},
+    {"path": "os/axvisor/src/virtio_net.rs", "size": 13579, "sha256": "3559ff732e6e5b15153a4f7f3a422194e6414aa64bd7662e2118bfaad3f6a7bd"},
+    {"path": "virtualization/axvm/src/configured.rs", "size": 9613, "sha256": "3c063b82da82954d93c9a2ff6ff51fedb1223e3805219d36885ee29ed9d5818f"},
+    {"path": "virtualization/axvm/src/arch/aarch64/resource_pools.rs", "size": 1906, "sha256": "07dbdb3ffd891af0f9b066afeca6040968ed81f7ce6c385bc42911b57f5efc44"},
+    {"path": "os/axvisor/configs/qemu/qemu-aarch64-virtio-net-peer.toml", "size": 356, "sha256": "a92c08937e0f19d68a85ec7f3581157b7e22f89a7c1a80f2c0f56bd62b252789"},
+    {"path": "os/axvisor/configs/vms/qemu/aarch64/arceos-virtio-net-peer-vm1.toml", "size": 559, "sha256": "47c0546dd9a3d843662c1e2f5c0fb8c36d8f9ff5a8d88d14cc2fe2239c5ef5e0"},
+    {"path": "os/axvisor/configs/vms/qemu/aarch64/arceos-virtio-net-peer-vm2.toml", "size": 559, "sha256": "9dc137f99b7f5e50b25d748a1ac4819e3205489032d62eb469be8624f4c3424c"}
+  ],
+  "productionDecision": {
+    "virtioCore": "reuse-official-axvirtio-common-and-axvirtio-net",
+    "deviceGraph": "reuse-official-resolved-device-graph-and-scoped-dma-grant",
+    "legacyBackend": "do-not-port",
+    "contestExtension": "resource-planning-adapter-plus-bounded-policy-and-evidence-only"
+  },
+  "resourceCompatibility": {
+    "officialVirtioNetGuestMmio": "0x0a000000",
+    "officialVirtioNetGuestIntid": 48,
+    "linuxRootBlockGuestMmio": "0x0a000000",
+    "status": "blocked_resource_collision",
+    "requiredResolution": "allocate-or-bind-a-distinct-guest-local-mmio-and-wired-irq-through-the-resolved-device-graph-without-a-second-virtio-backend"
+  },
+  "migratedHostContracts": [
+    "configs/contest/network/test-011-v1.json",
+    "configs/contest/network/test-012-v1.json",
+    "configs/contest/network/test-013-v1.json",
+    "configs/contest/network/test-015-v1.json",
+    "scripts/contest/network/capture.py",
+    "scripts/contest/network/fault_profile.py",
+    "scripts/contest/network/validate_network_session.py",
+    "scripts/test/check_contest_network_contract.py"
+  ],
+  "doesNotProve": [
+    "official dual-ArceOS QEMU runtime on this integration branch",
+    "Linux plus Zephyr device enumeration",
+    "Guest ARP, ICMP, TCP, UDP or ICPC",
+    "AI closed loop",
+    "real-time improvement",
+    "DMA isolation"
+  ]
+}

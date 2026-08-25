@@ -1,0 +1,145 @@
+//! Console input and output.
+
+use core::fmt::{Arguments, Result, Write};
+
+use bitflags::bitflags;
+pub use rdrive::DeviceId as ConsoleDeviceId;
+
+/// Why the platform could not provide a hardware console device id.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConsoleDeviceIdError {
+    /// No firmware or command-line hardware console was specified.
+    NotSpecified,
+    /// A console was specified, but it does not describe a hardware device.
+    NoHardwareDevice,
+    /// A hardware console was specified, but no probed device matched it.
+    DeviceNotFound,
+}
+
+/// Result type returned by the platform console device selector.
+pub type ConsoleDeviceIdResult = core::result::Result<ConsoleDeviceId, ConsoleDeviceIdError>;
+
+/// Error returned by an invalid early/runtime console ownership transition.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum ConsoleHandoffError {
+    /// The platform console is not in the state required by this transition.
+    #[error("invalid console ownership transition")]
+    InvalidState,
+}
+
+/// Result returned by console ownership transitions.
+pub type ConsoleHandoffResult = core::result::Result<(), ConsoleHandoffError>;
+
+bitflags! {
+    /// Console input IRQ events returned by the platform.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ConsoleIrqEvent: u32 {
+        /// Console input is ready to be drained.
+        const RX_READY = 1 << 0;
+        /// A receive-side error was reported.
+        const RX_ERROR = 1 << 1;
+        /// An overrun was reported.
+        const OVERRUN = 1 << 2;
+    }
+}
+
+/// Console input and output interface.
+#[def_plat_interface]
+pub trait ConsoleIf {
+    /// Writes given bytes to the console.
+    fn write_bytes(bytes: &[u8]);
+
+    /// Reads bytes from the console into the given mutable slice.
+    ///
+    /// Returns the number of bytes read.
+    fn read_bytes(bytes: &mut [u8]) -> usize;
+
+    /// Returns the runtime-discovered hardware device selected as the console.
+    ///
+    /// Static platforms that do not have a runtime device manager should return
+    /// [`ConsoleDeviceIdError::NotSpecified`].
+    fn device_id() -> ConsoleDeviceIdResult;
+
+    /// Stops new low-level console accesses and drains in-flight accesses.
+    fn begin_runtime_handoff() -> ConsoleHandoffResult;
+
+    /// Publishes runtime ownership after configuration and routing succeed.
+    fn commit_runtime_handoff() -> ConsoleHandoffResult;
+
+    /// Restores low-level ownership after a recoverable preparation failure.
+    fn rollback_runtime_handoff() -> ConsoleHandoffResult;
+
+    /// Permanently prevents low-level access after an uncertain failure.
+    fn fail_runtime_handoff_closed();
+
+    /// Returns the IRQ number for the console input interrupt.
+    ///
+    /// Returns `None` if input interrupt is not supported.
+    #[cfg(feature = "irq")]
+    fn irq_num() -> Option<irq_framework::IrqId>;
+
+    /// Enables or disables device-side console input interrupts.
+    #[cfg(feature = "irq")]
+    fn set_input_irq_enabled(enabled: bool);
+
+    /// Handles a console input IRQ in interrupt context and returns the
+    /// corresponding device events.
+    #[cfg(feature = "irq")]
+    fn handle_irq() -> ConsoleIrqEvent;
+}
+
+struct EarlyConsole;
+
+impl Write for EarlyConsole {
+    fn write_str(&mut self, s: &str) -> Result {
+        write_text_bytes(s.as_bytes());
+        Ok(())
+    }
+}
+
+/// Writes text bytes to the console, expanding line feeds to CRLF.
+///
+/// This is intended for human-readable console output. Use [`write_bytes`] for
+/// raw byte transport.
+pub fn write_text_bytes(bytes: &[u8]) {
+    let mut start = 0;
+    for (i, &byte) in bytes.iter().enumerate() {
+        if byte == b'\n' {
+            if start < i {
+                write_bytes(&bytes[start..i]);
+            }
+            write_bytes(b"\r\n");
+            start = i + 1;
+        }
+    }
+    if start < bytes.len() {
+        write_bytes(&bytes[start..]);
+    }
+}
+
+/// Lock for console operations to prevent mixed output from concurrent execution
+pub static CONSOLE_LOCK: ax_sync::SpinLock<()> = ax_sync::SpinLock::new(());
+
+/// Simple console print operation.
+#[macro_export]
+macro_rules! console_print {
+    ($($arg:tt)*) => {
+        $crate::console::__simple_print(format_args!($($arg)*));
+    }
+}
+
+/// Simple console print operation, with a newline.
+#[macro_export]
+macro_rules! console_println {
+    () => { $crate::ax_print!("\n") };
+    ($($arg:tt)*) => {
+        $crate::console::__simple_print(format_args!("{}\n", format_args!($($arg)*)));
+    }
+}
+
+#[doc(hidden)]
+pub fn __simple_print(fmt: Arguments) {
+    let _guard = CONSOLE_LOCK.lock_irqsave();
+    EarlyConsole.write_fmt(fmt).unwrap();
+    drop(_guard);
+}

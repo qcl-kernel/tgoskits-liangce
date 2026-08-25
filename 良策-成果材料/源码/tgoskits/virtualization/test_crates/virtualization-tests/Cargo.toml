@@ -1,0 +1,20 @@
+[package]
+name = "virtualization-tests"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+ax-plat = { path = "../../../platforms/ax-plat" }
+axdevice = { path = "../../axdevice" }
+axdevice_base = { path = "../../axdevice_base" }
+axvm = { path = "../../axvm" }
+axvm-types = { path = "../../axvm-types" }
+axvmconfig = { path = "../../axvmconfig" }
+irq-framework = { path = "../../../components/irq-framework" }
+serde = { version = "1", features = ["derive"] }
+toml.workspace = true

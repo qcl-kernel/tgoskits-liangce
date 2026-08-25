@@ -1,0 +1,13 @@
+schema_version = "p3-rt-profile-v1"
+scenario = "RT-AX-CPU"
+mode = "discovery"
+period_ms = 100
+warmup_samples = 1000
+minimum_samples = 100000
+minimum_duration_ns = 1800000000000
+required_gates = ["TEST-007"]
+
+[load]
+linux_cpu_workers = 2
+network_profile = "none"
+ai_profile = "none"

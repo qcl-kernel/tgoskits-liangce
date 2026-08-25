@@ -1,0 +1,61 @@
+[package]
+name = "ax-posix-api"
+version = "0.5.33"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = [
+    "Yuekai Jia <equation618@gmail.com>",
+    "yanjuguang <coolyanjg@163.com>",
+    "wudashuai <wu-ds20@mails.tsinghua.edu.cn>",
+    "yfblock <321353225@qq.com>",
+    "scPointer <bhy18@mails.tsinghua.edu.cn>",
+    "Shiping Yuan <robert_yuan@pku.edu.com>",
+]
+description = "POSIX-compatible APIs for ArceOS modules"
+include = ["src/**/*.rs", "Cargo.toml", "build.rs", "ctypes.h"]
+license.workspace = true
+
+[features]
+default = []
+
+smp = []
+irq = ["ax-api/irq", "ax-runtime/irq"]
+alloc = ["dep:ax-alloc"]
+multitask = [
+  "alloc",
+  "ax-api/multitask",
+  "ax-task/multitask",
+  "ax-runtime/multitask",
+]
+lockdep = ["multitask", "ax-runtime/lockdep"]
+fd = ["alloc", "dep:scope-local"]
+fs = ["dep:ax-fs-ng", "fd"]
+net = ["dep:ax-net", "fd"]
+pipe = ["fd"]
+select = ["fd"]
+poll = ["fd"]
+epoll = ["fd"]
+eventfd = ["fd"]
+
+[dependencies]
+# ArceOS modules
+ax-alloc = { workspace = true, optional = true }
+ax-api.workspace = true
+ax-fs-ng = { workspace = true, optional = true }
+ax-hal.workspace = true
+ax-log.workspace = true
+ax-net = { workspace = true, optional = true }
+ax-runtime.workspace = true
+ax-task = { workspace = true, optional = true }
+
+# Other crates
+ax-io.workspace = true
+ax-lazyinit.workspace = true
+axpoll.workspace = true
+flatten_objects = "0.2"
+scope-local = { workspace = true, optional = true }
+syscalls.workspace = true
+thiserror.workspace = true
+
+[build-dependencies]
+bindgen.workspace = true

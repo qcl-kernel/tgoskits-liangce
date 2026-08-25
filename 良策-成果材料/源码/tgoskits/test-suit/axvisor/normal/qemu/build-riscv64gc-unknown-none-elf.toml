@@ -1,0 +1,8 @@
+features = [
+    "ax-driver/nvme",
+    "fs",
+    "sstc",
+]
+log = "Info"
+target = "riscv64gc-unknown-none-elf"
+max_cpu_num = 4

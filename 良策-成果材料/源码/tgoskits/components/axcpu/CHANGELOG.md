@@ -1,0 +1,208 @@
+# Changelog
+
+## [Unreleased]
+
+## [0.8.7](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.6...ax-cpu-v0.8.7) - 2026-08-20
+
+### Added
+
+- *(starry-kernel)* consume user_access_ok_page in a lock-free user-copy fast path ([#2063](https://github.com/rcore-os/tgoskits/pull/2063))
+
+### Fixed
+
+- *(ax-cpu)* harden user access and architecture state transitions ([#2075](https://github.com/rcore-os/tgoskits/pull/2075))
+- *(cpu-local)* keep AArch64 current independent of TLS ([#1970](https://github.com/rcore-os/tgoskits/pull/1970))
+
+### Other
+
+- *(cpu-local)* define scheduler-neutral execution context boundary ([#2080](https://github.com/rcore-os/tgoskits/pull/2080))
+
+## [0.8.6](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.5...ax-cpu-v0.8.6) - 2026-08-09
+
+### Fixed
+
+- *(ax-cpu)* handle cross-page unaligned faults ([#1855](https://github.com/rcore-os/tgoskits/pull/1855))
+
+### Other
+
+- *(memory)* unify page-table execution on page-table-generic ([#1911](https://github.com/rcore-os/tgoskits/pull/1911))
+
+## [0.8.5](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.4...ax-cpu-v0.8.5) - 2026-08-03
+
+### Added
+
+- *(qperf)* support Starry x86_64 profiling ([#1785](https://github.com/rcore-os/tgoskits/pull/1785))
+- *(cpufreq)* RK3588 ondemand CPU DVFS with voltage calibration ([#1657](https://github.com/rcore-os/tgoskits/pull/1657))
+
+## [0.8.4](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.3...ax-cpu-v0.8.4) - 2026-07-23
+
+### Other
+
+- *(cpu-local)* extract per-CPU register ownership ([#1662](https://github.com/rcore-os/tgoskits/pull/1662))
+- *(ci)* update Rust nightly to 2026-07-15 ([#1626](https://github.com/rcore-os/tgoskits/pull/1626))
+
+### Changed
+
+- *(host-test)* use the unprivileged FXSAVE fallback when scheduler tests run outside ring 0.
+
+## [0.8.3](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.2...ax-cpu-v0.8.3) - 2026-07-08
+
+### Added
+
+- *(loongarch64)* add LS2K1000 physical board support ([#1368](https://github.com/rcore-os/tgoskits/pull/1368))
+
+## [0.8.2](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.1...ax-cpu-v0.8.2) - 2026-07-07
+
+### Other
+
+- *(platforms)* move someboot and somehal-macros and add documents ([#1485](https://github.com/rcore-os/tgoskits/pull/1485))
+
+## [0.8.1](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.8.0...ax-cpu-v0.8.1) - 2026-07-02
+
+### Added
+
+- *(axvisor)* support LoongArch Linux guest on QEMU ([#1207](https://github.com/rcore-os/tgoskits/pull/1207))
+- *(starry)* ARM PMUv3 hardware-PMU perf support (perf stat / record / report) ([#1395](https://github.com/rcore-os/tgoskits/pull/1395))
+
+### Other
+
+- *(starry-kernel)* move arch runtime helpers into HAL ([#1427](https://github.com/rcore-os/tgoskits/pull/1427))
+
+## [0.8.0](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.7.1...ax-cpu-v0.8.0) - 2026-06-27
+
+### Fixed
+
+- *(axcpu)* seed a fresh x86_64 task's x87 stack as empty (FXSAVE tag) ([#1366](https://github.com/rcore-os/tgoskits/pull/1366))
+- *(axcpu)* deliver x86_64 #DE (divide error) as SIGFPE/FPE_INTDIV ([#1367](https://github.com/rcore-os/tgoskits/pull/1367))
+
+## [0.7.1](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.7.0...ax-cpu-v0.7.1) - 2026-06-23
+
+### Other
+
+- updated the following local packages: axbacktrace
+
+## [0.7.0](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.8...ax-cpu-v0.7.0) - 2026-06-22
+
+### Fixed
+
+- *(axcpu)* preserve AVX state across x86_64 context switch (XSAVE) ([#1329](https://github.com/rcore-os/tgoskits/pull/1329))
+
+### Other
+
+- Feat/x86 64 ptrace clean ([#1062](https://github.com/rcore-os/tgoskits/pull/1062))
+
+## [0.6.8](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.7...ax-cpu-v0.6.8) - 2026-06-12
+
+### Fixed
+
+- *(ci)* stabilize x86 Starry QEMU timing ([#1245](https://github.com/rcore-os/tgoskits/pull/1245))
+
+## [0.6.7](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.6...ax-cpu-v0.6.7) - 2026-06-11
+
+### Fixed
+
+- *(axcpu)* support LoongArch user trap recovery
+
+## [0.6.6](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.5...ax-cpu-v0.6.6) - 2026-06-09
+
+### Added
+
+- *(std)* unify std-aware ArceOS builds ([#1080](https://github.com/rcore-os/tgoskits/pull/1080))
+
+### Fixed
+
+- *(axcpu)* preserve loongarch64 LASX state for Git HTTPS ([#1178](https://github.com/rcore-os/tgoskits/pull/1178))
+- *(axcpu-aarch64)* emulate EL0 MRS reads of ID_AA64* feature registers ([#1128](https://github.com/rcore-os/tgoskits/pull/1128))
+- *(ci)* switch x86_64 defaults to dynamic platform ([#1024](https://github.com/rcore-os/tgoskits/pull/1024))
+
+### Other
+
+- *(starryos)* add K230 NNCase runtime demo ([#1058](https://github.com/rcore-os/tgoskits/pull/1058))
+
+## [0.6.5](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.4...ax-cpu-v0.6.5) - 2026-06-03
+
+### Added
+
+- *(riscv64)* support dynamic platform on QEMU and SG2002 ([#961](https://github.com/rcore-os/tgoskits/pull/961))
+- *(axtask)* add task stack guard page support ([#811](https://github.com/rcore-os/tgoskits/pull/811))
+
+### Fixed
+
+- *(repo)* normalize allocator and RISC-V dependencies ([#1021](https://github.com/rcore-os/tgoskits/pull/1021))
+- *(loongarch64)* make userspace LSX usable (preserve FP/LSX state + fix uc_mcontext offset + advertise AT_HWCAP) ([#917](https://github.com/rcore-os/tgoskits/pull/917))
+- *(axcpu)* save SP in aarch64 TrapFrame for kprobe correctness ([#887](https://github.com/rcore-os/tgoskits/pull/887))
+
+## [0.6.4](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.3...ax-cpu-v0.6.4) - 2026-05-22
+
+### Fixed
+
+- *(axvisor)* recover riscv guest memory faults ([#788](https://github.com/rcore-os/tgoskits/pull/788))
+
+### Other
+
+- *(axbacktrace)* use Backtrace::kind() instead of BacktraceReport ([#748](https://github.com/rcore-os/tgoskits/pull/748))
+
+## [0.6.3](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.2...ax-cpu-v0.6.3) - 2026-05-19
+
+### Other
+
+- updated the following local packages: ax-page-table-multiarch
+
+## [0.6.2](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.6.1...ax-cpu-v0.6.2) - 2026-05-15
+
+### Other
+
+- updated the following local packages: axbacktrace
+
+## [0.6.0](https://github.com/rcore-os/tgoskits/compare/ax-cpu-v0.5.5...ax-cpu-v0.6.0) - 2026-04-27
+
+### Added
+
+- *(axvisor)* add loongarch64 qemu support and CI ([#242](https://github.com/rcore-os/tgoskits/pull/242))
+- *(ax-sync)* add mutex lockdep and fix Starry atomic-context violations ([#271](https://github.com/rcore-os/tgoskits/pull/271))
+
+### Other
+
+- Unifies breakpoint and debug trap handling across archs ([#244](https://github.com/rcore-os/tgoskits/pull/244))
+
+## 0.2.2
+
+### Fixes
+
+* [Fix compile error on riscv when enable `uspace` feature](https://github.com/arceos-org/ax-cpu/pull/12).
+
+## 0.2.1
+
+### Fixes
+
+* [Pad TrapFrame to multiple of 16 bytes for riscv64](https://github.com/arceos-org/ax-cpu/pull/11).
+
+## 0.2.0
+
+### Breaking Changes
+
+* Upgrade `memory_addr` to v0.4.
+
+### New Features
+
+* [Add FP state switch for riscv64](https://github.com/arceos-org/ax-cpu/pull/2).
+* [Add hypervisor support for aarch64](https://github.com/arceos-org/ax-cpu/pull/10).
+
+### Other Improvements
+
+* Export `save`/`restore` in FP states for each architecture.
+* Improve documentation.
+
+## 0.1.1
+
+### New Features
+
+* Add `init::init_percpu` for x86_64.
+
+### Other Improvements
+
+* Improve documentation.
+
+## 0.1.0
+
+Initial release.

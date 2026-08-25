@@ -1,0 +1,86 @@
+[package]
+name = "ax-hal"
+version = "0.6.0"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = ["Yuekai Jia <equation618@gmail.com>"]
+description = "ArceOS hardware abstraction layer, provides unified APIs for platform-specific operations"
+license.workspace = true
+
+[features]
+axtest = ["irq"]
+smp = [
+    "axplat-dyn/smp",
+    "ax-plat/smp",
+]
+irq = [
+    "ax-plat/irq",
+    "axplat-dyn/irq",
+]
+fp-simd = [
+    "ax-cpu/fp-simd",
+    "axplat-dyn/fp-simd",
+]
+xuantie-c9xx = ["ax-cpu/xuantie-c9xx"]
+rtc = ["axplat-dyn/rtc"]
+paging = [
+    "dep:ax-alloc",
+    "dep:page-table-generic",
+]
+tls = ["ax-cpu/tls", "cpu-local/tls", "axplat-dyn/tls"]
+uspace = ["paging", "ax-cpu/uspace", "axplat-dyn/uspace"]
+hv = [
+    "paging",
+    "ax-cpu/arm-el2",
+    "ax-cpu/exception-table",
+    "axplat-dyn/hv",
+]
+host-test = [
+    "cpu-local/host-test",
+    "ax-cpu/host-test",
+    "ax-percpu/host-test",
+    "ax-sync/host-test",
+]
+
+default = []
+ipi = ["irq"]
+
+[dependencies]
+ax-alloc = { workspace = true, optional = true }
+ax-cpu.workspace = true
+cpu-local.workspace = true
+ax-plat.workspace = true
+ax-lazyinit.workspace = true
+cfg-if.workspace = true
+fdt-parser = "0.4"
+heapless = "0.9"
+ax-sync.workspace = true
+log.workspace = true
+ax-memory-addr.workspace = true
+ax-percpu.workspace = true
+axplat-dyn = { workspace = true, default-features = false }
+page-table-generic = { workspace = true, optional = true }
+rdrive.workspace = true
+thiserror.workspace = true
+
+[build-dependencies]
+quote = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(axtest)'] }
+
+[[test]]
+name = "axtest"
+path = "tests/axtest.rs"
+harness = false
+required-features = ["axtest"]
+
+[dev-dependencies.axtest]
+path = "../../../../components/axtest/axtest"
+
+[dev-dependencies.ax-std]
+path = "../../ulib/axstd"
+features = ["default"]
+
+[dev-dependencies.ax-hal]
+path = "."

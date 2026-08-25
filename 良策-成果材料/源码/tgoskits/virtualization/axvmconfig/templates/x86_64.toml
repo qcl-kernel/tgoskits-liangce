@@ -1,0 +1,24 @@
+[base]
+id = 1
+name = "GuestVM-x86_64"
+guest_type = "passthrough"
+cpu_num = 1
+phys_cpu_sets = [1]
+
+[kernel]
+entry_point = 0x8000
+enable_bios = true
+boot_protocol = "multiboot"
+bios_path = "rvm-bios.bin"
+bios_load_addr = 0x8000
+kernel_path = "arceos-x86_64.bin"
+kernel_load_addr = 0x20_0000
+image_location = "fs"
+memory_regions = [
+    [0x0000_0000, 0x100_0000, 0x7, 1],
+]
+
+# COM1, IOAPIC, and PIT are supplied by the x86 machine profile.
+[devices]
+passthrough = []
+disabled = []

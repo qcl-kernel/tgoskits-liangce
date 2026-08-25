@@ -1,0 +1,163 @@
+{
+  "schema_version": "p5-ai-faults-v1",
+  "profile_id": "faults-v1",
+  "test_id": "TEST-018",
+  "host_only": true,
+  "evidence_level": "L2 host contract",
+  "cases": [
+    {
+      "case": "duty-out-of-range",
+      "inject": {
+        "kind": "control_value",
+        "values": [-1, 65537]
+      },
+      "expected": {
+        "apply": false,
+        "watchdog_refresh": false,
+        "error": "BAD_RANGE"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "bad-model-version",
+      "inject": {
+        "kind": "model_version",
+        "value": "not-current"
+      },
+      "expected": {
+        "apply": false,
+        "watchdog_refresh": false,
+        "error": "VERSION_MISMATCH"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "duplicate-control",
+      "inject": {
+        "kind": "replay",
+        "same": ["session_id", "sequence", "request_id"]
+      },
+      "expected": {
+        "ack_retransmit": true,
+        "action_count": 1,
+        "error": null
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "stale-request",
+      "inject": {
+        "kind": "request_id",
+        "direction": "backward"
+      },
+      "expected": {
+        "apply": false,
+        "watchdog_refresh": false,
+        "error": "STALE_REQUEST"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "bad-crc-schema",
+      "inject": {
+        "kind": "wire_mutation",
+        "mutations": ["crc", "schema", "reserved"]
+      },
+      "expected": {
+        "apply": false,
+        "watchdog_refresh": false,
+        "error": "INVALID_PAYLOAD"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "linux-stop",
+      "inject": {
+        "kind": "endpoint_stop",
+        "endpoint": "linux",
+        "duration_ms": 700
+      },
+      "expected": {
+        "safe_deadline_ms": 500,
+        "safe_tick_ms": 100,
+        "duty_q16_16": 0,
+        "error": "NETWORK_TIMEOUT"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "network-stop",
+      "inject": {
+        "kind": "network_block",
+        "duration_ms": 700
+      },
+      "expected": {
+        "safe_deadline_ms": 500,
+        "safe_tick_ms": 100,
+        "duty_q16_16": 0,
+        "error": "NETWORK_TIMEOUT"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "endpoint-restart",
+      "inject": {
+        "kind": "endpoint_restart",
+        "endpoint": "either"
+      },
+      "expected": {
+        "new_session_nonzero": true,
+        "old_session_action_count": 0,
+        "error": "SESSION_RESET"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    },
+    {
+      "case": "udp-expiry-tcp",
+      "inject": {
+        "kind": "udp_ack_expiry",
+        "retry_ms": [0, 100, 300],
+        "cancel_ms": 500
+      },
+      "expected": {
+        "udp_closed_at_ms": 500,
+        "tcp_recovery": true,
+        "new_session_nonzero": true,
+        "error": "TRANSPORT_FALLBACK"
+      },
+      "runtime": {
+        "requires_new_session": true,
+        "single_primary_fault": true
+      }
+    }
+  ],
+  "non_claims": [
+    "profile validation is host-only",
+    "the profile does not prove Guest execution, safe-state timing, recovery, PCAP, or TEST-018 qualification",
+    "each case must run in a fresh session and evidence directory"
+  ]
+}

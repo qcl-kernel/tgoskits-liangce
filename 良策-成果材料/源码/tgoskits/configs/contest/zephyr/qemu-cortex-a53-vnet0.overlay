@@ -1,0 +1,49 @@
+// Contest Zephyr network overlay: the mediated vnet0 frontend appears as a
+// virtio,mmio transport at 0x0b000000 (resolved Auto first value, INTID 32 =
+// GIC_SPI 0) with a virtio,net child. The device graph (ResourceRequest::Auto)
+// allocates the Zephyr vnet0 from the AArch64 auto MMIO pool and auto wired
+// inputs; this overlay is the compile-time view and MUST match the runtime DTB.
+// The P4 config freezes the Zephyr MAC to 02:00:00:00:00:02 and IPv4
+// 10.77.0.2/24 with the connected route to 10.77.0.0/24; no DHCP, no
+// default route.
+
+#include <zephyr/dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	chosen {
+		zephyr,console = &uart0;
+	};
+
+	aliases {
+		eth0 = &virtio_net0;
+	};
+
+	virtio_net0: virtio-net@b000000 {
+		compatible = "virtio,mmio";
+		status = "okay";
+		reg = <0x0 0x0b000000 0x0 0x200>;
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SPI 0 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>;
+
+		device {
+			compatible = "virtio,net";
+			status = "okay";
+			local-mac-address = [02 00 00 00 00 02];
+		};
+	};
+};
+
+/* The QEMU virt PCI ECAM is not emulated by AxVisor; disable the board's
+ * PCIe node so Zephyr never probes 0x4010000000. */
+&pcie {
+	status = "disabled";
+};
+
+/* The board sets chosen.zephyr,pcie-controller to the now-disabled PCIe
+ * node; clear it or the PCIe controller driver fails to compile
+ * (DEVICE_DT_GET on a disabled node). */
+/ {
+	chosen {
+		/delete-property/ zephyr,pcie-controller;
+	};
+};

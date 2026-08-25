@@ -1,0 +1,86 @@
+{
+  "schema_version": "p5-ai-qualification-v1",
+  "profile_id": "qualification-v1",
+  "test_id": "TEST-017",
+  "controllers": [
+    "fixed",
+    "mlp"
+  ],
+  "seeds": [
+    7,
+    19,
+    43
+  ],
+  "timing": {
+    "tick_period_ms": 100,
+    "ticks": 1800,
+    "duration_seconds": 180,
+    "control_validity_ms": 500,
+    "udp_retry_ms": [
+      0,
+      100,
+      300
+    ],
+    "udp_cancel_ms": 500
+  },
+  "plant": {
+    "initial_temperature_mC": 25000,
+    "ambient_temperature_mC": 25000,
+    "target_mC": 55000,
+    "heater_rate_mC_per_second": 4000,
+    "heat_loss_divisor": 100,
+    "disturbance_start_tick": 600,
+    "disturbance_end_tick": 899,
+    "disturbance_mC_per_tick": -150
+  },
+  "metrics": {
+    "error_band_mC": 1000,
+    "settling_hold_ticks": 50,
+    "recovery_start_tick": 900,
+    "overshoot_step_mC": 30000,
+    "require_feedback_for_every_request": true
+  },
+  "fault_stream": {
+    "algorithm": "pcg-xsh-rr-64-32",
+    "discard_first_output": true,
+    "outputs_per_request": 1,
+    "first_control_drop_modulus": 100,
+    "first_control_drop_residue": 0,
+    "drop_attempt_index": 0,
+    "drop_ack": false,
+    "drop_status": false,
+    "duplicate": false,
+    "reorder": false,
+    "scheduling_jitter_us": 0,
+    "paired_manifest_required": true
+  },
+  "fault_golden": {
+    "7": {
+      "outputs_sha256": "e261bdf362a9eb06ba87b64fe833d30d1f539326c7e96defb7e2527e3cdf704b",
+      "drop_first_control_request_indices": [128, 307, 414, 437, 460, 542, 623, 820, 896, 902, 940, 943, 1066, 1130, 1292, 1300, 1341, 1546, 1657, 1716, 1728]
+    },
+    "19": {
+      "outputs_sha256": "094027e39c5c18e7b0673ecf39381ebaec410e8cfc2d6b8e7d0d86734434c343",
+      "drop_first_control_request_indices": [3, 10, 408, 528, 673, 681, 785, 955, 999, 1041, 1142, 1151, 1186, 1248, 1281, 1427, 1575, 1582, 1690, 1709, 1751, 1767]
+    },
+    "43": {
+      "outputs_sha256": "20ebf1e11a411b96bfc5ec076656b14ae96048535635317d645ffb95ac53a3b2",
+      "drop_first_control_request_indices": [48, 191, 543, 617, 695, 967, 1008, 1299, 1327, 1406, 1559, 1560, 1595, 1648, 1719]
+    }
+  },
+  "model": {
+    "schema_version": "p5-mlp-model-v1",
+    "model_version": 731924617,
+    "model_sha256": "2ba04889fddb129be4fb42c76c595513896ba15b3aee3b65b4d6ff3dca46d50f",
+    "metadata_sha256": "c28c61bb954221c1e48bba6ca94339d081678905241151cf05b0256034d79938",
+    "golden_vectors_sha256": "7889009fcc62e92967dbf975113704f7c07a9a683cb8d29809999d30e19fb86b",
+    "dataset_manifest_sha256": "a9957815013e3382123621e34e66626b2d10d1d47ea8b68ac1deca6b1d751aa5",
+    "golden_vector_count": 256
+  },
+  "evidence": {
+    "level": "L8 AI-loop",
+    "success_status": "ai_control_completed",
+    "failed_status": "ai_control_failed",
+    "blocked_status": "ai_control_blocked"
+  }
+}

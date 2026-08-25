@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "package_name": "良策-成果材料",
+  "team": "良策",
+  "material_revision": "2026-08-25-final-source-02",
+  "status": "ready_for_repository_delivery_pending_remote_ci",
+  "source_revision": "5fc8fb8428f02b0020a3afcb3c46d53e133f30d1",
+  "live_upstream_dev": "c0942dbd6569d51c4b3b88c7f4d45caf330187a8",
+  "open_verification_items": [
+    "remote Rust and repository CI must pass after PR creation",
+    "current-revision target and runtime qualification evidence remains incomplete",
+    "clean-clone end-to-end reproduction remains incomplete",
+    "no demo video is currently available"
+  ],
+  "deliverables": [
+    {
+      "id": "DEL-001",
+      "name": "source code",
+      "path": "源码/tgoskits",
+      "status": "ready-for-delivery",
+      "scope": "tracked source snapshot rebased to the recorded live upstream dev",
+      "non_claims": ["not runtime-qualified"]
+    },
+    {
+      "id": "DEL-002",
+      "name": "configuration",
+      "paths": ["源码/tgoskits/configs", "源码/tgoskits/os/axvisor/configs"],
+      "status": "ready-for-delivery",
+      "non_claims": ["runtime configuration remains subject to target execution"]
+    },
+    {
+      "id": "DEL-003",
+      "name": "build run fault and statistics scripts",
+      "paths": ["源码/tgoskits/scripts", "源码/tgoskits/tools"],
+      "status": "ready-for-delivery",
+      "non_claims": ["script presence does not prove Guest runtime execution"]
+    },
+    {
+      "id": "DEL-004",
+      "name": "raw data and evidence index",
+      "status": "partial",
+      "non_claims": ["no current-revision runtime evidence archive is included"]
+    },
+    {
+      "id": "DEL-005",
+      "name": "statistics and figures",
+      "status": "not-produced",
+      "non_claims": ["no runtime result figures are asserted without current raw data"]
+    },
+    {
+      "id": "DEL-006",
+      "name": "design documents",
+      "paths": ["设计文档/系统设计说明.md", "设计文档/部署与复现说明.md"],
+      "status": "ready-for-delivery"
+    },
+    {
+      "id": "DEL-007",
+      "name": "test specification and reports",
+      "path": "测试材料/测试与证据说明.md",
+      "status": "host-static-verified",
+      "non_claims": ["target build and runtime reports are pending"]
+    },
+    {
+      "id": "DEL-008",
+      "name": "independent reproduction",
+      "path": "设计文档/部署与复现说明.md",
+      "status": "partial",
+      "non_claims": ["clean-clone end-to-end transcript is pending"]
+    },
+    {
+      "id": "DEL-009",
+      "name": "demo video and script",
+      "path": "演示材料/演示说明与录制脚本.md",
+      "status": "video-not-available",
+      "non_claims": ["no video or download link is represented as delivered"]
+    },
+    {
+      "id": "DEL-010",
+      "name": "private repository delivery and upstream PR",
+      "status": "pending-remote-operation",
+      "non_claims": ["push and PR status will be recorded after remote verification"]
+    },
+    {
+      "id": "DEL-011",
+      "name": "third-party test report if available",
+      "path": "测试材料/第三方检测报告说明.md",
+      "status": "N/A",
+      "reason": "no third-party report was found; the submission requirement is conditional"
+    },
+    {
+      "id": "DEL-012",
+      "name": "model model-card and reproducible data",
+      "paths": ["模型材料/模型卡.md", "源码/tgoskits/apps/contest/linux-ai-controller/model"],
+      "status": "host-contract-verified",
+      "non_claims": ["Guest inference and closed-loop qualification are pending"]
+    }
+  ],
+  "integrity": {
+    "checksum_file": "SHA256SUMS.txt",
+    "checksum_algorithm": "SHA-256",
+    "checksum_scope": "all package files except SHA256SUMS.txt itself"
+  },
+  "remote_actions": {
+    "uploaded": false,
+    "pushed": false,
+    "pull_request_created": false
+  }
+}

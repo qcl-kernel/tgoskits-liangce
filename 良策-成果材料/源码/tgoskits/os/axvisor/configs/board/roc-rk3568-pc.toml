@@ -1,0 +1,7 @@
+features = [
+    "fs",
+    "ax-driver/rockchip-sdhci",
+]
+log = "Info"
+target = "aarch64-unknown-none-softfloat"
+vm_configs = []

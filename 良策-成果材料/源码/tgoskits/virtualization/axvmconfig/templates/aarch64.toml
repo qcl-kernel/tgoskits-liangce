@@ -1,0 +1,21 @@
+[base]
+id = 1
+name = "GuestVM-aarch64"
+guest_type = "passthrough"
+cpu_num = 1
+phys_cpu_sets = [1]
+
+[kernel]
+entry_point = 0x4008_0000
+kernel_path = "arceos-aarch64.bin"
+kernel_load_addr = 0x4008_0000
+image_location = "fs"
+memory_regions = [
+    [0x8000_0000, 0x4000_0000, 0x7, 1],
+]
+
+# The virtual UART and interrupt controller are supplied by the machine profile.
+# Firmware-backed machines select PL011 or 16550 from the host console identity.
+[devices]
+passthrough = []
+disabled = []

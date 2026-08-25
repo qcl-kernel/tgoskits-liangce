@@ -1,0 +1,50 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.4.0](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.3.2...irq-framework-v0.4.0) - 2026-08-20
+
+### Other
+
+- *(axtest)* standardize Cargo and QEMU test flow ([#2088](https://github.com/rcore-os/tgoskits/pull/2088))
+- *(errors)* introduce domain-owned error boundaries ([#2024](https://github.com/rcore-os/tgoskits/pull/2024))
+
+## [0.3.2](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.3.1...irq-framework-v0.3.2) - 2026-08-09
+
+### Other
+
+- *(axvm)* unify guest devices and AArch64 timer ownership ([#1717](https://github.com/rcore-os/tgoskits/pull/1717))
+
+## [0.3.1](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.3.0...irq-framework-v0.3.1) - 2026-08-03
+
+### Other
+
+- enhance axtest coverage for various starry-kernel contracts ([#1674](https://github.com/rcore-os/tgoskits/pull/1674))
+
+## [0.3.0](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.2.0...irq-framework-v0.3.0) - 2026-07-02
+
+### Added
+
+- *(irq-framework)* use domain-scoped irq ids
+
+### Other
+
+- *(irq-framework)* require boxed IRQ callbacks ([#1452](https://github.com/rcore-os/tgoskits/pull/1452))
+- *(somehal)* modernize x86 qemu irq routing ([#1430](https://github.com/rcore-os/tgoskits/pull/1430))
+
+## [0.2.0](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.1.1...irq-framework-v0.2.0) - 2026-06-27
+
+### Other
+
+- *(serial)* align IRQ model with dev ([#1265](https://github.com/rcore-os/tgoskits/pull/1265))
+
+## [0.1.1](https://github.com/rcore-os/tgoskits/compare/irq-framework-v0.1.0...irq-framework-v0.1.1) - 2026-06-12
+
+### Added
+
+- *(irq)* enhance IRQ request handling and state restoration logic

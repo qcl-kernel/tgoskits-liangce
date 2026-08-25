@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "artifactStatus": "current-integration-reference",
+  "status": "p4_f964_convergence_locked",
+  "verifiedAt": "2026-08-24",
+  "previousUpstreamDevSha": "c82bbc444cd4a25cc269e86378c9a31a8d2506ba",
+  "upstreamDevSha": "f96452ce892e2916a0c5bfe5aa9e7908b8085c06",
+  "sourceContestHeadBeforeLatestMerge": "1fdc987365f239057d88b15624a33bdec664f438",
+  "latestDeltaCommitCount": 3,
+  "latestDeltaPathCount": 36,
+  "latestDeltaCommits": [
+    "aa9857b7bbd879808b36779c03dea4e973297561",
+    "5715bd3500ea1e66c542a4e61f205c13652b6114",
+    "f96452ce892e2916a0c5bfe5aa9e7908b8085c06"
+  ],
+  "sourceContestHeadBeforeMerge": "1e4af7f9eb42c57cc24f94f4583996bfae9c4444",
+  "historicalMergeBase": "21ef4b218ebb74641134238c2050d488c7504249",
+  "officialArtifacts": [
+    {"path": "virtualization/axvm/src/configured.rs", "size": 9632, "sha256": "db453b3e66a631d1146a0f17797334dc24ab331f7d0af0a2240d980bf21ed708"},
+    {"path": "virtualization/axvm/src/configured/devices/mod.rs", "size": 390, "sha256": "9a3b49ab80df6288a139c073b1c9e945be1e4dc943dc62fa2e63be2ad48743a3"},
+    {"path": "virtualization/axvm/src/configured/devices/virtio_net.rs", "size": 14485, "sha256": "4daf1914c0e1dae308790277f7662c04466241739faeb7ca8e9db04fbb86bbfe"},
+    {"path": "virtualization/axvm/src/boot/fdt/device.rs", "size": 12215, "sha256": "02447d088f13997e06532f6a3f36293f15fd54e0efbef04b468fab8837e5a092"},
+    {"path": "virtualization/axvm/src/boot/fdt/core/create.rs", "size": 44145, "sha256": "76f978f78463fd8aef317afaf4bac9243d9c5d5ebe5389ab66c40068a7e17170"},
+    {"path": "virtualization/axvm/src/arch/aarch64/capabilities.rs", "size": 4984, "sha256": "6207368caa37617891c10a4f51666c15f17339b3e4fb13c934566eea457142a6"},
+    {"path": "virtualization/axvm/src/arch/riscv64/capabilities.rs", "size": 9636, "sha256": "fc259ff9cbd239cb5864072224d59c6de0cc740b192b750e2d2f0f08f3a5e20d"},
+    {"path": "virtualization/axvirtio-net/src/managed.rs", "size": 3848, "sha256": "21c5169415d859b9d4d44dafa234c640be57967326eb2c71e8d993298d111cb5"},
+    {"path": "virtualization/axvirtio-net/src/switch.rs", "size": 26272, "sha256": "735d4e8864cac07f4a322d6464aa4d50a093fa28458782e1023d393ebe0fb9f2"},
+    {"path": "scripts/test/ci_plan.py", "size": 27294, "sha256": "0a5c839d9af254967ad4f18bb22dd0ac115bd91069d89b9e48f579e5e15903db"},
+    {"path": "scripts/test/test_ci_plan.py", "size": 24810, "sha256": "7eeaadd29b57761452a7b52582c3e6737bb9b26bee59b134899c0572415552db"},
+    {"path": ".github/workflows/reusable-check-matrix.yml", "size": 5278, "sha256": "310181ba3fef4cc036d33f0a48a0f422e9315fd2578496532710f28228b36bcb"},
+    {"path": "docs/design/axvm-capability-layering.md", "size": 14813, "sha256": "3c20ac1834ced3bc22bea0ec887f6d9392e1719d20186c8531ff13f849c5b1e7"}
+  ],
+  "productionDecision": {
+    "virtioCore": "reuse-official-axvirtio-common-and-axvirtio-net",
+    "deviceOwner": "virtualization/axvm/src/configured/devices/virtio_net.rs",
+    "registration": "single-axvm-configured-device-catalog-entry",
+    "resourcePlanning": "auto-mmio-and-auto-wired-irq",
+    "firmware": "typed-resolved-fdt-device",
+    "interrupt": "official-edge-triggered-pulse-baseline",
+    "legacyBackend": "absent",
+    "contestExtension": "frame-counter-drop-fault-and-evidence-hooks-only"
+  },
+  "runtimeProfile": {
+    "board": "os/axvisor/configs/board/qemu-aarch64-contest-network.toml",
+    "linuxVm": "os/axvisor/configs/vms/qemu/aarch64/linux-smp2-dual.toml",
+    "zephyrVm": "os/axvisor/configs/vms/qemu/aarch64/zephyr-smp1-dual.toml",
+    "outerQemuNic": "forbidden",
+    "networkModel": "virtio-net"
+  },
+  "doesNotProve": [
+    "Rust target build on this integration commit",
+    "Linux plus Zephyr device enumeration on f964",
+    "Guest ARP, ICMP, TCP, UDP or ICPC on f964",
+    "AI closed loop on f964",
+    "real-time improvement on f964",
+    "DMA isolation"
+  ]
+}
