@@ -1,0 +1,44 @@
+{
+  "episodes_per_split": 64,
+  "generator": "scripts/contest/ai/generate_dataset.py",
+  "sample_order": "episode-major-tick-minor",
+  "schema_version": "p5-dataset-v1",
+  "split_seed_map": {
+    "test": 43,
+    "train": 7,
+    "validation": 19
+  },
+  "splits": [
+    {
+      "episodes": 64,
+      "name": "train",
+      "path": "train.jsonl",
+      "sample_count": 115200,
+      "seed": 7,
+      "sha256": "aa8ad500d7300b1bf67ae56f3fecbdf92d382885bd9a9b7220567254a51417a2",
+      "size_bytes": 7859500,
+      "ticks_per_episode": 1800
+    },
+    {
+      "episodes": 64,
+      "name": "validation",
+      "path": "validation.jsonl",
+      "sample_count": 115200,
+      "seed": 19,
+      "sha256": "24c66f6ab451b4de1c0a02918e3b1c6b507c8509ef9e139e7e723b7d51bdff3f",
+      "size_bytes": 7859504,
+      "ticks_per_episode": 1800
+    },
+    {
+      "episodes": 64,
+      "name": "test",
+      "path": "test.jsonl",
+      "sample_count": 115200,
+      "seed": 43,
+      "sha256": "1d343896b913419f7880424828c873a3a4065fbe0e5f52b952935d095b9f9741",
+      "size_bytes": 7859500,
+      "ticks_per_episode": 1800
+    }
+  ],
+  "ticks_per_episode": 1800
+}
