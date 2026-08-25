@@ -38,6 +38,7 @@ MAIN_MANIFESTS = (
     CHECKS_ROOT / "arceos.toml",
     CHECKS_ROOT / "axvisor.toml",
     CHECKS_ROOT / "starry.toml",
+    CHECKS_ROOT / "contest.toml",
 )
 STARRY_APPS_MANIFEST = CHECKS_ROOT / "starry-apps.toml"
 RUNNER_PROFILES_MANIFEST = CHECKS_ROOT.parent / "runner-profiles.toml"

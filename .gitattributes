@@ -3,3 +3,9 @@
 *.jpg binary
 *.bin binary
 *.img binary
+
+# P5 canonical model metadata is hashed byte-for-byte by the qualification
+# validator. Keep JSON/checksum artifacts LF-stable across Windows worktrees;
+# otherwise core.autocrlf changes the frozen bytes without showing a Git diff.
+apps/contest/linux-ai-controller/model/*.json text eol=lf
+apps/contest/linux-ai-controller/model/checksums.sha256 text eol=lf

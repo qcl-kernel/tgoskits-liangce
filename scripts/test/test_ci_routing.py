@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import textwrap
@@ -464,16 +465,15 @@ def run_route(
     push_runs_after_query: int = 1,
 ) -> RouteResult:
     script = route_script()
+    bash = require_bash()
     with tempfile.TemporaryDirectory() as temp_dir_name:
         temp_dir = Path(temp_dir_name)
         bin_dir = temp_dir / "bin"
         bin_dir.mkdir()
         fake_gh = bin_dir / "gh"
-        fake_gh.write_text(FAKE_GH, encoding="utf-8")
-        fake_gh.chmod(0o755)
+        write_executable(fake_gh, FAKE_GH)
         fake_sleep = bin_dir / "sleep"
-        fake_sleep.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        fake_sleep.chmod(0o755)
+        write_executable(fake_sleep, "#!/bin/sh\nexit 0\n")
 
         output_file = temp_dir / "output"
         summary_file = temp_dir / "summary"
@@ -482,15 +482,15 @@ def run_route(
         env.update(
             {
                 "EVENT_NAME": event_name,
-                "GITHUB_OUTPUT": str(output_file),
+                "GITHUB_OUTPUT": bash_path(output_file),
                 "GITHUB_REPOSITORY": "rcore-os/tgoskits",
-                "GITHUB_STEP_SUMMARY": str(summary_file),
+                "GITHUB_STEP_SUMMARY": bash_path(summary_file),
                 "HEAD_REPOSITORY": head_repository,
                 "HEAD_SHA": "fc2a957ef330a39ef673d7364db1909fdbfe2821",
-                "PATH": f"{bin_dir}{os.pathsep}{env['PATH']}",
+                "PATH": bash_path_env(bin_dir, env["PATH"]),
                 "PR_HEAD_REF": "fix/qemu-forward-progress",
                 "FAKE_ACTIVE_MATRIX_RUN_IDS": active_matrix_run_ids,
-                "FAKE_GH_LOG": str(gh_log),
+                "FAKE_GH_LOG": bash_path(gh_log),
                 "FAKE_HAS_ACTIVE_MATRIX": has_active_matrix,
                 "FAKE_JOB_QUERY_EXIT": job_query_exit,
                 "FAKE_PUSH_RUNS": push_runs,
@@ -500,11 +500,11 @@ def run_route(
                 "FAKE_PUSH_RUN_QUERY_FAIL_IDS": push_run_query_fail_ids,
                 "FAKE_RUN_QUERY_EXIT": run_query_exit,
                 "FAKE_PUSH_RUNS_AFTER_QUERY": str(push_runs_after_query),
-                "FAKE_STATE_DIR": str(temp_dir),
+                "FAKE_STATE_DIR": bash_path(temp_dir),
             }
         )
         completed = subprocess.run(
-            ["bash", "-c", script],
+            [bash, "-c", script],
             cwd=WORKSPACE_ROOT,
             env=env,
             capture_output=True,
@@ -542,6 +542,7 @@ def run_cancellation(
     runs: list[dict[str, object]] | None = None,
 ) -> RouteResult:
     script = workflow_step_script("Cancel older queued or running runs")
+    bash = require_bash()
     if runs is None:
         runs = [
             fake_run(
@@ -557,11 +558,9 @@ def run_cancellation(
         bin_dir = temp_dir / "bin"
         bin_dir.mkdir()
         fake_gh = bin_dir / "gh"
-        fake_gh.write_text(FAKE_CANCEL_GH, encoding="utf-8")
-        fake_gh.chmod(0o755)
+        write_executable(fake_gh, FAKE_CANCEL_GH)
         fake_sleep = bin_dir / "sleep"
-        fake_sleep.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        fake_sleep.chmod(0o755)
+        write_executable(fake_sleep, "#!/bin/sh\nexit 0\n")
 
         gh_log = temp_dir / "gh.log"
         env = os.environ.copy()
@@ -570,10 +569,10 @@ def run_cancellation(
                 "CURRENT_RUN_NUMBER": "200",
                 "EVENT_NAME": event_name,
                 "FAKE_CANCEL_RUNS": json.dumps(runs),
-                "FAKE_GH_LOG": str(gh_log),
+                "FAKE_GH_LOG": bash_path(gh_log),
                 "FAKE_RECHECK_STATUS": "queued",
                 "GITHUB_REPOSITORY": "rcore-os/tgoskits",
-                "PATH": f"{bin_dir}{os.pathsep}{env['PATH']}",
+                "PATH": bash_path_env(bin_dir, env["PATH"]),
                 "PR_HEAD_REF": pr_head_ref,
                 "PR_HEAD_REPOSITORY_ID": pr_head_repository_id,
                 "PR_NUMBER": pr_number,
@@ -581,7 +580,7 @@ def run_cancellation(
             }
         )
         completed = subprocess.run(
-            ["bash", "-c", script],
+            [bash, "-c", script],
             cwd=WORKSPACE_ROOT,
             env=env,
             capture_output=True,
@@ -598,7 +597,7 @@ def run_cancellation(
             "",
             completed.stdout,
             completed.stderr,
-            gh_log.read_text(encoding="utf-8").splitlines(),
+            read_log(gh_log),
         )
 
 
@@ -611,6 +610,7 @@ def run_target_cancellation(
         "Cancel older queued or running runs",
         PR_CLEANUP_WORKFLOW,
     )
+    bash = require_bash()
     if runs is None:
         runs = []
     with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -618,11 +618,9 @@ def run_target_cancellation(
         bin_dir = temp_dir / "bin"
         bin_dir.mkdir()
         fake_gh = bin_dir / "gh"
-        fake_gh.write_text(FAKE_TARGET_CANCEL_GH, encoding="utf-8")
-        fake_gh.chmod(0o755)
+        write_executable(fake_gh, FAKE_TARGET_CANCEL_GH)
         fake_sleep = bin_dir / "sleep"
-        fake_sleep.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        fake_sleep.chmod(0o755)
+        write_executable(fake_sleep, "#!/bin/sh\nexit 0\n")
 
         gh_log = temp_dir / "gh.log"
         env = os.environ.copy()
@@ -632,15 +630,15 @@ def run_target_cancellation(
                 "FAKE_CURRENT_HEAD_REF": "fork-branch",
                 "FAKE_CURRENT_HEAD_REPOSITORY_ID": "42",
                 "FAKE_CURRENT_HEAD_SHA": "current-head",
-                "FAKE_GH_LOG": str(gh_log),
+                "FAKE_GH_LOG": bash_path(gh_log),
                 "GITHUB_REPOSITORY": "rcore-os/tgoskits",
-                "PATH": f"{bin_dir}{os.pathsep}{env['PATH']}",
+                "PATH": bash_path_env(bin_dir, env["PATH"]),
                 "PR_EVENT_HEAD_SHA": event_head_sha,
                 "PR_NUMBER": "2078",
             }
         )
         completed = subprocess.run(
-            ["bash", "-c", script],
+            [bash, "-c", script],
             cwd=WORKSPACE_ROOT,
             env=env,
             capture_output=True,
@@ -657,8 +655,52 @@ def run_target_cancellation(
             "",
             completed.stdout,
             completed.stderr,
-            gh_log.read_text(encoding="utf-8").splitlines(),
+            read_log(gh_log),
         )
+
+
+def require_bash() -> str:
+    if os.name == "nt":
+        raise unittest.SkipTest(
+            "CI routing shell simulation requires the Linux runner environment"
+        )
+    bash = shutil.which("bash")
+    if bash is None:
+        raise unittest.SkipTest("CI routing shell tests require bash")
+    return bash
+
+
+def bash_path(path: Path) -> str:
+    """Render a Windows path for either WSL bash or MSYS/Git bash."""
+    if os.name != "nt":
+        return str(path)
+    path_text = path.as_posix()
+    if len(path_text) < 3 or path_text[1] != ":":
+        return path_text
+    drive = path_text[0].lower()
+    tail = path_text[2:]
+    bash = Path(require_bash()).as_posix().lower()
+    if "/windows/system32/bash.exe" in bash:
+        return f"/mnt/{drive}{tail}"
+    return f"/{drive}{tail}"
+
+
+def bash_path_env(bin_dir: Path, original_path: str) -> str:
+    if os.name != "nt":
+        return f"{bin_dir}{os.pathsep}{original_path}"
+    # Both WSL and MSYS provide these locations.  Keeping the fixture path
+    # first makes the fake gh/sleep commands deterministic without relying on
+    # Windows PATH translation.
+    return f"{bash_path(bin_dir)}:/usr/local/bin:/usr/bin:/bin"
+
+
+def write_executable(path: Path, content: str) -> None:
+    path.write_bytes(content.replace("\r\n", "\n").encode("utf-8"))
+    path.chmod(0o755)
+
+
+def read_log(path: Path) -> list[str]:
+    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
 
 
 def fake_run(
@@ -754,7 +796,6 @@ FAKE_CANCEL_GH = r'''#!/usr/bin/env python3
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -765,22 +806,42 @@ with Path(os.environ["FAKE_GH_LOG"]).open("a", encoding="utf-8") as log:
 
 if "actions/workflows/ci.yml/runs?status=" in arguments:
     status = re.search(r"status=([^& ]+)", arguments).group(1)
-    runs = [
+    candidate_runs = [
         run
         for run in json.loads(os.environ["FAKE_CANCEL_RUNS"])
         if run["status"] == status
     ]
-    jq_index = sys.argv.index("--jq")
-    completed = subprocess.run(
-        ["jq", "-r", sys.argv[jq_index + 1]],
-        input=json.dumps({"workflow_runs": runs}),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    sys.stdout.write(completed.stdout)
-    sys.stderr.write(completed.stderr)
-    sys.exit(completed.returncode)
+    current_run_number = int(os.environ.get("CURRENT_RUN_NUMBER", "200"))
+    event_name = os.environ.get("EVENT_NAME", "push")
+    runs = []
+    for run in candidate_runs:
+        if run["run_number"] >= current_run_number:
+            continue
+        if event_name == "pull_request":
+            pull_requests = run.get("pull_requests", [])
+            has_number = any(
+                str(item.get("number")) == os.environ.get("PR_NUMBER", "")
+                for item in pull_requests
+            )
+            matches_head = (
+                not pull_requests
+                and os.environ.get("PR_HEAD_REF", "") != ""
+                and os.environ.get("PR_HEAD_REPOSITORY_ID", "") != ""
+                and run["head_branch"] == os.environ["PR_HEAD_REF"]
+                and str(run["head_repository"]["id"])
+                == os.environ["PR_HEAD_REPOSITORY_ID"]
+            )
+            if not (has_number or matches_head):
+                continue
+        elif (
+            run["head_branch"] != os.environ.get("REF_NAME", "")
+            or run["event"] != event_name
+        ):
+            continue
+        runs.append(run)
+    for run in runs:
+        print(f'{run["id"]}\t{run["run_number"]}\t{run["html_url"]}')
+    sys.exit(0)
 
 cancel_match = re.search(r"actions/runs/(\d+)/(?:force-)?cancel", arguments)
 if cancel_match:
@@ -800,7 +861,6 @@ FAKE_TARGET_CANCEL_GH = r'''#!/usr/bin/env python3
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -829,18 +889,20 @@ if "actions/workflows/ci.yml/runs" in arguments:
         for run in json.loads(os.environ["FAKE_CANCEL_RUNS"])
         if run["status"] == status
     ]
-    jq_index = sys.argv.index("--jq")
-    completed = subprocess.run(
-        ["jq", "-r", sys.argv[jq_index + 1]],
-        input=json.dumps({"workflow_runs": runs}),
-        capture_output=True,
-        text=True,
-        check=False,
-        env=os.environ,
-    )
-    sys.stdout.write(completed.stdout)
-    sys.stderr.write(completed.stderr)
-    sys.exit(completed.returncode)
+    for run in runs:
+        if run["run_number"] >= 200 or run["event"] != "pull_request":
+            continue
+        pull_requests = run.get("pull_requests", [])
+        has_number = any(item.get("number") == 2078 for item in pull_requests)
+        matches_head = (
+            not pull_requests
+            and run["head_branch"] == os.environ["FAKE_CURRENT_HEAD_REF"]
+            and str(run["head_repository"]["id"])
+            == os.environ["FAKE_CURRENT_HEAD_REPOSITORY_ID"]
+        )
+        if has_number or matches_head:
+            print(f'{run["id"]}\t{run["run_number"]}\t{run["html_url"]}')
+    sys.exit(0)
 
 cancel_match = re.search(r"actions/runs/(\d+)/(?:force-)?cancel", arguments)
 if cancel_match:
