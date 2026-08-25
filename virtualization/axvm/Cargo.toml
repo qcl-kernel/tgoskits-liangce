@@ -18,6 +18,7 @@ host-test = [
 ]
 sstc = ["riscv_vcpu/sstc"]
 tls = ["ax-std/tls", "cpu-local/tls"]
+contest-rt-opt-pending-irq-wake = []
 
 [dependencies]
 log = "0.4"

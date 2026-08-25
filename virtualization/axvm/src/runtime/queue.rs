@@ -45,12 +45,12 @@ impl VcpuInterruptQueue {
     }
 
     /// Pushes a pending interrupt onto the queue for the given vCPU.
-    pub fn push(&self, vcpu_id: usize, interrupt: PendingVcpuInterrupt) {
-        self.pending
-            .lock()
-            .entry(vcpu_id)
-            .or_default()
-            .push(interrupt);
+    pub fn push(&self, vcpu_id: usize, interrupt: PendingVcpuInterrupt) -> bool {
+        let mut pending = self.pending.lock();
+        let queue = pending.entry(vcpu_id).or_default();
+        let became_nonempty = queue.is_empty();
+        queue.push(interrupt);
+        became_nonempty
     }
 
     /// Drains all pending interrupts for the given vCPU, leaving its

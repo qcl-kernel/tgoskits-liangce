@@ -94,7 +94,10 @@ pub(crate) fn queue_pending_interrupt(
     }
 
     let runtime = vm.runtime_handle()?;
-    let cpu_id = runtime.queue_pending_interrupt(vcpu_id, interrupt)?;
+    let (cpu_id, became_nonempty) = runtime.queue_pending_interrupt(vcpu_id, interrupt)?;
+    if cfg!(feature = "contest-rt-opt-pending-irq-wake") && !became_nonempty {
+        return Ok(());
+    }
     runtime.notify_all();
     crate::host::task::send_ipi(cpu_id);
     Ok(())
