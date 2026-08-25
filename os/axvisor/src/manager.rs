@@ -24,6 +24,15 @@ pub struct AxvmManager {
 impl AxvmManager {
     /// Initialize the AxVM runtime services.
     pub fn new() -> Result<Self> {
+        info!(
+            "contest-rt-opt-pending-irq-wake feature={} path={}",
+            cfg!(feature = "contest-rt-opt-pending-irq-wake"),
+            if cfg!(feature = "contest-rt-opt-pending-irq-wake") {
+                "edge-only"
+            } else {
+                "legacy-every-enqueue"
+            }
+        );
         Ok(Self {
             runtime: AxvmRuntime::new().context("initialize AxVM runtime")?,
         })

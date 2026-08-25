@@ -1,0 +1,11 @@
+# Contest P4/P5 mediated VirtIO-net dual-Guest profile (official baseline).
+#
+# Guest networking is entirely the host-owned internal vnet0 switch: the
+# outer QEMU command line must not contain any NIC. MMIO/IRQ for the
+# virtio-net frontends are resolved by the device graph (`Auto`), not by
+# this file. The P4 runner supplies the VM configs explicitly via
+# `--vmconfigs` (linux-smp2-dual.toml + zephyr-smp1-dual.toml).
+features = []
+log = "Info"
+target = "aarch64-unknown-none-softfloat"
+vm_configs = []
