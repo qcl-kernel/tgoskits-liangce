@@ -159,7 +159,7 @@ class P4ReliabilityTests(unittest.TestCase):
                 json.dumps(
                     {
                         "bootId": "p4-rel-preflight",
-                        "mode": "udp-echo",
+                        "mode": "udp-reliability",
                         "sourceSoak": source,
                         "outputRootfs": claim(files["rootfs"]),
                     }
@@ -171,7 +171,7 @@ class P4ReliabilityTests(unittest.TestCase):
                 json.dumps(
                     {
                         "bootId": "p4-rel-preflight",
-                        "mode": "udp-echo",
+                        "mode": "udp-reliability",
                         "sourceSoak": source,
                         "artifacts": {"bin": claim(files["image"])},
                     }

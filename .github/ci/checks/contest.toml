@@ -12,13 +12,6 @@ group = "Contest"
 default_runner = "qcs"
 
 [[check]]
-id = "contest-mirror-docs"
-name = "Mirror development docs into the repository"
-command = '''
-python3 scripts/test/check_contest_development_mirror.py
-'''
-
-[[check]]
 id = "contest-upstream-p4-baseline"
 name = "Locked upstream P4 integration baseline preflight"
 command = '''

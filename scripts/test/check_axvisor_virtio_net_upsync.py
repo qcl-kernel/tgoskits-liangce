@@ -36,6 +36,7 @@ TARGET = (
 LEGACY_TARGET = REPO_ROOT / "os" / "axvisor" / "src" / "virtio_net.rs"
 SWITCH_TARGET = REPO_ROOT / "virtualization" / "axvirtio-net" / "src" / "switch.rs"
 RUNNER_TARGET = REPO_ROOT / "scripts" / "contest" / "network" / "run_guest_network.py"
+RUNTIME_TARGET = REPO_ROOT / "scripts" / "contest" / "runtime" / "dual_guest.py"
 
 TOKEN = "AXVISOR_VIRTIO_NET_UPSYNC_PASS"
 
@@ -146,6 +147,12 @@ def main() -> int:
     else:
         runner_text = RUNNER_TARGET.read_text(encoding="utf-8")
 
+    if not RUNTIME_TARGET.is_file():
+        errors.append(f"missing {RUNTIME_TARGET.relative_to(REPO_ROOT)}")
+        runtime_text = ""
+    else:
+        runtime_text = RUNTIME_TARGET.read_text(encoding="utf-8")
+
     if LEGACY_TARGET.exists():
         errors.append("legacy AxVisor-owned virtio_net.rs still exists as a second backend")
 
@@ -158,10 +165,10 @@ def main() -> int:
             errors.append(f"missing: {description}")
 
     if not re.search(
-        r'"cargo",\s*"xtask",\s*"axvisor",\s*"qemu"', runner_text
+        r'"cargo",\s*"xtask",\s*"axvisor",\s*"qemu"', runtime_text
     ):
-        errors.append("missing: runner uses current `cargo xtask axvisor qemu` route")
-    if re.search(r'"cargo",\s*"xtask",\s*"qemu"', runner_text):
+        errors.append("missing: shared runtime uses current `cargo xtask axvisor qemu` route")
+    if re.search(r'"cargo",\s*"xtask",\s*"qemu"', runtime_text):
         errors.append("forbidden: removed top-level `cargo xtask qemu` route")
     if not re.search(r"cwd\s*=\s*repository\s*,", runner_text):
         errors.append("missing: repository-level xtask runs from repository root")

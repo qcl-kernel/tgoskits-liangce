@@ -29,6 +29,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
     def test_rootfs_plan_binds_profile_and_model_without_mutation(self) -> None:
         plan = prepare_linux_ai_rootfs.build_plan(
             run_id="p5-prep-host",
+            session_id=1,
             source_rootfs=None,
             profile=PROFILE,
             model_directory=MODEL_DIR,
@@ -42,7 +43,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
     def test_guest_paths_fail_closed_without_dry_run(self) -> None:
         self.assertEqual(
             prepare_linux_ai_rootfs.main(
-                ["--run-id", "p5-prep-host", "--output-dir", "unused"]
+                ["--run-id", "p5-prep-host", "--session-id", "1", "--output-dir", "unused"]
             ),
             1,
         )
@@ -57,6 +58,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             with self.assertRaises(prepare_linux_ai_rootfs.RootfsPlanError):
                 prepare_linux_ai_rootfs.build_plan(
                     run_id="p5-link-negative",
+                    session_id=1,
                     source_rootfs=None,
                     profile=link,
                     model_directory=MODEL_DIR,
@@ -72,6 +74,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             with self.assertRaises(prepare_linux_ai_rootfs.RootfsPlanError):
                 prepare_linux_ai_rootfs.build_plan(
                     run_id="p5-model-link-negative",
+                    session_id=1,
                     source_rootfs=None,
                     profile=PROFILE,
                     model_directory=link,
@@ -99,6 +102,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             )
             plan = prepare_linux_ai_rootfs.build_plan(
                 run_id="p5-source-bound",
+                session_id=1,
                 source_rootfs=source,
                 source_manifest=manifest,
                 profile=PROFILE,
@@ -112,6 +116,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             with self.assertRaises(prepare_linux_ai_rootfs.RootfsPlanError):
                 prepare_linux_ai_rootfs.build_plan(
                     run_id="p5-source-unbound",
+                    session_id=1,
                     source_rootfs=source,
                     source_manifest=None,
                     profile=PROFILE,
@@ -143,6 +148,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             prepared = root / "prepared"
             plan = prepare_linux_ai_rootfs.build_plan(
                 run_id="p5-materialize-host",
+                session_id=1,
                 source_rootfs=source,
                 source_manifest=source_manifest,
                 profile=PROFILE,
@@ -171,14 +177,23 @@ class P5GuestOrchestrationTests(unittest.TestCase):
                 "/opt/tgos/golden-vectors.json": (MODEL_DIR / "golden-vectors.json").read_bytes(),
                 "/etc/tgos/linux-controller.json": config_bytes,
             }
+            written_guest_files: dict[str, bytes] = {}
 
             def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
                 if "-R" not in argv:
                     return subprocess.CompletedProcess(argv, 0, "", "")
                 request = argv[argv.index("-R") + 1]
-                if request.startswith("dump "):
+                if request.startswith("write "):
+                    source_path, guest_path = request[len("write ") :].rsplit(" ", 1)
+                    written_guest_files[guest_path] = Path(source_path).read_bytes()
+                elif request.startswith("dump "):
                     guest_path, destination = request[len("dump ") :].rsplit(" ", 1)
-                    Path(destination).write_bytes(guest_bytes[guest_path])
+                    payload = (
+                        written_guest_files[guest_path]
+                        if guest_path in written_guest_files
+                        else guest_bytes[guest_path]
+                    )
+                    Path(destination).write_bytes(payload)
                 return subprocess.CompletedProcess(argv, 0, "", "")
 
             with mock.patch.object(prepare_linux_ai_rootfs.shutil, "which", side_effect=lambda tool: tool), mock.patch.object(
@@ -229,6 +244,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             prepared = root / "prepared"
             plan = prepare_linux_ai_rootfs.build_plan(
                 run_id="p5-materialize-no-debugfs",
+                session_id=1,
                 source_rootfs=source,
                 source_manifest=source_manifest,
                 profile=PROFILE,
@@ -365,6 +381,8 @@ class P5GuestOrchestrationTests(unittest.TestCase):
                         "46001",
                         "--run-id",
                         "phase5-ai-mlp-s43-host",
+                        "--session-id",
+                        "1",
                         "--output-rootfs",
                         str(prepared / "linux-ai.ext4"),
                         "--output-controller-config",
@@ -395,6 +413,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             with self.assertRaises(prepare_linux_ai_rootfs.RootfsPlanError):
                 prepare_linux_ai_rootfs.build_plan(
                     run_id="p5-network-drift",
+                    session_id=1,
                     source_rootfs=None,
                     profile=PROFILE,
                     model_directory=MODEL_DIR,
@@ -745,6 +764,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
                     {
                         "schema_version": "p5-ai-rootfs-v1",
                         "run_id": run_id,
+                        "session_id": 2,
                         "controller_mode": "mlp",
                         "seed": 43,
                     }
@@ -757,6 +777,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
                     {
                         "schema_version": "p5-linux-controller-config-v1",
                         "run_id": run_id,
+                        "session_id": 2,
                         "controller_mode": "mlp",
                         "seed": 43,
                         "model_version": 731924617,
@@ -766,7 +787,7 @@ class P5GuestOrchestrationTests(unittest.TestCase):
             )
             zephyr_manifest = root / "zephyr-build-manifest.json"
             zephyr_manifest.write_text(
-                json.dumps({"schema_version": "p5-zephyr-control-build-v1", "run_id": run_id}),
+                json.dumps({"schema_version": "p5-zephyr-control-build-v1", "run_id": run_id, "session_id": 2}),
                 encoding="utf-8",
             )
             build_config = root / "build.toml"

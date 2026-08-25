@@ -308,7 +308,10 @@ def validate_scenario(
 
 
 def _relative_file(root: Path, relative: str) -> Path:
-    candidate = (root / relative).resolve()
+    # Keep the caller's lexical root form so Windows 8.3 aliases do not make
+    # an in-bundle file appear to escape after ``resolve()`` expands only one
+    # side of the comparison. Symlinks are rejected by the bundle walk.
+    candidate = (root / relative).absolute()
     try:
         candidate.relative_to(root)
     except ValueError as error:
