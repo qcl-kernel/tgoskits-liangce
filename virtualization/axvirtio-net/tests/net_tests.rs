@@ -596,6 +596,62 @@ fn rx_delivers_header_plus_frame() {
 }
 
 #[test]
+fn rx_reuses_descriptor_and_interrupt_status_for_1800_cycles() {
+    let h = Harness::new();
+    h.bring_up();
+    let frame = [0xaa, 0xbb, 0xcc, 0xdd];
+
+    // TEST-017 runs for 1,800 plant ticks. Characterize the lower VirtIO RX
+    // seam over the same number of guest buffer recycle + interrupt ACK
+    // cycles. This covers long-sequence descriptor reuse and InterruptStatus
+    // ACK/reassertion, but does not claim a full 16-bit ring wrap or wired-IRQ
+    // coverage.
+    h.write_desc(
+        h.rx_desc,
+        0,
+        h.rx_desc + 0x100,
+        (NEGOTIATED_HEADER_SIZE + frame.len()) as u32,
+        vc::VIRTQ_DESC_F_WRITE,
+        0,
+    );
+    for cycle in 0u16..1800u16 {
+        h.set_avail(
+            h.rx_avail,
+            cycle % h.size,
+            0,
+            cycle.wrapping_add(1),
+        );
+
+        let outcome = h.device.receive_frame(&frame).unwrap();
+        assert_eq!(
+            outcome,
+            RxOutcome::Delivered {
+                frame_len: frame.len(),
+                notify: true,
+            },
+            "RX delivery/notify drifted at cycle {cycle}"
+        );
+        assert_ne!(
+            h.r(vc::VIRTIO_MMIO_INTERRUPT_STATUS) & vc::VIRTIO_MMIO_INT_VRING,
+            0,
+            "RX interrupt was not raised at cycle {cycle}"
+        );
+        assert_eq!(
+            h.used_idx(h.rx_used),
+            cycle.wrapping_add(1),
+            "used index drifted at cycle {cycle}"
+        );
+
+        h.w(vc::VIRTIO_MMIO_INTERRUPT_ACK, vc::VIRTIO_MMIO_INT_VRING);
+        assert_eq!(
+            h.r(vc::VIRTIO_MMIO_INTERRUPT_STATUS),
+            0,
+            "RX interrupt did not rearm at cycle {cycle}"
+        );
+    }
+}
+
+#[test]
 fn rx_no_interrupt_flag_is_reported_to_runtime() {
     let h = Harness::new();
     h.bring_up();

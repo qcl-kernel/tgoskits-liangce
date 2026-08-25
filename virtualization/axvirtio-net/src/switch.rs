@@ -31,6 +31,21 @@ impl SwitchPortId {
     }
 }
 
+/// Result of attempting to append one frame to a port's bounded ingress.
+///
+/// The switch keeps capacity pressure separate from lifecycle rejection so
+/// runtime evidence can distinguish a slow Guest from a stale teardown
+/// callback. Both failures are fail-closed and leave the existing FIFO intact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IngressOutcome {
+    /// The frame was appended and the port may now be notified.
+    Accepted,
+    /// The bounded FIFO was full; drop the newest frame.
+    Full,
+    /// The endpoint no longer belongs to an active device generation.
+    Inactive,
+}
+
 /// Capability the switch exercises on a registered port.
 ///
 /// Implemented by the concrete per-port endpoint in the hypervisor glue; tests
@@ -45,17 +60,16 @@ pub trait SwitchPort: Send + Sync {
     /// is removed from the table, but a stale `Arc` may still be held briefly
     /// by the uplink worker; this gate makes such references benign.
     fn is_active(&self) -> bool;
-    /// Pushes a frame toward the guest RX queue of this port.
+    /// Pushes a frame toward the guest RX queue of this port and schedules its
+    /// consumer before the endpoint can cross its teardown linearization
+    /// point.
     ///
-    /// Returns `false` when the port's bounded ingress is full or the port is
-    /// no longer active, so the caller can count the drop without aborting the
-    /// rest of a broadcast fan-out (design §5.3).
-    fn deliver_ingress(&self, frame: &[u8]) -> bool;
-    /// Schedules the consumer after a frame was accepted by its ingress queue.
-    ///
-    /// The switch invokes this only after releasing its registry lock. The
-    /// concrete runtime may use it to wake a blocked VM and poll its RX queue.
-    fn notify_ingress(&self);
+    /// Returns the exact acceptance or rejection class so the caller can
+    /// publish separate saturation and teardown counters without aborting the
+    /// rest of a broadcast fan-out (design §5.3). `Accepted` therefore means
+    /// both enqueue and wake scheduling completed while this generation was
+    /// active; the switch must not issue a second notification.
+    fn deliver_ingress(&self, frame: &[u8]) -> IngressOutcome;
 }
 
 /// Why a frame left the switch without being delivered or uplinked.
@@ -65,8 +79,12 @@ pub enum SwitchDropReason {
     Undersize,
     /// Ethernet source MAC does not match the port it arrived on.
     SourceMacViolation,
-    /// The source port had been unregistered before the frame was classified.
+    /// The source port was unregistered, or a snapshotted target became
+    /// inactive before ingress delivery completed.
     InactiveGeneration,
+    /// A known local target rejected the newest frame because its bounded
+    /// ingress FIFO was full.
+    IngressFull,
     /// Host RX frame did not match any active port and unknown unicast is not
     /// flooded inbound (design §5.2).
     UnknownUnicast,
@@ -86,6 +104,8 @@ pub struct SwitchStats {
     pub source_mac_violation: AtomicU64,
     pub undersize_drop: AtomicU64,
     pub inactive_generation_drop: AtomicU64,
+    pub ingress_full_drop: AtomicU64,
+    pub inactive_target_drop: AtomicU64,
     pub duplicate_mac_rejected: AtomicU64,
 }
 
@@ -180,6 +200,24 @@ impl VirtualSwitch {
             .collect()
     }
 
+    fn deliver_to_target(
+        &self,
+        target: &Arc<dyn SwitchPort>,
+        frame: &[u8],
+    ) -> Result<(), SwitchDropReason> {
+        match target.deliver_ingress(frame) {
+            IngressOutcome::Accepted => Ok(()),
+            IngressOutcome::Full => {
+                self.stats.inc(&self.stats.ingress_full_drop);
+                Err(SwitchDropReason::IngressFull)
+            }
+            IngressOutcome::Inactive => {
+                self.stats.inc(&self.stats.inactive_target_drop);
+                Err(SwitchDropReason::InactiveGeneration)
+            }
+        }
+    }
+
     /// Switches a frame that a guest transmitted on `src_id`.
     ///
     /// Performs the anti-spoof source-MAC check, classifies the destination and
@@ -217,20 +255,35 @@ impl VirtualSwitch {
             classify_destination(&header.dst, src_id, &registry)
         };
 
+        let mut local_deliveries = 0;
+        let mut first_rejection = None;
         for target in decision.local_targets.iter() {
-            if target.deliver_ingress(frame) {
-                target.notify_ingress();
-                match header.class() {
-                    DestinationClass::Broadcast => {
-                        self.stats.inc(&self.stats.broadcast_copies);
-                    }
-                    DestinationClass::Multicast => {
-                        self.stats.inc(&self.stats.multicast_copies);
-                    }
-                    DestinationClass::Unicast => {
-                        self.stats.inc(&self.stats.local_unicast_forwarded);
-                    }
+            match self.deliver_to_target(target, frame) {
+                Ok(()) => {
+                    local_deliveries += 1;
                 }
+                Err(reason) => {
+                    if first_rejection.is_none() {
+                        first_rejection = Some(reason);
+                    }
+                    continue;
+                }
+            }
+            match header.class() {
+                DestinationClass::Broadcast => {
+                    self.stats.inc(&self.stats.broadcast_copies);
+                }
+                DestinationClass::Multicast => {
+                    self.stats.inc(&self.stats.multicast_copies);
+                }
+                DestinationClass::Unicast => {
+                    self.stats.inc(&self.stats.local_unicast_forwarded);
+                }
+            }
+        }
+        if local_deliveries == 0 && !decision.uplink {
+            if let Some(reason) = first_rejection {
+                return EgressOutcome::dropped(reason);
             }
         }
         if decision.uplink {
@@ -238,6 +291,7 @@ impl VirtualSwitch {
         }
         EgressOutcome::Forwarded {
             uplink: decision.uplink,
+            local_deliveries,
         }
     }
 
@@ -276,8 +330,7 @@ impl VirtualSwitch {
         };
 
         for target in targets {
-            if target.deliver_ingress(frame) {
-                target.notify_ingress();
+            if self.deliver_to_target(&target, frame).is_ok() {
                 match header.class() {
                     DestinationClass::Broadcast => {
                         self.stats.inc(&self.stats.broadcast_copies);
@@ -386,9 +439,14 @@ fn classify_destination(
 /// Outcome of switching one guest-originated frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EgressOutcome {
-    /// Local delivery completed; `uplink` says whether the caller must also
-    /// transmit the frame on the host uplink.
-    Forwarded { uplink: bool },
+    /// Classification completed. `local_deliveries` counts ports that accepted
+    /// the frame; `uplink` says whether the caller must also transmit it on the
+    /// host uplink. A caller must not treat uplink-only classification as local
+    /// delivery evidence.
+    Forwarded {
+        uplink: bool,
+        local_deliveries: usize,
+    },
     /// The frame was dropped for the given reason.
     Dropped(SwitchDropReason),
 }
@@ -467,6 +525,7 @@ mod tests {
         delivered: Mutex<alloc::vec::Vec<alloc::vec::Vec<u8>>>,
         accept: AtomicUsize,
         notifications: AtomicUsize,
+        deactivate_on_delivery: AtomicBool,
     }
 
     impl FakePort {
@@ -478,6 +537,7 @@ mod tests {
                 delivered: Mutex::new(alloc::vec::Vec::new()),
                 accept: AtomicUsize::new(usize::MAX),
                 notifications: AtomicUsize::new(0),
+                deactivate_on_delivery: AtomicBool::new(false),
             })
         }
 
@@ -487,6 +547,10 @@ mod tests {
 
         fn set_capacity(&self, capacity: usize) {
             self.accept.store(capacity, Ordering::Release);
+        }
+
+        fn deactivate_on_next_delivery(&self) {
+            self.deactivate_on_delivery.store(true, Ordering::Release);
         }
 
         fn delivered(&self) -> alloc::vec::Vec<alloc::vec::Vec<u8>> {
@@ -508,19 +572,22 @@ mod tests {
         fn is_active(&self) -> bool {
             self.active.load(Ordering::Acquire)
         }
-        fn deliver_ingress(&self, frame: &[u8]) -> bool {
+        fn deliver_ingress(&self, frame: &[u8]) -> IngressOutcome {
+            // Deterministically models teardown after the registry snapshot
+            // but before the target's authoritative ingress check.
+            if self.deactivate_on_delivery.swap(false, Ordering::AcqRel) {
+                self.set_active(false);
+            }
             if !self.is_active() {
-                return false;
+                return IngressOutcome::Inactive;
             }
             let mut delivered = self.delivered.lock_irqsave();
             if delivered.len() >= self.accept.load(Ordering::Acquire) {
-                return false;
+                return IngressOutcome::Full;
             }
             delivered.push(frame.to_vec());
-            true
-        }
-        fn notify_ingress(&self) {
             self.notifications.fetch_add(1, Ordering::Release);
+            IngressOutcome::Accepted
         }
     }
 
@@ -589,7 +656,13 @@ mod tests {
     fn known_unicast_delivers_only_to_target_without_uplink() {
         let (switch, a, b, _ra, _rb) = two_port_switch();
         let outcome = switch.switch_from_port(port_id(1), &frame(MAC_B, MAC_A));
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: false });
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: false,
+                local_deliveries: 1,
+            }
+        );
         assert!(a.delivered().is_empty());
         assert_eq!(b.delivered().len(), 1);
         assert_eq!(a.notifications(), 0);
@@ -600,7 +673,13 @@ mod tests {
     fn broadcast_fans_out_to_other_ports_and_uplink() {
         let (switch, a, b, _ra, _rb) = two_port_switch();
         let outcome = switch.switch_from_port(port_id(1), &frame([0xff; 6], MAC_A));
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: true });
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: true,
+                local_deliveries: 1,
+            }
+        );
         assert!(a.delivered().is_empty()); // source excluded
         assert_eq!(b.delivered().len(), 1);
     }
@@ -610,7 +689,13 @@ mod tests {
         let (switch, a, b, _ra, _rb) = two_port_switch();
         let mcast = [0x01, 0x00, 0x5e, 0x00, 0x00, 0x01];
         let outcome = switch.switch_from_port(port_id(2), &frame(mcast, MAC_B));
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: true });
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: true,
+                local_deliveries: 1,
+            }
+        );
         assert_eq!(a.delivered().len(), 1);
         assert!(b.delivered().is_empty()); // source excluded
     }
@@ -619,7 +704,13 @@ mod tests {
     fn unknown_unicast_is_uplinked_only() {
         let (switch, a, b, _ra, _rb) = two_port_switch();
         let outcome = switch.switch_from_port(port_id(1), &frame(MAC_HOST, MAC_A));
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: true });
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: true,
+                local_deliveries: 0,
+            }
+        );
         assert!(a.delivered().is_empty());
         assert!(b.delivered().is_empty());
     }
@@ -683,14 +774,78 @@ mod tests {
     }
 
     #[test]
-    fn one_full_ingress_does_not_block_other_copies_or_uplink() {
+    fn full_broadcast_target_is_counted_without_blocking_uplink() {
         let (switch, a, b, _ra, _rb) = two_port_switch();
-        a.set_capacity(0); // A's ingress rejects everything.
+        b.set_capacity(0); // The only local target rejects the newest frame.
         let outcome = switch.switch_from_port(port_id(1), &frame([0xff; 6], MAC_A));
-        // Broadcast still requests the uplink and still reaches B.
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: true });
+        // Broadcast still requests the uplink, but local acceptance stays zero.
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: true,
+                local_deliveries: 0,
+            }
+        );
         assert!(a.delivered().is_empty());
-        assert_eq!(b.delivered().len(), 1);
+        assert!(b.delivered().is_empty());
+        assert_eq!(b.notifications(), 0);
+        assert_eq!(switch.stats().ingress_full_drop.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            switch.stats().inactive_target_drop.load(Ordering::Relaxed),
+            0
+        );
+    }
+
+    #[test]
+    fn full_known_unicast_target_is_reported_as_a_drop() {
+        let (switch, _a, b, _ra, _rb) = two_port_switch();
+        b.set_capacity(0);
+
+        let outcome = switch.switch_from_port(port_id(1), &frame(MAC_B, MAC_A));
+
+        assert_eq!(
+            outcome,
+            EgressOutcome::Dropped(SwitchDropReason::IngressFull)
+        );
+        assert!(b.delivered().is_empty());
+        assert_eq!(b.notifications(), 0);
+        assert_eq!(switch.stats().ingress_full_drop.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            switch.stats().local_unicast_forwarded.load(Ordering::Relaxed),
+            0
+        );
+    }
+
+    #[test]
+    fn sixty_fifth_frame_is_drop_newest_and_preserves_fifo() {
+        let (switch, _a, b, _ra, _rb) = two_port_switch();
+        b.set_capacity(64);
+
+        let first_sixty_four: alloc::vec::Vec<_> = (0u8..64)
+            .map(|marker| {
+                let mut packet = frame(MAC_B, MAC_A);
+                packet.push(marker);
+                assert_eq!(
+                    switch.switch_from_port(port_id(1), &packet),
+                    EgressOutcome::Forwarded {
+                        uplink: false,
+                        local_deliveries: 1,
+                    }
+                );
+                packet
+            })
+            .collect();
+        let mut rejected = frame(MAC_B, MAC_A);
+        rejected.push(64);
+
+        assert_eq!(
+            switch.switch_from_port(port_id(1), &rejected),
+            EgressOutcome::Dropped(SwitchDropReason::IngressFull)
+        );
+        assert_eq!(b.delivered(), first_sixty_four);
+        assert!(!b.delivered().contains(&rejected));
+        assert_eq!(b.notifications(), 64);
+        assert_eq!(switch.stats().ingress_full_drop.load(Ordering::Relaxed), 1);
     }
 
     #[test]
@@ -698,9 +853,73 @@ mod tests {
         let (switch, a, b, _ra, _rb) = two_port_switch();
         b.set_active(false);
         let outcome = switch.switch_from_port(port_id(1), &frame([0xff; 6], MAC_A));
-        assert_eq!(outcome, EgressOutcome::Forwarded { uplink: true });
+        assert_eq!(
+            outcome,
+            EgressOutcome::Forwarded {
+                uplink: true,
+                local_deliveries: 0,
+            }
+        );
         assert!(a.delivered().is_empty()); // source
         assert_eq!(b.delivered().len(), 0); // inactive
+    }
+
+    #[test]
+    fn inactive_known_unicast_target_is_counted_as_teardown_rejection() {
+        let (switch, _a, b, _ra, _rb) = two_port_switch();
+        b.set_active(false);
+
+        let outcome = switch.switch_from_port(port_id(1), &frame(MAC_B, MAC_A));
+
+        assert_eq!(
+            outcome,
+            EgressOutcome::Dropped(SwitchDropReason::InactiveGeneration)
+        );
+        assert!(b.delivered().is_empty());
+        assert_eq!(b.notifications(), 0);
+        assert_eq!(
+            switch.stats().inactive_target_drop.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(switch.stats().ingress_full_drop.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn target_deactivated_after_snapshot_is_rejected_without_notification() {
+        let (switch, _a, b, _ra, _rb) = two_port_switch();
+        b.deactivate_on_next_delivery();
+
+        let outcome = switch.switch_from_port(port_id(1), &frame(MAC_B, MAC_A));
+
+        assert_eq!(
+            outcome,
+            EgressOutcome::Dropped(SwitchDropReason::InactiveGeneration)
+        );
+        assert!(b.delivered().is_empty());
+        assert_eq!(b.notifications(), 0);
+        assert_eq!(
+            switch.stats().inactive_target_drop.load(Ordering::Relaxed),
+            1
+        );
+    }
+
+    #[test]
+    fn uplink_snapshot_rechecks_target_lifecycle_before_delivery() {
+        let (switch, a, _b, _ra, _rb) = two_port_switch();
+        a.deactivate_on_next_delivery();
+
+        switch.switch_from_uplink(&frame(MAC_A, MAC_HOST));
+
+        assert!(a.delivered().is_empty());
+        assert_eq!(a.notifications(), 0);
+        assert_eq!(
+            switch.stats().inactive_target_drop.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            switch.stats().local_unicast_forwarded.load(Ordering::Relaxed),
+            0
+        );
     }
 
     #[test]

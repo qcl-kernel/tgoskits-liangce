@@ -19,21 +19,39 @@ fn console_irq(raw: usize) -> Option<ax_plat::irq::IrqId> {
     Some(ax_plat::irq::IrqNumber(raw).expect("console IRQ exceeds legacy IRQ width"))
 }
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
+/// Serializes individual console chunks across all writers (axvisor logging
+/// and the merged guest-console forwarding). Each chunk is short (a log
+/// record is split into a few ANSI/colour/body chunks by axlog), so the
+/// lock hold time is tiny and the guest console forwarding is only delayed
+/// microseconds. Without it, chunks from concurrent writers interleave
+/// mid-line, corrupting the P4 frame-hex evidence lines.
+static CONSOLE_WRITE_LOCK: AtomicBool = AtomicBool::new(false);
+
+fn acquire_console_write() {
+    while CONSOLE_WRITE_LOCK.swap(true, Ordering::Acquire) {
+        core::hint::spin_loop();
+    }
+}
+
+fn release_console_write() {
+    CONSOLE_WRITE_LOCK.store(false, Ordering::Release);
+}
+
 struct ConsoleIfImpl;
 
 #[impl_plat_interface]
 impl ConsoleIf for ConsoleIfImpl {
     /// Writes given bytes to the console.
     fn write_bytes(bytes: &[u8]) {
-        let mut remaining = bytes;
-        while !remaining.is_empty() {
-            let written = somehal::console::_write_bytes(remaining);
-            if written == 0 {
-                core::hint::spin_loop();
-                continue;
-            }
-            remaining = &remaining[written..];
-        }
+        acquire_console_write();
+        // Single `_write_bytes` call: someboot writes the whole chunk inside
+        // its early-console guard, so one chunk is atomic. (Looping here
+        // re-acquired the guard per chunk and let a concurrent writer
+        // interleave mid-line.)
+        let _ = somehal::console::_write_bytes(bytes);
+        release_console_write();
     }
 
     /// Reads bytes from the console into the given mutable slice.

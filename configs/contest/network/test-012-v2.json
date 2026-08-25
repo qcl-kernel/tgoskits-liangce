@@ -1,0 +1,97 @@
+{
+  "schema_version": "p4-network-profile-v2",
+  "profile_id": "test-012-v2",
+  "test_id": "TEST-012",
+  "scenario": "udp-echo-qualification",
+  "host_only": false,
+  "guest_runtime": true,
+  "evidence_level": "L7 Guest-IP",
+  "transport": "udp",
+  "network": {
+    "name": "vnet0",
+    "cidr": "10.77.0.0/24",
+    "mtu": 1500,
+    "default_route": false,
+    "gateway": null,
+    "dns": [],
+    "outer_nic": false,
+    "host_uplink": false,
+    "bridge": false,
+    "nat": false,
+    "tap": false,
+    "proxy": false
+  },
+  "endpoints": {
+    "linux": {
+      "vm_id": 1,
+      "port": 0,
+      "mac": "02:00:00:00:00:01",
+      "ip": "10.77.0.1",
+      "prefix_length": 24,
+      "connected_route": "10.77.0.0/24",
+      "udp_port": 46000,
+      "tcp_port": 46001,
+      "default_route": false,
+      "gateway": null,
+      "dns": []
+    },
+    "zephyr": {
+      "vm_id": 2,
+      "port": 1,
+      "mac": "02:00:00:00:00:02",
+      "ip": "10.77.0.2",
+      "prefix_length": 24,
+      "connected_route": "10.77.0.0/24",
+      "udp_port": 46000,
+      "tcp_port": 46001,
+      "default_route": false,
+      "gateway": null,
+      "dns": []
+    }
+  },
+  "fault": {
+    "schema_version": "p4-network-fault-v1",
+    "profile_id": "p4-test-012-disabled",
+    "seed": 0,
+    "enabled": false,
+    "packet_numbering": "one-based",
+    "rules": {
+      "drop_every": 0,
+      "duplicate_every": 0,
+      "reorder_every": 0,
+      "corrupt_every": 0
+    },
+    "operation_order": [
+      "corrupt",
+      "reorder",
+      "duplicate",
+      "drop"
+    ]
+  },
+  "completionMarker": "TGOS_LINUX_UDP_ECHO",
+  "oracle": {
+    "requiredMarkers": [
+      "AXVISOR_DUAL_GUEST_LINUX_READY",
+      "AXVISOR_DUAL_GUEST_ZEPHYR_READY"
+    ],
+    "forbidden": [
+      "AXVISOR_LINUX_CONSOLE_FAIL",
+      "kernel panic"
+    ],
+    "structuredScenarioOracle": {
+      "scenario": "test-012",
+      "linux_to_zephyr_udp": {
+        "sent": 100,
+        "received": 100,
+        "loss": 0
+      },
+      "minimum_capture_frames": 200,
+      "minimum_switch_deliver": 200,
+      "maximum_switch_drop": 0,
+      "maximum_ingress_full_drop": 0,
+      "maximum_ingress_inactive_drop": 0,
+      "minimum_ingress_counter_observations": 1
+    }
+  },
+  "timeoutSeconds": 1200
+}

@@ -299,3 +299,137 @@ fn its_ids_are_isolated_but_lpis_are_controller_global() {
         } if found == controller
     ));
 }
+
+#[test]
+fn fixed_linux_root_block_and_auto_virtio_net_coexist() {
+    // P4-UPSTREAM-01 / X-P4-RES-001 regression: the official virtio-net model
+    // must not pin Guest MMIO 0x0a000000 / INTID 48, which the Linux
+    // passthrough root block already occupies. Fixed pins must conflict;
+    // `ResourceRequest::Auto` must resolve outside the fixed root window.
+    const LINUX_ROOT_MMIO: u64 = 0x0a00_0000;
+    const MMIO_SIZE: u64 = 0x200;
+    const LINUX_ROOT_IRQ: usize = 48;
+    let controller = InterruptControllerId::new(0);
+
+    fn root_request(controller: InterruptControllerId) -> DevicePlanRequest {
+        DevicePlanRequest::new(
+            "linux-root",
+            DeviceRequirements::new()
+                .with_mmio(
+                    slot("root-mmio"),
+                    MMIO_SIZE,
+                    4,
+                    ResourceRequest::Fixed(LINUX_ROOT_MMIO),
+                )
+                .unwrap()
+                .with_wired_irq(
+                    slot("root-irq"),
+                    controller,
+                    InterruptTrigger::EdgeTriggered,
+                    InterruptSharing::Exclusive,
+                    ResourceRequest::Fixed(ControllerInputId::new(LINUX_ROOT_IRQ)),
+                )
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn net_request(
+        controller: InterruptControllerId,
+        mmio: ResourceRequest<u64>,
+        irq: ResourceRequest<ControllerInputId>,
+    ) -> DevicePlanRequest {
+        DevicePlanRequest::new(
+            "virtnet0",
+            DeviceRequirements::new()
+                .with_mmio(slot("mmio"), MMIO_SIZE, 4, mmio)
+                .unwrap()
+                .with_wired_irq(
+                    slot("irq"),
+                    controller,
+                    InterruptTrigger::EdgeTriggered,
+                    InterruptSharing::Exclusive,
+                    irq,
+                )
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    // Red: the old fixed placement collides with the Linux root block.
+    let mut fixed_pools = ResourcePools::new();
+    fixed_pools
+        .allow_fixed_mmio(LINUX_ROOT_MMIO..LINUX_ROOT_MMIO + MMIO_SIZE)
+        .unwrap();
+    fixed_pools
+        .allow_fixed_controller_inputs(
+            controller,
+            ControllerInputId::new(32)..ControllerInputId::new(64),
+        )
+        .unwrap();
+    assert!(matches!(
+        VmResourcePlanner::new(fixed_pools)
+            .plan([
+                root_request(controller),
+                net_request(
+                    controller,
+                    ResourceRequest::Fixed(LINUX_ROOT_MMIO),
+                    ResourceRequest::Fixed(ControllerInputId::new(LINUX_ROOT_IRQ)),
+                ),
+            ])
+            .unwrap_err(),
+        ResourcePlanningError::Conflict { .. }
+    ));
+
+    // Green: Auto resources coexist with the fixed root block.
+    let mut auto_pools = ResourcePools::new();
+    auto_pools
+        .allow_fixed_mmio(LINUX_ROOT_MMIO..LINUX_ROOT_MMIO + MMIO_SIZE)
+        .unwrap();
+    auto_pools.add_auto_mmio(0x0b00_0000..0x0c00_0000).unwrap();
+    auto_pools
+        .allow_fixed_controller_inputs(
+            controller,
+            ControllerInputId::new(32)..ControllerInputId::new(64),
+        )
+        .unwrap();
+    auto_pools
+        .add_auto_controller_inputs(
+            controller,
+            ControllerInputId::new(32)..ControllerInputId::new(64),
+        )
+        .unwrap();
+    let plan = VmResourcePlanner::new(auto_pools)
+        .plan([
+            root_request(controller),
+            net_request(controller, ResourceRequest::Auto, ResourceRequest::Auto),
+        ])
+        .unwrap();
+
+    let (mmio_base, mmio_size) = plan
+        .resources("virtnet0")
+        .unwrap()
+        .mmio(&slot("mmio"))
+        .unwrap();
+    assert_ne!(mmio_base, LINUX_ROOT_MMIO);
+    assert_eq!(mmio_size, MMIO_SIZE);
+    let irq = plan
+        .resources("virtnet0")
+        .unwrap()
+        .wired_irq(&slot("irq"))
+        .unwrap();
+    assert_eq!(irq.controller(), controller);
+    assert_ne!(irq.input(), ControllerInputId::new(LINUX_ROOT_IRQ));
+    let root_mmio = plan
+        .resources("linux-root")
+        .unwrap()
+        .mmio(&slot("root-mmio"))
+        .unwrap();
+    assert_eq!(root_mmio, (LINUX_ROOT_MMIO, MMIO_SIZE));
+    let root_irq = plan
+        .resources("linux-root")
+        .unwrap()
+        .wired_irq(&slot("root-irq"))
+        .unwrap();
+    assert_eq!(root_irq.input(), ControllerInputId::new(LINUX_ROOT_IRQ));
+}
