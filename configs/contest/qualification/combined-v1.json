@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "profile": "combined-v1",
+  "profile_id": "combined-v1",
+  "duration_s": 7200,
+  "seeds": [7, 19, 43],
+  "phases": [
+    {
+      "name": "warmup_idle",
+      "start_s": 0,
+      "duration_s": 600,
+      "load": "dual_guest_ready"
+    },
+    {
+      "name": "cpu_net_fixed",
+      "start_s": 600,
+      "duration_s": 1800,
+      "load": "cpu_net_fixed"
+    },
+    {
+      "name": "cpu_net_mlp",
+      "start_s": 2400,
+      "duration_s": 1800,
+      "load": "cpu_net_mlp"
+    },
+    {
+      "name": "fault_recovery",
+      "start_s": 4200,
+      "duration_s": 600,
+      "load": "fault_recovery"
+    },
+    {
+      "name": "post_recovery_soak",
+      "start_s": 4800,
+      "duration_s": 2400,
+      "load": "post_recovery_soak"
+    }
+  ],
+  "cpu_load": {
+    "schema_version": "p6-cpu-load-v1",
+    "linux_vcpus": 2,
+    "fixed_workers": 1,
+    "mlp_workers": 1,
+    "measurement": "raw_rt_samples_only"
+  },
+  "network_profile": {
+    "schema_version": "p6-network-profile-v1",
+    "endpoints": ["10.77.0.1", "10.77.0.2"],
+    "udp_port": 46000,
+    "tcp_port": 46001,
+    "control_rate_hz": 10,
+    "p4_oracle": "P4-REL-01"
+  },
+  "ai_profile": {
+    "schema_version": "p6-ai-profile-v1",
+    "test_id": "TEST-017",
+    "controllers": ["fixed", "mlp"],
+    "tick_period_ms": 100,
+    "ticks_per_session": 1800,
+    "control_validity_ms": 500,
+    "profile": "qualification-v1"
+  },
+  "fault_manifest": {
+    "schema_version": "p6-fault-manifest-v1",
+    "algorithm": "explicit-case-v1",
+    "targets": [
+      {"case": "drop", "target": "linux_to_zephyr.control", "action": "drop"},
+      {"case": "duplicate", "target": "linux_to_zephyr.control", "action": "duplicate"},
+      {"case": "reorder", "target": "linux_to_zephyr.control", "action": "reorder"},
+      {"case": "corrupt", "target": "linux_to_zephyr.control", "action": "corrupt"},
+      {"case": "linux_socket_stop", "target": "linux.control_socket", "action": "stop"},
+      {"case": "network_pause", "target": "p4.dual_guest_link", "action": "pause"},
+      {"case": "endpoint_restart", "target": "zephyr.control_endpoint", "action": "restart"}
+    ]
+  },
+  "required_tests": [
+    "TEST-006",
+    "TEST-007",
+    "TEST-008",
+    "TEST-009",
+    "TEST-010",
+    "TEST-011",
+    "TEST-012",
+    "TEST-013",
+    "TEST-014",
+    "TEST-015",
+    "TEST-016",
+    "TEST-017",
+    "TEST-018"
+  ]
+}

@@ -2,10 +2,10 @@
 
 import importlib.util
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 MODULE_PATH = Path(__file__).with_name("ci_plan.py")
 sys.path.insert(0, str(MODULE_PATH.parent))
@@ -83,6 +83,40 @@ class CiPlanTests(unittest.TestCase):
                 not row["name"].startswith(f"{row['group']} / ")
                 for row in test_rows.values()
             )
+        )
+
+    def test_contest_gates_are_unique_and_present_in_static_matrix(self) -> None:
+        plan = ci_plan.build_main_plan(self.upstream)
+        static_rows = self.assert_unique_ids(plan["static_matrix"]["include"])
+        contest_source = str(
+            (ci_plan.CHECKS_ROOT / "contest.toml").relative_to(ci_plan.WORKSPACE_ROOT)
+        )
+        catalog_contest_ids = {
+            check["id"]
+            for check in ci_plan.load_catalog(ci_plan.MAIN_MANIFESTS)
+            if check["source"] == contest_source
+        }
+
+        self.assertTrue(catalog_contest_ids)
+        self.assertTrue(catalog_contest_ids.issubset(static_rows))
+        self.assertEqual(
+            {
+                check_id
+                for check_id, row in static_rows.items()
+                if row["group"] == "Contest"
+            },
+            catalog_contest_ids,
+        )
+        self.assertTrue(
+            all(
+                static_rows[check_id]["runs_on"]
+                == ["self-hosted", "linux", "qcs"]
+                for check_id in catalog_contest_ids
+            )
+        )
+        self.assertEqual(
+            static_rows["contest-upstream-c82-convergence"]["fetch_depth"],
+            "2",
         )
 
     def test_pull_request_crate_impact_selects_every_check_for_matching_os(
@@ -330,22 +364,20 @@ class CiPlanTests(unittest.TestCase):
             )
 
     def test_manifest_rejects_unsupported_test_group(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            manifest = Path(temp_dir) / "future-os.toml"
-            manifest.write_text(
-                """\
-schema_version = 3
-phase = "test"
-group = "Future OS"
-
-[[check]]
-id = "future-os-check"
-name = "Future OS check"
-command = "true"
-""",
-                encoding="utf-8",
-            )
-
+        manifest = ci_plan.MAIN_MANIFESTS[0]
+        document = {
+            "schema_version": 3,
+            "phase": "test",
+            "group": "Future OS",
+            "check": [
+                {
+                    "id": "future-os-check",
+                    "name": "Future OS check",
+                    "command": "true",
+                }
+            ],
+        }
+        with mock.patch.object(ci_plan.tomllib, "load", return_value=document):
             with self.assertRaisesRegex(
                 ci_plan.PlanError,
                 "unsupported test group 'Future OS'",
