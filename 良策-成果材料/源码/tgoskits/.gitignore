@@ -1,0 +1,78 @@
+# Sphinx documentation
+/docs/_build/
+
+# PyBuilder
+/target/
+
+# Jupyter Notebook
+/.ipynb_checkpoints
+
+# pyenv
+/.python-version
+
+
+# Environments
+/.env
+/.venv
+/env/
+/venv/
+/ENV/
+/env.bak/
+/venv.bak/
+
+# mkdocs documentation
+/site
+
+# IDEs
+/.idea/
+/.vscode/*
+!/.vscode/launch.json
+!/.vscode/session.py
+!/.vscode/tasks.json
+/.zed/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+
+*-schema.json
+.qemu*
+.build*
+.uboot*
+
+/.cargo/.config-local.toml
+.axconfig*
+*.img
+!.claude/skills/*
+/tmp/*
+*.vi
+
+.arceos*
+.starry*
+.axvisor*
+.board*
+
+# Tooling artifacts
+.direnv/
+.codex
+.agents
+.image.toml
+coverage/
+third_party/
+os/StarryOS-REF
+.Ds_Store
+starry-*.log
+loongarch64-axvisor-guest-tests.md
+
+# GitHub page snapshots accidentally saved into the repo
+*rcore-os_tgoskits*.html
+
+# Resource monitor local artifacts
+/logs/offline-monitor/
+/images/linux-qemu/
+offline-monitor-analysis*.html
+
+# Contest app build artifacts (reproduced from manifests; never tracked)
+apps/contest/*/build/

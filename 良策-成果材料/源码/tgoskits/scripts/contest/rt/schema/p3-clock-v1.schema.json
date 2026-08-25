@@ -1,0 +1,54 @@
+{
+  "$id": "p3-clock-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "counter_frequency_hz",
+    "host_counter",
+    "guest_counter",
+    "cntvoff_ticks_by_vcpu",
+    "mapping",
+    "calibration_samples",
+    "max_mapping_residual_ns"
+  ],
+  "properties": {
+    "schema_version": {"const": "p3-clock-v1"},
+    "counter_frequency_hz": {"type": "integer", "minimum": 1},
+    "host_counter": {"const": "CNTPCT_EL0"},
+    "guest_counter": {"const": "CNTVCT_EL0"},
+    "cntvoff_ticks_by_vcpu": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[0-9]+:[0-9]+$": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+    "mapping": {"const": "host_ticks = guest_ticks + cntvoff_ticks"},
+    "calibration_samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "vm_id",
+          "vcpu_id",
+          "host_counter_ticks",
+          "guest_counter_ticks",
+          "residual_ns"
+        ],
+        "properties": {
+          "vm_id": {"type": "integer", "minimum": 0},
+          "vcpu_id": {"type": "integer", "minimum": 0},
+          "host_counter_ticks": {"type": "integer", "minimum": 0},
+          "guest_counter_ticks": {"type": "integer", "minimum": 0},
+          "residual_ns": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": true
+      }
+    },
+    "max_mapping_residual_ns": {"type": "integer", "minimum": 0},
+    "clock_mapping_id": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": true
+}

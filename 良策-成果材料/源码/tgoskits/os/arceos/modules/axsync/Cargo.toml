@@ -1,0 +1,23 @@
+[package]
+name = "ax-sync"
+version = "0.5.32"
+repository = "https://github.com/rcore-os/tgoskits"
+edition.workspace = true
+authors = ["Yuekai Jia <equation618@gmail.com>"]
+description = "ArceOS synchronization primitives"
+license.workspace = true
+
+[features]
+host-test = []
+sleep = []
+lock-api = ["dep:lock_api"]
+default = []
+
+[dependencies]
+ax-crate-interface.workspace = true
+lock_api = { workspace = true, optional = true }
+
+[[test]]
+name = "std"
+path = "tests/std.rs"
+required-features = ["host-test"]

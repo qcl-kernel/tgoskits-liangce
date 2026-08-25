@@ -1,0 +1,17 @@
+/.idea
+.DS_Store
+*.elf
+*.bin
+*.dbg
+**/target/
+/.axconfig.*
+*.img
+/kernel-rv
+/kernel-la
+/.crates*
+/mnt
+*.swp
+*.swo
+/.cargo/.config-local.toml
+/tmp/
+/Cargo.lock

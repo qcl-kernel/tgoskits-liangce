@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "package_name": "良策-成果材料",
+  "team": "良策",
+  "snapshot_status": "rebased_source_snapshot_ready_for_delivery",
+  "source": {
+    "repository": "tgoskits-c82-integration",
+    "branch": "contest/liangce-final-3049",
+    "revision": "9b1506144d1502d9d46557ed218f878064688f41",
+    "revision_time": "2026-08-25T10:19:44+08:00",
+    "export_method": "git archive selected tracked paths",
+    "tracked_regular_files": 7651,
+    "bytes": 83813237,
+    "worktree_clean_at_freeze": true
+  },
+  "baseline": {
+    "live_upstream_dev_checked_at": "2026-08-25",
+    "live_upstream_dev": "3049b0c7becf1fd7972243a19b8b24e605b01e9b",
+    "candidate_ahead": 5,
+    "candidate_behind": 0,
+    "live_base_is_ancestor": true,
+    "rebased_to_live_upstream_dev": true,
+    "verification": "git fetch upstream dev; rev-list 0/5; merge-base --is-ancestor passed"
+  },
+  "excluded": [
+    ".git and Git credentials/history metadata",
+    "root .claude and .vscode",
+    "root AGENTS.md and CLAUDE.md",
+    "repository docs directory and internal development documentation",
+    "target, caches, temporary directories and ignored files",
+    "historical raw evidence and large runtime artifacts"
+  ],
+  "submodules": [
+    {
+      "path": "apps/starry/cpu-audio-test/assets",
+      "revision": "3fbb179fc776f8de607b3c7b1736c9e057e9fc1b",
+      "embedded": false,
+      "required_for_contest_prototype": false
+    },
+    {
+      "path": "apps/starry/cpu-video-test/assets",
+      "revision": "3fbb179fc776f8de607b3c7b1736c9e057e9fc1b",
+      "embedded": false,
+      "required_for_contest_prototype": false
+    }
+  ],
+  "verification": {
+    "contest_manifest_checks": "47/47 passed on committed-tree export",
+    "git_history_baseline_check": "passed in full repository",
+    "rust_build_local": "not_run_cargo_unavailable_on_windows_host",
+    "runtime_qualification_complete": false,
+    "clean_clone_verified": false
+  },
+  "delivery": {
+    "uploaded": false,
+    "push_performed": false,
+    "pr_created": false,
+    "demo_video_available": false,
+    "third_party_report": "N/A",
+    "previous_private_repository_revision": "1ca691ef6"
+  }
+}

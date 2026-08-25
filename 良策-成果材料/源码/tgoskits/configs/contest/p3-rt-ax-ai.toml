@@ -1,0 +1,13 @@
+schema_version = "p3-rt-profile-v1"
+scenario = "RT-AX-AI"
+mode = "production-ab"
+period_ms = 100
+warmup_samples = 1000
+minimum_samples = 100000
+minimum_duration_ns = 1800000000000
+required_gates = ["TEST-007", "TEST-011", "TEST-012", "TEST-013", "TEST-014", "TEST-015", "TEST-016", "TEST-017", "TEST-018"]
+
+[load]
+linux_cpu_workers = 0
+network_profile = "none"
+ai_profile = "qualification-v1"

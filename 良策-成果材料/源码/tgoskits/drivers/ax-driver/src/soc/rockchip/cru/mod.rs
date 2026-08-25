@@ -1,0 +1,133 @@
+use alloc::{sync::Arc, vec::Vec};
+
+use ax_sync::{RawSpinLockGuard, SpinLock as Mutex};
+use rdrive::{DriverGeneric, KError};
+use rockchip_soc::{
+    ClkId, ClockAssignmentProtection, ClockMmioWriteProtection, ClockOp, Cru, ResetOp, RstId,
+};
+
+mod rk3568;
+mod rk3576;
+mod rk3588;
+
+type SharedCru = Arc<Mutex<Cru>>;
+
+fn lock_cru(cru: &SharedCru) -> RawSpinLockGuard<'_, Cru> {
+    // SAFETY: CRU operations are serialized by the platform discovery/control
+    // path, which excludes same-CPU re-entry around register transactions.
+    unsafe { cru.lock_raw() }
+}
+
+pub struct ClkDrv {
+    name: &'static str,
+    inner: SharedCru,
+}
+
+impl ClkDrv {
+    pub fn new(name: &'static str, cru: SharedCru) -> Self {
+        Self { name, inner: cru }
+    }
+}
+
+pub struct ResetDrv {
+    name: &'static str,
+    inner: SharedCru,
+}
+
+impl ResetDrv {
+    pub fn new(name: &'static str, cru: SharedCru) -> Self {
+        Self { name, inner: cru }
+    }
+}
+
+impl DriverGeneric for ResetDrv {
+    fn name(&self) -> &str {
+        self.name
+    }
+}
+
+unsafe impl Send for ClkDrv {}
+unsafe impl Send for ResetDrv {}
+
+impl DriverGeneric for ClkDrv {
+    fn name(&self) -> &str {
+        self.name
+    }
+}
+
+impl rdif_clk::Interface for ClkDrv {
+    fn perper_enable(&mut self) {}
+
+    fn enable(&mut self, id: rdif_clk::ClockId) -> Result<(), KError> {
+        lock_cru(&self.inner)
+            .clk_enable(clock_id(id))
+            .map_err(|_| KError::InvalidArg { name: "clock_id" })
+    }
+
+    fn get_rate(&self, id: rdif_clk::ClockId) -> Result<u64, KError> {
+        lock_cru(&self.inner)
+            .clk_get_rate(clock_id(id))
+            .map_err(|_| KError::InvalidArg { name: "clock_id" })
+    }
+
+    fn set_rate(&mut self, id: rdif_clk::ClockId, rate: u64) -> Result<(), KError> {
+        lock_cru(&self.inner)
+            .clk_set_rate(clock_id(id), rate)
+            .map_err(|_| KError::InvalidArg { name: "clock_id" })?;
+        Ok(())
+    }
+
+    fn assignment_mmio_write_protection(
+        &self,
+        id: rdif_clk::ClockId,
+    ) -> Option<Vec<rdif_clk::ClockMmioWriteProtection>> {
+        lock_cru(&self.inner)
+            .assignment_mmio_write_protection(clock_id(id))
+            .map(|protections| {
+                protections
+                    .into_iter()
+                    .map(clock_mmio_write_protection)
+                    .collect()
+            })
+    }
+}
+
+impl rdif_reset::Interface for ResetDrv {
+    fn assert(&mut self, id: rdif_reset::ResetId) -> Result<(), rdif_reset::ResetError> {
+        lock_cru(&self.inner).reset_assert(reset_id(id));
+        Ok(())
+    }
+
+    fn deassert(&mut self, id: rdif_reset::ResetId) -> Result<(), rdif_reset::ResetError> {
+        lock_cru(&self.inner).reset_deassert(reset_id(id));
+        Ok(())
+    }
+}
+
+fn clock_id(id: rdif_clk::ClockId) -> ClkId {
+    let id: usize = id.into();
+    ClkId::from(id)
+}
+
+fn clock_mmio_write_protection(
+    protection: ClockMmioWriteProtection,
+) -> rdif_clk::ClockMmioWriteProtection {
+    match protection {
+        ClockMmioWriteProtection::Deny { offset, length } => {
+            rdif_clk::ClockMmioWriteProtection::Deny { offset, length }
+        }
+        ClockMmioWriteProtection::MaskedWrite32 {
+            offset,
+            value_mask,
+            write_enable_mask,
+        } => rdif_clk::ClockMmioWriteProtection::MaskedWrite32 {
+            offset,
+            value_mask,
+            write_enable_mask,
+        },
+    }
+}
+
+fn reset_id(id: rdif_reset::ResetId) -> RstId {
+    RstId::from(id.raw())
+}

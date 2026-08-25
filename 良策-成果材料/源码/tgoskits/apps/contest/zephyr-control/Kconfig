@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "TGOS contest Zephyr control guest"
+
+source "$(ZEPHYR_BASE)/Kconfig"
+
+config DUAL_BOOT_ID
+	string "Contest dual-guest boot identifier"
+	default "unknown"
+	help
+	  Boot identifier bound by the contest runner before build.
+
+config CONTEST_NET_MODE
+	string "Contest network mode"
+	default "l3-smoke"
+	help
+	  P4 network mode selected at build time. Reliability images use
+	  udp-reliability, tcp-reliability, or icpc-reliability.

@@ -1,0 +1,99 @@
+{
+  "artifactStatus": "validated-source-provenance",
+  "artifacts": {
+    "inputs": {
+      "path": "prepared/dual-inputs.json",
+      "sha256": "67e99c512d742436b2087a3800534a415d43b872f08909d24126de9d18c276b4",
+      "size": 2334
+    },
+    "linuxRootfs": {
+      "path": "prepared/linux-console-rootfs.ext4",
+      "sha256": "39bd1e92ee4ec1ce477c3b67abff8a980aa4871b551894c3418b5296e528f8dc",
+      "size": 33554432
+    },
+    "linuxRootfsPlan": {
+      "path": "prepared/linux-rootfs-plan.json",
+      "sha256": "4e27f6bd90889d4ae872573ba8dc8e28d299babee378c18465bdbe57f5780b56",
+      "size": 1740
+    },
+    "linuxVmConfig": {
+      "path": "prepared/linux.resolved.toml",
+      "sha256": "66daccf3b002cfe38e9fee38d5625bce6fc417099f6b5d466a8f2ac4ae626a21",
+      "size": 852
+    },
+    "liveStatus": {
+      "path": "live/status.json",
+      "sha256": "ebe18bff2c2d1d37dd0d3de126c0f4b439ece1264990b4ceb4044e542e97cccf",
+      "size": 7903
+    },
+    "qemuConfig": {
+      "path": "prepared/qemu.no-dataplane.toml",
+      "sha256": "2009e39aef313bdf9c1497215a02a152ad19868d6e7c6288735d674d25c2a15b",
+      "size": 857
+    },
+    "result": {
+      "path": "dual-guest-soak-result.json",
+      "sha256": "37a7572ae41c441e00e13d36c88e000aed91cf52ffd8e13cc7f2aafe68156cce",
+      "size": 2211
+    },
+    "session": {
+      "path": "dual-guest-soak-session.json",
+      "sha256": "1a7aed0ec36171e99d396afa9d78646e63d770e0fdea44bec8dae2c8e6b6b316",
+      "size": 2840
+    },
+    "zephyrBuildManifest": {
+      "path": "prepared/zephyr-build-manifest.json",
+      "sha256": "c0d795b2cf209a93b6e55aa2f95f47fbae8af9e13e4030ac3754f59e6f36387f",
+      "size": 639
+    },
+    "zephyrVmConfig": {
+      "path": "prepared/zephyr.resolved.toml",
+      "sha256": "72729275af14b6a8564c23d15b452a69cf2ccc6e94e2c68d8198a53e66c9ffdb",
+      "size": 1520
+    }
+  },
+  "bindingSha256": "45405058798bb44099f0901dc54c787b55dc1e3a18ba7c839f105965c72eb83e",
+  "cpuSets": {
+    "linux": [0, 1],
+    "zephyr": [2]
+  },
+  "doesNotProve": [
+    "the fresh P4 inputs were built",
+    "the current c82 AxVisor build succeeded",
+    "fresh Linux or Zephyr Guest enumeration",
+    "Guest IP connectivity",
+    "DMA isolation"
+  ],
+  "durationNs": 1800519845152,
+  "historicalOuterNicExplicitlyDisabled": false,
+  "historicalRuntimeRootfs": {
+    "currentFile": {
+      "path": "prepared/linux-console-rootfs.ext4",
+      "sha256": "39bd1e92ee4ec1ce477c3b67abff8a980aa4871b551894c3418b5296e528f8dc",
+      "size": 33554432
+    },
+    "currentMatchesLaunchClaim": false,
+    "launchClaim": {
+      "path": "linux-console-rootfs.ext4",
+      "sha256": "da0baf4570c04addc4338804e7bca2ca01b51868bf4a60ed8e8d1c566b1581df",
+      "size": 33554432
+    },
+    "reusable": false
+  },
+  "proofScope": "p2-soak-provenance-for-fresh-p4-inputs",
+  "reusableLinuxSourceRootfs": {
+    "path": "rootfs.img",
+    "sha256": "178f81bf40c1a0723a75e0b0f18b70e09b09ceae2b91ce1a990e5f7a792a224c",
+    "size": 33554432
+  },
+  "schemaVersion": 1,
+  "sourceIdentity": {
+    "bootId": "dual-20260814T072549Z-d4b3c5c744e28eea",
+    "qemuName": "axvisor-dual-soak-0c924b826c08f09f3fe8919e760fe3b4",
+    "qemuPid": 1390,
+    "qemuStartMonotonicNs": 8277858911590,
+    "sessionNonce": "0c924b826c08f09f3fe8919e760fe3b4"
+  },
+  "sourceRun": "phase2-dual-soak-20260814T072549Z-15df1f65d-dirty-r31",
+  "status": "p2_soak_input_bound"
+}
