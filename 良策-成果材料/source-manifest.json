@@ -52,10 +52,11 @@
     "clean_clone_verified": false
   },
   "delivery": {
-    "uploaded": false,
-    "push_performed": false,
+    "uploaded": true,
+    "push_performed": true,
     "pr_created": false,
     "demo_video_available": false,
-    "third_party_report": "N/A"
+    "third_party_report": "N/A",
+    "initial_private_repository_revision": "70df58b2ec771d533f98c3318ad4a240d7e1806c"
   }
 }
